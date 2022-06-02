@@ -1,0 +1,25 @@
+{
+  "name": "ingestion-worker",
+  "version": "0.1.0",
+  "description": "Data Ingestion Worker",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amanoxsolutions/mlops-realtime-data-ingestion.git"
+  },
+  "keywords": [
+    "aws",
+    "realtim",
+    "data",
+    "ingestion"
+  ],
+  "author": "Matthieu Lienart",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/issues"
+  },
+  "homepage": "https://github.com/amanoxsolutions/mlops-realtime-data-ingestion#readme"
+}

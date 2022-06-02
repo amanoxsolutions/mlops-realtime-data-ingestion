@@ -1,0 +1,23 @@
+# IDEs
+.vscode
+.idea
+
+# CDK
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+!.eslintrc.js
+!.prettierrc.js
+venv/
+
+# Lambda Layers packaging
+asset-outputpython
+!resources/**/layer/poetry.lock
+!resources/**/layer/pyproject.toml
+resources/**/layer/*.py
+resources/**/layer/*.txt
