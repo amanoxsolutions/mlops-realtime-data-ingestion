@@ -1,9 +1,8 @@
-import * as path from 'path';
 import { Construct } from 'constructs';
-import { RemovalPolicy, Duration } from 'aws-cdk-lib';
-import { Role, PolicyStatement, Effect, AnyPrincipal, ServicePrincipal, Policy, PolicyDocument, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
+import { RemovalPolicy } from 'aws-cdk-lib';
+import { Role, PolicyStatement, Effect, ServicePrincipal, Policy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, ILogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { Vpc, IVpc, SubnetType, SecurityGroup, InterfaceVpcEndpointAwsService, Port, Peer } from 'aws-cdk-lib/aws-ec2';
+import { Vpc, IVpc, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { 
   Cluster, 
   ICluster, 
@@ -17,10 +16,7 @@ import {
   FargateService,
   IFargateService,
  } from 'aws-cdk-lib/aws-ecs';
-import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns';
-import { Repository, TagMutability, IRepository } from 'aws-cdk-lib/aws-ecr';
-import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
-import * as ecrdeploy from 'cdk-ecr-deployment';
+import { IRepository } from 'aws-cdk-lib/aws-ecr';
 
 interface RDIIngestionWorkerProps {
   readonly prefix: string;
@@ -85,6 +81,7 @@ export class RDIIngestionWorker extends Construct {
     this.fargateLogGroup = new LogGroup(this, 'LogGroup', {
       logGroupName: `${props.prefix}-ingestion-worker`,
       retention: RetentionDays.ONE_MONTH,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     // Setup the Fargate Task on ECS
@@ -119,7 +116,6 @@ export class RDIIngestionWorker extends Construct {
     const workerContainer = fargateTask.addContainer('FargateContainer', {
       containerName: `${this.prefix}-ingestion-worker`,
       image: ContainerImage.fromEcrRepository(props.ecrRepo, 'latest'),
-      //image: ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
       portMappings: [{
         containerPort: 3000,
         protocol: Protocol.TCP
@@ -134,6 +130,7 @@ export class RDIIngestionWorker extends Construct {
       // },
       logging: LogDrivers.awsLogs({ 
         logGroup: this.fargateLogGroup,
+        logRetention: RetentionDays.ONE_MONTH,
         streamPrefix: `${props.prefix}-ingestion-worker-`,
       })
     });

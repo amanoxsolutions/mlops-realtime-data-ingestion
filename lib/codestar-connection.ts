@@ -2,6 +2,7 @@ import { Construct, } from 'constructs';
 import { Duration, CustomResource } from 'aws-cdk-lib';
 import { Effect, PolicyStatement, Policy } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 interface CodestarConnectionProps {
     readonly prefix: string;
@@ -31,6 +32,7 @@ interface CodestarConnectionProps {
         },
         timeout: Duration.seconds(60),
         runtime: Runtime.PYTHON_3_9,
+        logRetention: RetentionDays.ONE_WEEK,
       });
       customResourceLambda.addToRolePolicy(connectionPolicy);
 
