@@ -130,7 +130,6 @@ export class RDIIngestionWorker extends Construct {
       // },
       logging: LogDrivers.awsLogs({ 
         logGroup: this.fargateLogGroup,
-        logRetention: RetentionDays.ONE_MONTH,
         streamPrefix: `${props.prefix}-ingestion-worker-`,
       })
     });
