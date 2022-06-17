@@ -79,9 +79,9 @@ export class RealtimeDataIngestionStack extends Stack {
       },
     });
 
-    const eventBusArn = EventBus.fromEventBusName(this, 'DefaultBus', 'default').eventBusArn;
+    let eventBusArn = EventBus.fromEventBusName(this, 'DefaultBus', 'default').eventBusArn;
     if (inputStream.eventBus) {
-      const eventBusArn = inputStream.eventBus;
+      eventBusArn = inputStream.eventBus.eventBusArn;
     } 
 
     const ingestionWorkerImage = new RDIIngestionWorkerImage(this, 'WorkerImgae', {
