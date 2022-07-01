@@ -13,6 +13,7 @@ tracer = Tracer()
 DYNAMODB_SEEN_TABLE_NAME = os.environ.get("DYNAMODB_SEEN_TABLE_NAME")
 HASH_KEY_NAME = os.environ.get("HASH_KEY_NAME")
 
+# TODO introduce boto3 session retry-config
 dynamodb_resource = boto3.resource("dynamodb")
 
 table_of_seen_items = dynamodb_resource.Table(DYNAMODB_SEEN_TABLE_NAME)
@@ -28,8 +29,19 @@ def lambda_handler(event, context):
         record = base64.b64decode(raw_data)
         event_hash = record[HASH_KEY_NAME]
 
-        # TODO: mitigate failure case upon creation
-        table_of_seen_items.put_item(Item={HASH_KEY_NAME: event_hash, "seen": 0})
+        # only create item if it does not exist
+        # https://stackoverflow.com/a/55110463/429162
+        try:
+            table_of_seen_items.put_item(
+                Item={
+                    HASH_KEY_NAME: event_hash,
+                    "seen": 0
+                },
+                ConditionExpression=Attr(HASH_KEY_NAME).not_exists()
+            )
+        except dynamodb_resource.meta.client.exceptions.ConditionalCheckFailedException:
+            # if ConditionExpression resolves to false, the query will return a 400 err
+            continue
 
         table_of_seen_items.update_item()
         try:
