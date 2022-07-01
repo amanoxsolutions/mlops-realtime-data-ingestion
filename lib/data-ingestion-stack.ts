@@ -40,6 +40,10 @@ export class RealtimeDataIngestionStack extends Stack {
       codePath: 'resources/lambdas/filter_duplicates',
       memorySize: 256,
       timeout: Duration.seconds(60),
+      environment: {
+        DYNAMODB_SEEN_TABLE_NAME: inputTable.table.tableName,
+        HASH_KEY_NAME: inputTable.table.partitionKey.name,
+      }
     });
 
     const inputStream = new EventbridgeToKinesisFirehoseToS3(this, 'InputStream', {
