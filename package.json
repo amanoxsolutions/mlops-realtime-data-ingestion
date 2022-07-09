@@ -27,6 +27,7 @@
     "aws-cdk-lib": "^2.26.0",
     "cdk-ecr-deployment": "^2.5.1",
     "constructs": "^10.0.0",
+    "murmurhash": "^2.0.1",
     "source-map-support": "^0.5.21"
   }
 }
