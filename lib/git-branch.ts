@@ -1,4 +1,3 @@
-import { resolve } from 'dns';
 import murmurhash = require('murmurhash'); 
  
  const fs = require('fs');

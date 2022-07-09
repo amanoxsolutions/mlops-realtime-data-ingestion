@@ -1,4 +1,15 @@
 # MLOps Realtime Data Ingestion
+An end-to-end realtime machine learning pipeline on AWS including:
+* realtime data ingestion
+* data drift detection using AWS Glue DataBrew
+* data ETL
+* model training & validation
+* model monitoring
+* model deployment
+
+> **Warning**
+> This opensource project is work in progress
+> Do not hesitate to contact us if you want to participate
 ## Architecture
 ![](doc/images/mlops-realtime-data-ingestion.jpg)
 
@@ -14,8 +25,14 @@ The list below is for _Windows_ environment
 ### 1. Fork this Repository
 
 ### 2. Create an AWS Codestar Connection
+Please refer to the AWS document [Create a connection to GitHub](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-github.html)
 
 ### 3. Edit the Data Ingestion Configuration
+In the `bin/data-ingestion.ts` file
+
+```
+
+```
 
 ### 4. Deploy the CI/CD Pipeline
 If you have multiple AWS CLI configuration profiles use the `--profile <your profile name>` to use it for authentication.
