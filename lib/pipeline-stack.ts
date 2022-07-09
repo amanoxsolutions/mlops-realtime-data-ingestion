@@ -16,9 +16,8 @@ export class DataIngestionPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: DataIngestionPipelineStackProps) {
     super(scope, id, props);
 
-    // The code in the current active branch will be the one deployed by the pipeline
-    // The branch name is used to create a Hash for all the resources created by the pipeline
-    // This allows to deploy multiple versions of the same code in parallel the same AWS Account
+    // The code deployed by the pipeline is either the one from the GitBranch passed as a CDK context
+    // If not, it tries to read the current branch name from the .git/HEAD file
     let branchName = this.node.tryGetContext('branchToDeploy');
     if (branchName === undefined) {
       branchName = getCurrentBranchName() || 'unknown';
@@ -53,6 +52,7 @@ export class DataIngestionPipelineStack extends Stack {
           branchName,
           { connectionArn: codestarConnection.arn }
         ),
+        // We pass to the CodeBuild job the branchName as a context parameter
         commands: ['npm ci', 'npm run build', `npx cdk synth --context branchToDeploy=${branchName}`]
       }),
       dockerEnabledForSynth: true,
