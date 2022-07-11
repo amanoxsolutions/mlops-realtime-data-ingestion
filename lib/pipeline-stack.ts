@@ -3,32 +3,24 @@ import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { RealtimeDataIngestionStage } from './pipeline-stage';
 import { CodestarConnection } from './codestar-connection';
-import { getCurrentBranchName, getShortHashFromString } from './git-branch';
+import {  getShortHashFromString } from './git-branch';
 
 
 export interface DataIngestionPipelineStackProps extends StackProps {
   readonly prefix?: string;
   readonly repoName: string;
   readonly codestarConnectionName: string;
+  readonly branchName: string;
 }
 
 export class DataIngestionPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: DataIngestionPipelineStackProps) {
     super(scope, id, props);
 
-    // The code deployed by the pipeline is either the one from the GitBranch passed as a CDK context
-    // If not, it tries to read the current branch name from the .git/HEAD file
-    let branchName = this.node.tryGetContext('branchToDeploy');
-    if (branchName === undefined) {
-      branchName = getCurrentBranchName() || 'unknown';
-      if (branchName === 'unknown') {
-        throw new Error('Could not determine the branch name to deploy from the CDK Stack paramteter nor from the local .git/HEAD file');
-      }
-    }
-    console.log('Current branch name: 👉 ', branchName);
+    
     // Get the first 6 characters of the hash value computed from the Git branch name
     // and use it in the prefix of all the resource names
-    const branchHash = getShortHashFromString(branchName);
+    const branchHash = getShortHashFromString(props.branchName);
     console.log('Hash value computed from the branch name and used for resource names: 👉 ', branchHash);
     let prefix = `mlops-rdi-${branchHash}`;
     if (props.prefix) {
@@ -47,13 +39,14 @@ export class DataIngestionPipelineStack extends Stack {
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: `${prefix}-pipeline`,
       synth: new ShellStep('Synth', {
-        input: CodePipelineSource.connection(
-          props.repoName, 
-          branchName,
-          { connectionArn: codestarConnection.arn }
+        input: CodePipelineSource.connection(props.repoName, props.branchName,
+          { 
+            connectionArn: codestarConnection.arn,
+            codeBuildCloneOutput: true,
+          }
         ),
         // We pass to the CodeBuild job the branchName as a context parameter
-        commands: ['npm ci', 'npm run build', `npx cdk synth --context branchToDeploy=${branchName}`]
+        commands: [`git checkout ${props.branchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth']
       }),
       dockerEnabledForSynth: true,
     });
