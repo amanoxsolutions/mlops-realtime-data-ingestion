@@ -22,7 +22,7 @@ export class DataIngestionPipelineStack extends Stack {
     // and use that in the prefix of all the resource names
     const branchHash = getShortHashFromString(props.branchName);
     console.log('Hash value computed from the branch name and used for resource names: 👉 ', branchHash);
-    let prefix = `mlops-rdi-${branchHash}`;
+    let prefix = `mlops-rdi-${props.branchName.substring(0,4)}${branchHash}`;
     if (props.prefix) {
       prefix = `${props.prefix}-${props.branchName.substring(0,4)}${branchHash}`;
     }
