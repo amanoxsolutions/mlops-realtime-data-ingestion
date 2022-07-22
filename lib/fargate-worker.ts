@@ -141,7 +141,7 @@ export class RDIIngestionWorker extends Construct {
       assignPublicIp: true,
       securityGroups: [ sg ],
       taskDefinition: fargateTask,
-      desiredCount: 1,
+      desiredCount: 0,
       circuitBreaker: { rollback: true },
     });
   }
