@@ -1,14 +1,22 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { DataIngestionPipelineStack, StageType } from '../lib/pipeline-stack';
+import { DataIngestionPipelineStack } from '../lib/pipeline-stack';
+import { getCurrentBranchName } from '../lib/git-branch';
 
 const app = new cdk.App();
+
+// Finds the current branch name from the .git/HEAD file
+const currentBranch = getCurrentBranchName() || 'unknown';
+if (currentBranch === 'unknown') {
+  throw new Error('Could not determine the branch name to deploy from the local .git/HEAD file');
+}
+console.log('Current branch name: 👉 ', currentBranch);
+
 new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
-  prefix: '3mr50x-mlops-rdi',
   repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
-  stage: StageType.DEV,
   codestarConnectionName: 'mlops-realtime-data-ingestion',
+  branchName: currentBranch,
 });
 
 app.synth();
