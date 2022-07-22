@@ -17,14 +17,14 @@ export class DataIngestionPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: DataIngestionPipelineStackProps) {
     super(scope, id, props);
 
-    
-    // Get the first 6 characters of the hash value computed from the Git branch name
-    // and use it in the prefix of all the resource names
+    // Get the fist 4 characters of the Git branch name (e.g. 'main', 'test', 'feat')
+    // add to it the first 6 characters of the hash value computed from the Git branch name
+    // and use that in the prefix of all the resource names
     const branchHash = getShortHashFromString(props.branchName);
     console.log('Hash value computed from the branch name and used for resource names: 👉 ', branchHash);
     let prefix = `mlops-rdi-${branchHash}`;
     if (props.prefix) {
-      prefix = `${props.prefix}-${branchHash}`;
+      prefix = `${props.prefix}-${props.branchName.substring(0,4)}${branchHash}`;
     }
     // Create a unique suffix based on the AWS account number to be used for resources
     // this is used for S3 bucket bucket names for example
