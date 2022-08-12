@@ -2,7 +2,7 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { DataIngestionPipelineStack } from '../lib/pipeline-stack';
-import { getCurrentBranchName } from '../lib/git-branch';
+import { getCurrentBranchName, getShortHashFromString } from '../lib/git-branch';
 
 const app = new cdk.App();
 
@@ -13,7 +13,15 @@ if (currentBranch === 'unknown') {
 }
 console.log('Current branch name: 👉 ', currentBranch);
 
-new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
+// Get the first 6 characters of the hash value computed from the Git branch name
+// and use it in the prefix of all the resource names
+const branchHash = getShortHashFromString(currentBranch);
+console.log('Hash value computed from the branch name and used for resource names: 👉 ', branchHash);
+const prefix = `mlops-rdi-${currentBranch.substring(0,4)}${branchHash}`;
+console.log('Prefix for all resources deployed by this stack: 👉 ', prefix);
+
+new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
+  prefix: prefix,
   repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
   codestarConnectionName: 'mlops-realtime-data-ingestion',
   branchName: currentBranch,
