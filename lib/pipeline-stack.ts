@@ -43,7 +43,7 @@ export class DataIngestionPipelineStack extends Stack {
     });
     pipeline.node.addDependency(codestarConnection);
 
-    pipeline.addStage(new RealtimeDataIngestionStage(this, "Stage", {
+    pipeline.addStage(new RealtimeDataIngestionStage(this, `${props.prefix}-RealtimeDataIngestion`, {
       prefix: props.prefix,
       uniqueSuffix: uniqueSuffix,
     }));
