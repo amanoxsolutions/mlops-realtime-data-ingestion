@@ -33,7 +33,7 @@ async function pushDataOnEventBus(data, detailType) {
     Entries: [
       {
         EventBusName: eventBusName,
-        Detail: 'Ingestion Worker',
+        Detail: data,
         DetailType: detailType,
         Source: 'Fargate Ingestion Worker',
         Resources: [
