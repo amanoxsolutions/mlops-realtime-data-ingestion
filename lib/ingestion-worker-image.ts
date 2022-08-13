@@ -31,7 +31,6 @@ export class RDIIngestionWorkerImage extends Construct {
     });
     const ecrAsset = new DockerImageAsset(this, 'IngestionWorkerImage', {
       directory: path.join(__dirname, '../resources/services/ingestion-worker'),
-      
     });
     const assetDeployment = new ecrdeploy.ECRDeployment(this, 'DeployDockerImage', {
       src: new ecrdeploy.DockerImageName(ecrAsset.imageUri),

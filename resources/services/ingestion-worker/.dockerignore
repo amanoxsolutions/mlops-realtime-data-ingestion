@@ -1,0 +1,14 @@
+# npm artifacts
+node_modules
+npm-debug.log
+# Docker files
+Dockerfile
+# Git files
+.git
+.gitignore
+# Code environment files
+jsconfig.json
+jest.config.js
+.eslintrc.json
+# Test files
+*.test.js
