@@ -8,16 +8,10 @@ const ebClient = new EventBridgeClient({
 // Function to pull data from the public API
 async function ingestData() {
   try {
-    latestblockResponse = await axios.get('https://blockchain.info/latestblock');
-    const block_hash = latestblockResponse.data.hash;
-    // If we have a block hash, then we can get the block data
-    if (block_hash) {
-      rawblockResponse = await axios.get(`https://blockchain.info/rawblock/${block_hash}`);
-      const block_data = rawblockResponse.data;
-      // If we have block data, then we can send it to EventBridge
-      if (block_data) {
-        return block_data;
-      }
+    latestblockResponse = await axios.get('https://blockchain.info/unconfirmed-transactions?format=json');
+    const transactions = latestblockResponse.data.txs;
+    if (transactions) {
+      return transactions;
     }
   } catch (error) {
     console.log(error);
@@ -28,7 +22,6 @@ async function ingestData() {
 // Function to push data on the eventBridge Bus
 async function pushDataOnEventBus(data, detailType) {
   const eventBusName = process.env.EVENT_BUS_NAME || 'default';
-  console.log(`Pushed ${data.tx.length} data points on the eventBus ${eventBusName}`);
   const params = {
     Entries: [
       {
@@ -44,7 +37,7 @@ async function pushDataOnEventBus(data, detailType) {
   }; 
   try {
     ebResponse = await ebClient.send(new PutEventsCommand(params));
-    console.log(`Pushed ${data.tx.length} data points on the eventBus ${eventBusName}`);
+    console.log(`Pushed ${data.length} data points on the eventBus ${eventBusName}`);
   } catch (error) {
     console.log(error);
     throw new Error('Pushing data on the eventBus failed');

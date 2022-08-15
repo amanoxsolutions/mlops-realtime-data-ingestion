@@ -118,7 +118,7 @@ export class RealtimeDataIngestionStack extends Stack {
       eventBusName: eventBusName,
       eventDetailType: eventDetailType,
       kinesisFirehoseArn: inputStream.kinesisFirehose.attrArn,
-      ingestionIntervalMSec: 300000, // 5 minutes
+      ingestionIntervalMSec: 1000, // 1 second
     });
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     
