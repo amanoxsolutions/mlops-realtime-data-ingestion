@@ -50,11 +50,11 @@ async function pushEntryOnEventBus(entry, throwError = false) {
   }; 
   try {
     ebResponse = await ebClient.send(new PutEventsCommand(params));
-    console.log(`-- Pushed data points on the eventBus ${entry.eventBusName}`);
+    console.log(`-- Pushed data points on the eventBus ${entry.EventBusName}`);
   } catch (error) {
     console.log(error);
     if (throwError) {
-      throw new Error('Failed to push data on the eventBus');
+      throw new Error('-- Failed to push data on the eventBus');
     }
   }
 }
