@@ -6,27 +6,29 @@ const ebClient = new EventBridgeClient({
 });
 
 // Function to pull data from the public API
-async function ingestData() {
+async function ingestData(throwError = false) {
   try {
     latestblockResponse = await axios.get('https://blockchain.info/unconfirmed-transactions?format=json');
-    const transactions = latestblockResponse.data.txs;
+    const transactions = latestblockResponse.data;
     if (transactions) {
       return transactions;
     }
   } catch (error) {
     console.log(error);
-    throw new Error('Pulling data from public API failed');
+    if (throwError) {
+      throw new Error('Failed to get data from the public API');
+    }
   }
 }
 
 // Function to push data on the eventBridge Bus
-async function pushDataOnEventBus(data, detailType) {
+async function pushDataOnEventBus(data, detailType, throwError = false) {
   const eventBusName = process.env.EVENT_BUS_NAME || 'default';
   const params = {
     Entries: [
       {
         EventBusName: eventBusName,
-        Detail: data,
+        Detail: JSON.stringify(data),
         DetailType: detailType,
         Source: 'Fargate Ingestion Worker',
         Resources: [
@@ -40,7 +42,9 @@ async function pushDataOnEventBus(data, detailType) {
     console.log(`Pushed ${data.length} data points on the eventBus ${eventBusName}`);
   } catch (error) {
     console.log(error);
-    throw new Error('Pushing data on the eventBus failed');
+    if (throwError) {
+      throw new Error('Failed to push data on the eventBus');
+    }
   }
 }
 
