@@ -1,9 +1,9 @@
 const axios = require('axios');
 const { EventBridgeClient, PutEventsCommand } = require("@aws-sdk/client-eventbridge");
 
-// const ebClient = new EventBridgeClient({
-//   region: process.env.AWS_REGION,
-// });
+const ebClient = new EventBridgeClient({
+  region: process.env.AWS_REGION,
+});
 
 // Function to compute the data size of an eventBridge PutEvents entry
 // refer to https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-putevent-size.html
@@ -49,7 +49,7 @@ async function pushEntryOnEventBus(entry, throwError = false) {
     Entries: [entry],
   }; 
   try {
-    // ebResponse = await ebClient.send(new PutEventsCommand(params));
+    ebResponse = await ebClient.send(new PutEventsCommand(params));
     console.log(`-- Pushed data points on the eventBus ${entry.eventBusName}`);
   } catch (error) {
     console.log(error);
