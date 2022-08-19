@@ -44,10 +44,13 @@ async function ingestData(throwError = false) {
   }
 }
 
-async function pushEntriesOnEventBus(eventParams, throwError = false) {
+async function pushEntryOnEventBus(entry, throwError = false) {
+  let params = {
+    Entries: [entry],
+  }; 
   try {
-    ebResponse = await ebClient.send(new PutEventsCommand(eventParams));
-    console.log(`-- Pushed data points on the eventBus ${eventParams.Entries[0].EventBusName}`);
+    ebResponse = await ebClient.send(new PutEventsCommand(params));
+    console.log(`-- Pushed data points on the eventBus ${entry.EventBusName}`);
   } catch (error) {
     console.log(error);
     if (throwError) {
@@ -61,9 +64,6 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
   const eventBusName = process.env.EVENT_BUS_NAME || 'default';
   // create a parameter object with an empty list of entries
   
-  let eventParams = {
-    Entries: [],
-  }; 
   // Try first to create an entry with all the data
   let entry = {
     EventBusName: eventBusName,
@@ -113,7 +113,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
         // paramaters entries
         entry.Detail = JSON.stringify({txs: entryTransactions});
         console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
-        eventParams.Entries.push(Object.assign({}, entry))
+        pushEntryOnEventBus(Object.assign({}, entry), throwError);
         // we reset the list of entry transactions to the current transaction
         entryTransactions = [data.txs[i]];
         nbTransactions = 1;
@@ -128,15 +128,13 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     if (entryTransactions.length > 0 && currentEntrySize <= 256000) {
       entry.Detail = JSON.stringify({txs: entryTransactions});
       console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
-      eventParams.Entries.push(Object.assign({}, entry))
+      pushEntryOnEventBus(Object.assign({}, entry), throwError);
     } else {
       console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${tempEntrySize} bytes superior to the limit of 256KB`);
     }
   } else {
-    eventParams.Entries.push(entry)
+    pushEntryOnEventBus(entry, throwError);
   }
-  pushEntriesOnEventBus(eventParams, throwError);
-  //console.log(eventParams);
 }
 
 module.exports = { ingestData , pushDataOnEventBus };
