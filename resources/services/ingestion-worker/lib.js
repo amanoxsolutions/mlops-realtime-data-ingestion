@@ -88,7 +88,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     let nbTransactions = 0;
     for (let i = 0; i < totalTransactions; i++) {
       // get the size of the current entry
-      entry.Detail = JSON.stringify({txs: tempTransactions});
+      entry.Detail = JSON.stringify({txs: entryTransactions});
       currentEntrySize = getEntrySize(entry);
       // create a temporary transaction list equal to the current entry transactions
       let tempTransactions = [...entryTransactions];
