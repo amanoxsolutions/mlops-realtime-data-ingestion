@@ -86,6 +86,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     let entryTransactions = [];
     let numberOfEntries = 1;
     let nbTransactions = 0;
+    let currentEntrySize = 0;
     for (let i = 0; i < totalTransactions; i++) {
       // get the size of the current entry
       entry.Detail = JSON.stringify({txs: entryTransactions});
@@ -112,7 +113,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
         // paramaters entries
         entry.Detail = JSON.stringify({txs: entryTransactions});
         console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
-        eventParams.Entries.push(entry)
+        eventParams.Entries.push(Object.assign({}, entry))
         // we reset the list of entry transactions to the current transaction
         entryTransactions = [data.txs[i]];
         nbTransactions = 1;
@@ -123,16 +124,19 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
       }
     }
     // if there are still transactions in the entry transactions list we need to 
-    // add it to the entry and push it on the event bus
-    if (entryTransactions.length > 0) {
+    // add it to the entry and push it on the event bus if its size is inferior to 256KB
+    if (entryTransactions.length > 0 && currentEntrySize <= 256000) {
       entry.Detail = JSON.stringify({txs: entryTransactions});
       console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
-      eventParams.Entries.push(entry)
+      eventParams.Entries.push(Object.assign({}, entry))
+    } else {
+      console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${tempEntrySize} bytes superior to the limit of 256KB`);
     }
   } else {
     eventParams.Entries.push(entry)
   }
   pushEntriesOnEventBus(eventParams, throwError);
+  //console.log(eventParams);
 }
 
 module.exports = { ingestData , pushDataOnEventBus };
