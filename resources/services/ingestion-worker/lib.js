@@ -87,6 +87,9 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     let numberOfEntries = 1;
     let nbTransactions = 0;
     for (let i = 0; i < totalTransactions; i++) {
+      // get the size of the current entry
+      entry.Detail = JSON.stringify({txs: tempTransactions});
+      currentEntrySize = getEntrySize(entry);
       // create a temporary transaction list equal to the current entry transactions
       let tempTransactions = [...entryTransactions];
       // add the transaction to the temporary transaction list
@@ -94,15 +97,23 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
       entry.Detail = JSON.stringify({txs: tempTransactions});
       // get the size of the temporary transaction list
       const tempEntrySize = getEntrySize(entry);
-      // if the size of the temporary transaction list is greater than 256KB
-      // we keep the entry transactions list as is and add it to the list of 
-      // paramaters entries
-      if (tempEntrySize > 256000) {
+      //if there is only one transaction in the entry and it is superior to the 256KB limit
+      // discard that event for the time being
+      if (currentEntrySize > 256000 && entryTransactions.length == 1) {
+        //if there is only one transaction in the entry and it is superior to the 256KB limit
+        // discard that entry for the time being
+        console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${tempEntrySize} bytes superior to the limit of 256KB`);
+        entryTransactions = [data.txs[i]]; // we discard the existing transaction in the list
+        nbTransactions = 1;
+        numberOfEntries += 1;
+      } else if (tempEntrySize > 256000) {
+        // if the size of the temporary transaction list is greater than 256KB
+        // we keep the entry transactions list as is and add it to the list of 
+        // paramaters entries
         entry.Detail = JSON.stringify({txs: entryTransactions});
         console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
         eventParams.Entries.push(entry)
-        // if it was the last transaction in the entry we need to create a separate entry for it
-        // otherwise we reset the list of entry transactions to the current transaction
+        // we reset the list of entry transactions to the current transaction
         entryTransactions = [data.txs[i]];
         nbTransactions = 1;
         numberOfEntries += 1;
