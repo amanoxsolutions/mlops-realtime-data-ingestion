@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { RemovalPolicy } from 'aws-cdk-lib';
+import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { Role, PolicyStatement, Effect, ServicePrincipal, Policy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, ILogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Vpc, IVpc, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
@@ -11,7 +11,6 @@ import {
   IFargateTaskDefinition,
   CpuArchitecture,
   OperatingSystemFamily,
-  Protocol,
   LogDrivers,
   FargateService,
   IFargateService,
@@ -21,11 +20,15 @@ import { IRepository } from 'aws-cdk-lib/aws-ecr';
 interface RDIIngestionWorkerProps {
   readonly prefix: string;
   readonly removalPolicy: RemovalPolicy;
+  readonly ecrRepo: IRepository;
   readonly workerCpu?: number;
   readonly workerMemoryMiB?: number;
   readonly vpcCider?: string;
   readonly eventBusArn: string;
-  readonly ecrRepo: IRepository;
+  readonly eventBusName: string;
+  readonly eventDetailType: string;
+  readonly kinesisFirehoseArn: string;
+  readonly ingestionIntervalMSec?: number;
 }
 
 export class RDIIngestionWorker extends Construct {
@@ -35,11 +38,13 @@ export class RDIIngestionWorker extends Construct {
   public readonly fargateTask: IFargateTaskDefinition;
   public readonly fargateService: IFargateService;
   public readonly fargateLogGroup: ILogGroup;
+  public readonly ingestionIntervalMSec: number;
 
   constructor(scope: Construct, id: string, props: RDIIngestionWorkerProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
+    this.ingestionIntervalMSec = props.ingestionIntervalMSec || 1000;
 
     //
     // VPC
@@ -116,18 +121,20 @@ export class RDIIngestionWorker extends Construct {
     const workerContainer = fargateTask.addContainer('FargateContainer', {
       containerName: `${this.prefix}-ingestion-worker`,
       image: ContainerImage.fromEcrRepository(props.ecrRepo, 'latest'),
-      portMappings: [{
-        containerPort: 3000,
-        protocol: Protocol.TCP
-      }],
+      environment: {
+        'EVENT_BUS_NAME': props.eventBusName,
+        'EVENT_DETAIL_TYPE': props.eventDetailType,
+        'KINESIS_FIREHOSE_ARN': props.kinesisFirehoseArn,
+        'INGESTION_INTERVAL': this.ingestionIntervalMSec.toString(),
+      },
       essential: true,
-      // healthCheck: {
-      //   command: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"],
-      //   interval: Duration.seconds(30),
-      //   retries: 3,
-      //   startPeriod: Duration.seconds(30),
-      //   timeout: Duration.seconds(5),
-      // },
+      healthCheck: {
+        command: ['CMD-SHELL', 'node healthcheck.js || exit 1'],
+        interval: Duration.seconds(30),
+        retries: 3,
+        startPeriod: Duration.seconds(30),
+        timeout: Duration.seconds(5),
+      },
       logging: LogDrivers.awsLogs({ 
         logGroup: this.fargateLogGroup,
         streamPrefix: `${props.prefix}-ingestion-worker-`,

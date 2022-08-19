@@ -32,7 +32,7 @@ export function getCurrentBranchName(p = process.cwd()): string | undefined {
     return branchName;
 };
 
-export function getShortHashFromString(branchName: string, hashLength: number = 6): string {
-  // Use murmur hash to generate a hash from the Git branch name and extract the first characters as a string
-  return murmurhash.v3(branchName).toString(16).substring(0, hashLength);
+export function getShortHashFromString(strToConvert: string, hashLength: number = 6): string {
+  // Use murmur hash to generate a hash from the string and extract the first characters as a string
+  return murmurhash.v3(strToConvert).toString(16).substring(0, hashLength);
 }

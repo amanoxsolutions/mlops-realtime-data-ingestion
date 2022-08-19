@@ -6,6 +6,7 @@ import { RDIIngestionWorkerImage } from './ingestion-worker-image';
 import { RDILambda } from './lambda';
 import { EventbridgeToKinesisFirehoseToS3 } from '@aws-solutions-constructs/aws-eventbridge-kinesisfirehose-s3';
 import { EventBus } from 'aws-cdk-lib/aws-events';
+import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
 
 export interface RealtimeDataIngestionStackProps extends StackProps {
@@ -45,19 +46,20 @@ export class RealtimeDataIngestionStack extends Stack {
       timeout: Duration.seconds(60),
     });
 
+    const eventDetailType = 'Incoming Data';
     const inputStream = new EventbridgeToKinesisFirehoseToS3(this, 'InputStream', {
       eventBusProps: { eventBusName: `${this.prefix}-ingestion-bus` },
       eventRuleProps: { 
         ruleName: `${this.prefix}-ingestion-rule`,
         eventPattern: {
-          detailType: ["Incoming Data"],
+          detailType: [eventDetailType],
         },
       },
       kinesisFirehoseProps: { 
         deliveryStreamName : `${this.prefix}-kf-stream`,
         extendedS3DestinationConfiguration: {
           processingConfiguration: {
-            enabled: true,
+            enabled: false,
             processors: [{
               type: 'Lambda',
               parameters: [
@@ -75,19 +77,35 @@ export class RealtimeDataIngestionStack extends Stack {
         autoDeleteObjects: true,
         removalPolicy: this.removalPolicy,
       },
-      loggingBucketProps: { 
-        bucketName: `${this.prefix}-logging-bucket-${this.s3Suffix}`,
-        autoDeleteObjects: true,
-        removalPolicy: this.removalPolicy,
-      },
+      logS3AccessLogs: false,
     });
 
+    // Edit Kinesis Firehose Stream Role to allow invocation of Lambda
+    const kinesisFirehoseStreamRole = inputStream.kinesisFirehoseRole;
+    kinesisFirehoseStreamRole.attachInlinePolicy(new Policy(this, 'InvokeDataProcessingLambda', {
+      policyName: `${this.prefix}-invoke-data-processing-lambda-policy`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['lambda:InvokeFunction'],
+            resources: [lambda.function.functionArn],
+          }),
+        ],
+      })
+    }));
+
+    // Retrieve the eventBus data stream from the eventbridgeToKinesisFirehoseToS3 stack
+    // If no custom eventBus was specified, the construct uses the default eventBus so we
+    // set these values as default and get the inputStream custom eventBus if it was specified
     let eventBusArn = EventBus.fromEventBusName(this, 'DefaultBus', 'default').eventBusArn;
+    let eventBusName = 'default';
     if (inputStream.eventBus) {
       eventBusArn = inputStream.eventBus.eventBusArn;
+      eventBusName = inputStream.eventBus.eventBusName;
     } 
 
-    const ingestionWorkerImage = new RDIIngestionWorkerImage(this, 'WorkerImgae', {
+    const ingestionWorkerImage = new RDIIngestionWorkerImage(this, 'WorkerImage', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
     });
@@ -95,8 +113,12 @@ export class RealtimeDataIngestionStack extends Stack {
     const ingestionWorker = new RDIIngestionWorker(this, 'Worker', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
-      eventBusArn: eventBusArn,
       ecrRepo: ingestionWorkerImage.ecrRepo,
+      eventBusArn: eventBusArn,
+      eventBusName: eventBusName,
+      eventDetailType: eventDetailType,
+      kinesisFirehoseArn: inputStream.kinesisFirehose.attrArn,
+      ingestionIntervalMSec: 1000, // 1 second
     });
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     
