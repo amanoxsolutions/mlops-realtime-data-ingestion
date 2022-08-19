@@ -59,7 +59,7 @@ export class RealtimeDataIngestionStack extends Stack {
         deliveryStreamName : `${this.prefix}-kf-stream`,
         extendedS3DestinationConfiguration: {
           processingConfiguration: {
-            enabled: true,
+            enabled: false,
             processors: [{
               type: 'Lambda',
               parameters: [
