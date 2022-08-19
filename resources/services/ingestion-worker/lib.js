@@ -44,13 +44,10 @@ async function ingestData(throwError = false) {
   }
 }
 
-async function pushEntryOnEventBus(entry, throwError = false) {
-  const params = {
-    Entries: [entry],
-  }; 
+async function pushEntriesOnEventBus(eventParams, throwError = false) {
   try {
-    ebResponse = await ebClient.send(new PutEventsCommand(params));
-    console.log(`-- Pushed data points on the eventBus ${entry.EventBusName}`);
+    ebResponse = await ebClient.send(new PutEventsCommand(eventParams));
+    console.log(`-- Pushed data points on the eventBus ${eventParams.Entries[0].EventBusName}`);
   } catch (error) {
     console.log(error);
     if (throwError) {
@@ -64,6 +61,9 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
   const eventBusName = process.env.EVENT_BUS_NAME || 'default';
   // create a parameter object with an empty list of entries
   
+  let eventParams = {
+    Entries: [],
+  }; 
   // Try first to create an entry with all the data
   let entry = {
     EventBusName: eventBusName,
@@ -100,7 +100,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
       if (tempEntrySize > 256000) {
         entry.Detail = JSON.stringify({txs: entryTransactions});
         console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
-        pushEntryOnEventBus(entry, throwError);
+        eventParams.Entries.push(entry)
         // if it was the last transaction in the entry we need to create a separate entry for it
         // otherwise we reset the list of entry transactions to the current transaction
         entryTransactions = [data.txs[i]];
@@ -116,11 +116,12 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     if (entryTransactions.length > 0) {
       entry.Detail = JSON.stringify({txs: entryTransactions});
       console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
-      pushEntryOnEventBus(entry, throwError);
+      eventParams.Entries.push(entry)
     }
   } else {
-    pushEntryOnEventBus(entry, throwError);
+    eventParams.Entries.push(entry)
   }
+  pushEntriesOnEventBus(eventParams, throwError);
 }
 
 module.exports = { ingestData , pushDataOnEventBus };
