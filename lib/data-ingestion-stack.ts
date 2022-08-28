@@ -39,10 +39,10 @@ export class RealtimeDataIngestionStack extends Stack {
     });
 
     // Create the Lambda function used by Kinesis Firehose to pre-process the data
-    const lambda = new RDILambda(this, 'filterDuplicatesLambda', {
+    const lambda = new RDILambda(this, 'streamProcessingLambda', {
       prefix: this.prefix,
-      name: 'filter-duplicates',
-      codePath: 'resources/lambdas/filter_duplicates',
+      name: 'stream-processing',
+      codePath: 'resources/lambdas/stream_processing',
       memorySize: 256,
       timeout: Duration.seconds(60),
       environment: {

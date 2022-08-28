@@ -12,8 +12,7 @@ An end-to-end realtime machine learning pipeline on AWS including:
 > Do not hesitate to contact us if you want to participate
 ## ToDo
 The current focus is to finalize the real time data ingestion pipeline
-* Finalize the data injestion container (work in progress)
-* Finalize the Lambda Function filtering the duplicate data points (work in progress)
+* Finalize the Lambda Function pre-processing the Kinesis Firehose stream data (work in progress)
 * Stream directly into AWS Sagemaker Feature Store
 * Configure AWS Glue DataBrew to detect data drift and emit CloudWatch alarms
 ## Architecture
