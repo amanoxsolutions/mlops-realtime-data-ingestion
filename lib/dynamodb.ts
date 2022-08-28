@@ -10,15 +10,17 @@ export interface RDIDynamodbTableProps {
 export class RDIDynamodbTable extends Construct {
     public readonly prefix: string;
     public readonly table: ITable;
+    public readonly partitionKey: string;
   
     constructor(scope: Construct, id: string, props: RDIDynamodbTableProps) {
       super(scope, id);
   
       this.prefix = props.prefix;
+      this.partitionKey = 'hash';
   
       this.table = new Table(this, 'table', {
         tableName: `${this.prefix}-input-hash`,
-        partitionKey: { name: 'hash', type: AttributeType.STRING },
+        partitionKey: { name: this.partitionKey, type: AttributeType.STRING },
         removalPolicy: props.removalPolicy,
       });
     }

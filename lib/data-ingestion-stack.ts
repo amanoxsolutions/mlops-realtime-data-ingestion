@@ -46,7 +46,7 @@ export class RealtimeDataIngestionStack extends Stack {
       timeout: Duration.seconds(60),
       environment: {
         DYNAMODB_SEEN_TABLE_NAME: inputTable.table.tableName,
-        HASH_KEY_NAME: inputTable.table.partitionKey.name,
+        HASH_KEY_NAME: inputTable.partitionKey,
       }
     });
 
