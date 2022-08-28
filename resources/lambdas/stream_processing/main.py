@@ -24,7 +24,7 @@ dynamodb_resource = boto3.resource("dynamodb")
 table_of_seen_items = dynamodb_resource.Table(DYNAMODB_SEEN_TABLE_NAME)
 """ :type: pyboto3.dynamodb.resources.Table """
 
-@logger.inject_lambda_context(log_event=True)
+# @logger.inject_lambda_context(log_event=True)
 @tracer.capture_lambda_handler
 def lambda_handler(event, context):
     result = []
