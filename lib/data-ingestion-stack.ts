@@ -76,6 +76,7 @@ export class RealtimeDataIngestionStack extends Stack {
         bucketName: `${this.prefix}-input-bucket-${this.s3Suffix}`,
         autoDeleteObjects: true,
         removalPolicy: this.removalPolicy,
+        versioned: false,
       },
       logS3AccessLogs: false,
     });
