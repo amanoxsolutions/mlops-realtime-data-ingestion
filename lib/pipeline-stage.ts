@@ -4,6 +4,7 @@ import { RealtimeDataIngestionStack } from './data-ingestion-stack';
 
 export interface RealtimeDataIngestionStageProps extends StageProps {
   readonly prefix: string;
+  readonly uniqueSuffix: string;
 }
 
 export class RealtimeDataIngestionStage extends Stage {
@@ -11,8 +12,9 @@ export class RealtimeDataIngestionStage extends Stage {
     constructor(scope: Construct, id: string, props: RealtimeDataIngestionStageProps) {
       super(scope, id, props);
   
-      const realtimeDataIngestionStack = new RealtimeDataIngestionStack(this, 'RealtimeDataIngestionStack', {
+      const realtimeDataIngestionStack = new RealtimeDataIngestionStack(this, "Stack", {
         prefix: props.prefix,
+        s3Suffix: props.uniqueSuffix,
       });      
     }
 }
