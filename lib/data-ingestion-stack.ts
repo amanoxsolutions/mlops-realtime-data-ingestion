@@ -38,6 +38,7 @@ export class RealtimeDataIngestionStack extends Stack {
       removalPolicy: this.removalPolicy,
     });
 
+    // Create the Lambda function used by Kinesis Firehose to pre-process the data
     const lambda = new RDILambda(this, 'filterDuplicatesLambda', {
       prefix: this.prefix,
       name: 'filter-duplicates',
@@ -47,9 +48,20 @@ export class RealtimeDataIngestionStack extends Stack {
       environment: {
         DYNAMODB_SEEN_TABLE_NAME: inputTable.table.tableName,
         HASH_KEY_NAME: inputTable.partitionKey,
+        TTL_ATTRIBUTE_NAME: inputTable.timeToLiveAttribute,
+        DDB_ITEM_TTL_HOURS: '3',
       }
     });
 
+    // Add the PutItem permissions on the DynamoDB table to the Lambda function's policy
+    const lambdaPolicyStatement = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ['dynamodb:PutItem', 'dynamodb:UpdateItem'],
+      resources: [inputTable.table.tableArn],
+    });
+    lambda.function.addToRolePolicy(lambdaPolicyStatement);
+
+    // Create the EventBridge to Kinesis Firehose to S3 construct
     const eventDetailType = 'Incoming Data';
     const inputStream = new EventbridgeToKinesisFirehoseToS3(this, 'InputStream', {
       eventBusProps: { eventBusName: `${this.prefix}-ingestion-bus` },
