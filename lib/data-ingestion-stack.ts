@@ -12,6 +12,7 @@ import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws
 export interface RealtimeDataIngestionStackProps extends StackProps {
   readonly prefix: string;
   readonly s3Suffix: string;
+  readonly s3Versioning?: boolean;
   readonly removalPolicy?: RemovalPolicy;
   readonly kinesisBufferInterval?: Duration;
   readonly kinesisBufferSize?: Size;
@@ -20,6 +21,7 @@ export interface RealtimeDataIngestionStackProps extends StackProps {
 export class RealtimeDataIngestionStack extends Stack {
   public readonly prefix: string;
   public readonly s3Suffix: string;
+  public readonly s3Versioning: boolean;
   public readonly removalPolicy: RemovalPolicy;
   public readonly kinesisBufferInterval: Duration;
   public readonly kinesisBufferSize : Size;
@@ -29,6 +31,7 @@ export class RealtimeDataIngestionStack extends Stack {
 
     this.prefix = props.prefix;
     this.s3Suffix = props.s3Suffix;
+    this.s3Versioning = props.s3Versioning || false;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.kinesisBufferInterval = props.kinesisBufferInterval || Duration.seconds(60);
     this.kinesisBufferSize = props.kinesisBufferSize || Size.mebibytes(1);
@@ -76,7 +79,7 @@ export class RealtimeDataIngestionStack extends Stack {
         bucketName: `${this.prefix}-input-bucket-${this.s3Suffix}`,
         autoDeleteObjects: true,
         removalPolicy: this.removalPolicy,
-        versioned: false,
+        versioned: this.s3Versioning,
       },
       logS3AccessLogs: false,
     });
