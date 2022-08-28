@@ -92,8 +92,8 @@ export class RealtimeDataIngestionStack extends Stack {
         statements: [
           new PolicyStatement({
             effect: Effect.ALLOW,
-            actions: ['lambda:InvokeFunction'],
-            resources: [lambda.function.functionArn],
+            actions: ['lambda:InvokeFunction', 'lambda:GetFunctionConfiguration'],
+            resources: [`${lambda.function.functionArn}*`],
           }),
         ],
       })
