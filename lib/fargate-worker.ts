@@ -111,14 +111,14 @@ export class RDIIngestionWorker extends Construct {
       memoryLimitMiB: props.workerMemoryMiB || 512,
       cpu: props.workerCpu || 256,
       runtimePlatform: {
-        cpuArchitecture: CpuArchitecture.X86_64,
+        cpuArchitecture: CpuArchitecture.ARM64,
         operatingSystemFamily: OperatingSystemFamily.LINUX,
       },
       taskRole: taskRole
     });
     this.fargateTask = fargateTask;
 
-    const workerContainer = fargateTask.addContainer('FargateContainer', {
+    fargateTask.addContainer('FargateContainer', {
       containerName: `${this.prefix}-ingestion-worker`,
       image: ContainerImage.fromEcrRepository(props.ecrRepo, 'latest'),
       environment: {

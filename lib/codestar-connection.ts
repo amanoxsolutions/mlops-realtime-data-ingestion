@@ -1,6 +1,6 @@
 import { Construct, } from 'constructs';
 import { Duration, CustomResource } from 'aws-cdk-lib';
-import { Effect, PolicyStatement, Policy } from 'aws-cdk-lib/aws-iam';
+import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
