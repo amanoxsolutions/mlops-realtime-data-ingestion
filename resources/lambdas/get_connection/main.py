@@ -3,7 +3,8 @@ import boto3
 import logging
 import lib.cfnresponse as cfnresponse
 
-logger = logging.Logger("get-codestar-connection")
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 csc = boto3.client("codestar-connections")
 
 CONNECTION_NAME = os.environ["CONNECTION_NAME"]
