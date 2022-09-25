@@ -1,8 +1,9 @@
-import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
+import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { RealtimeDataIngestionStage } from './pipeline-stage';
 import { CodestarConnection } from './codestar-connection';
+import { LinuxArmBuildImage } from 'aws-cdk-lib/aws-codebuild';
 import { getShortHashFromString } from './git-branch';
 
 
@@ -40,6 +41,11 @@ export class DataIngestionPipelineStack extends Stack {
         commands: [`git checkout ${props.branchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth']
       }),
       dockerEnabledForSynth: true,
+      synthCodeBuildDefaults: {
+        buildEnvironment: {
+          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_2_0
+        }
+      },
     });
     pipeline.node.addDependency(codestarConnection);
 

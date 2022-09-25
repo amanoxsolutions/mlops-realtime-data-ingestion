@@ -12,7 +12,7 @@ export class RealtimeDataIngestionStage extends Stage {
     constructor(scope: Construct, id: string, props: RealtimeDataIngestionStageProps) {
       super(scope, id, props);
   
-      const realtimeDataIngestionStack = new RealtimeDataIngestionStack(this, "Stack", {
+      new RealtimeDataIngestionStack(this, "Stack", {
         prefix: props.prefix,
         s3Suffix: props.uniqueSuffix,
       });      
