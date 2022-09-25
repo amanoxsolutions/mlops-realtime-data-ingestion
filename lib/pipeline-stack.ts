@@ -48,7 +48,7 @@ export class DataIngestionPipelineStack extends Stack {
         partialBuildSpec: BuildSpec.fromObject({
           phases: {
             install: {
-              commands: ["nvm install --lts"]
+              commands: ["n 16.17.1"]
             }
           }
         }),
