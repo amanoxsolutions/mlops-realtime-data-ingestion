@@ -49,7 +49,7 @@ def lambda_handler(event, context):
                 )
             except dynamodb_resource.meta.client.exceptions.ConditionalCheckFailedException:
                 # if ConditionExpression resolves to false, the query will return a 400 err
-                continue # TODO is this continue or pass ?
+                continue
 
             try:
                 # using write condition idempotence
