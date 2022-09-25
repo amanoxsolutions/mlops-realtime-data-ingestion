@@ -2,7 +2,7 @@
 # https://snyk.io/blog/10-best-practices-to-containerize-nodejs-web-applications-with-docker/
 
 # --------------> The build image
-FROM public.ecr.aws/docker/library/node:18.7.0 AS build
+FROM public.ecr.aws/docker/library/node:18.9.0 AS build
 # Install dumb-init (5. Properly handle events to safely terminate a Node.js Docker web application)
 RUN apt-get -y update
 # Set env variable to production
@@ -16,7 +16,7 @@ RUN npm ci --only=production
 
 # --------------> The production image
 
-FROM public.ecr.aws/docker/library/node:18.7.0-alpine
+FROM public.ecr.aws/docker/library/node:18.9.0-alpine
 # Install dumb-init
 RUN apk add --update dumb-init curl
 # Set env variable to production
