@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "filter_duplicates"
+name = "stream_processing"
 version = "0.1.0"
 description = ""
 authors = ["Matthieu Lienart <matthieu.lienart@amanox.ch>"]

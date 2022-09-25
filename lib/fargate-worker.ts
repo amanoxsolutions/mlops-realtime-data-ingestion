@@ -1,9 +1,8 @@
-import * as path from 'path';
 import { Construct } from 'constructs';
 import { RemovalPolicy, Duration } from 'aws-cdk-lib';
-import { Role, PolicyStatement, Effect, AnyPrincipal, ServicePrincipal, Policy, PolicyDocument, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
+import { Role, PolicyStatement, Effect, ServicePrincipal, Policy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, ILogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { Vpc, IVpc, SubnetType, SecurityGroup, InterfaceVpcEndpointAwsService, Port, Peer } from 'aws-cdk-lib/aws-ec2';
+import { Vpc, IVpc, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
 import { 
   Cluster, 
   ICluster, 
@@ -12,24 +11,24 @@ import {
   IFargateTaskDefinition,
   CpuArchitecture,
   OperatingSystemFamily,
-  Protocol,
   LogDrivers,
   FargateService,
   IFargateService,
  } from 'aws-cdk-lib/aws-ecs';
-import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns';
-import { Repository, TagMutability, IRepository } from 'aws-cdk-lib/aws-ecr';
-import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
-import * as ecrdeploy from 'cdk-ecr-deployment';
+import { IRepository } from 'aws-cdk-lib/aws-ecr';
 
 interface RDIIngestionWorkerProps {
   readonly prefix: string;
   readonly removalPolicy: RemovalPolicy;
+  readonly ecrRepo: IRepository;
   readonly workerCpu?: number;
   readonly workerMemoryMiB?: number;
   readonly vpcCider?: string;
   readonly eventBusArn: string;
-  readonly ecrRepo: IRepository;
+  readonly eventBusName: string;
+  readonly eventDetailType: string;
+  readonly kinesisFirehoseArn: string;
+  readonly ingestionIntervalMSec?: number;
 }
 
 export class RDIIngestionWorker extends Construct {
@@ -39,11 +38,13 @@ export class RDIIngestionWorker extends Construct {
   public readonly fargateTask: IFargateTaskDefinition;
   public readonly fargateService: IFargateService;
   public readonly fargateLogGroup: ILogGroup;
+  public readonly ingestionIntervalMSec: number;
 
   constructor(scope: Construct, id: string, props: RDIIngestionWorkerProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
+    this.ingestionIntervalMSec = props.ingestionIntervalMSec || 1000;
 
     //
     // VPC
@@ -85,6 +86,7 @@ export class RDIIngestionWorker extends Construct {
     this.fargateLogGroup = new LogGroup(this, 'LogGroup', {
       logGroupName: `${props.prefix}-ingestion-worker`,
       retention: RetentionDays.ONE_MONTH,
+      removalPolicy: RemovalPolicy.DESTROY,
     });
 
     // Setup the Fargate Task on ECS
@@ -109,29 +111,30 @@ export class RDIIngestionWorker extends Construct {
       memoryLimitMiB: props.workerMemoryMiB || 512,
       cpu: props.workerCpu || 256,
       runtimePlatform: {
-        cpuArchitecture: CpuArchitecture.X86_64,
+        cpuArchitecture: CpuArchitecture.ARM64,
         operatingSystemFamily: OperatingSystemFamily.LINUX,
       },
       taskRole: taskRole
     });
     this.fargateTask = fargateTask;
 
-    const workerContainer = fargateTask.addContainer('FargateContainer', {
+    fargateTask.addContainer('FargateContainer', {
       containerName: `${this.prefix}-ingestion-worker`,
       image: ContainerImage.fromEcrRepository(props.ecrRepo, 'latest'),
-      //image: ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
-      portMappings: [{
-        containerPort: 3000,
-        protocol: Protocol.TCP
-      }],
+      environment: {
+        'EVENT_BUS_NAME': props.eventBusName,
+        'EVENT_DETAIL_TYPE': props.eventDetailType,
+        'KINESIS_FIREHOSE_ARN': props.kinesisFirehoseArn,
+        'INGESTION_INTERVAL': this.ingestionIntervalMSec.toString(),
+      },
       essential: true,
-      // healthCheck: {
-      //   command: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"],
-      //   interval: Duration.seconds(30),
-      //   retries: 3,
-      //   startPeriod: Duration.seconds(30),
-      //   timeout: Duration.seconds(5),
-      // },
+      healthCheck: {
+        command: ['CMD-SHELL', 'node healthcheck.js || exit 1'],
+        interval: Duration.seconds(30),
+        retries: 3,
+        startPeriod: Duration.seconds(30),
+        timeout: Duration.seconds(5),
+      },
       logging: LogDrivers.awsLogs({ 
         logGroup: this.fargateLogGroup,
         streamPrefix: `${props.prefix}-ingestion-worker-`,
@@ -145,7 +148,7 @@ export class RDIIngestionWorker extends Construct {
       assignPublicIp: true,
       securityGroups: [ sg ],
       taskDefinition: fargateTask,
-      desiredCount: 1,
+      desiredCount: 0,
       circuitBreaker: { rollback: true },
     });
   }

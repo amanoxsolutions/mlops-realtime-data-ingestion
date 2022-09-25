@@ -3,7 +3,7 @@
 .idea
 
 # CDK
-*.js
+lib/**/*.js
 !jest.config.js
 *.d.ts
 node_modules
