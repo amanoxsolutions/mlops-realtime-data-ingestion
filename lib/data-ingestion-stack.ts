@@ -41,14 +41,30 @@ export class RealtimeDataIngestionStack extends Stack {
       removalPolicy: this.removalPolicy,
     });
 
-    const lambda = new RDILambda(this, 'filterDuplicatesLambda', {
+    // Create the Lambda function used by Kinesis Firehose to pre-process the data
+    const lambda = new RDILambda(this, 'streamProcessingLambda', {
       prefix: this.prefix,
-      name: 'filter-duplicates',
-      codePath: 'resources/lambdas/filter_duplicates',
+      name: 'stream-processing',
+      codePath: 'resources/lambdas/stream_processing',
       memorySize: 256,
       timeout: Duration.seconds(60),
+      environment: {
+        DYNAMODB_SEEN_TABLE_NAME: inputTable.table.tableName,
+        HASH_KEY_NAME: inputTable.partitionKey,
+        TTL_ATTRIBUTE_NAME: inputTable.timeToLiveAttribute,
+        DDB_ITEM_TTL_HOURS: '3',
+      }
     });
 
+    // Add the PutItem permissions on the DynamoDB table to the Lambda function's policy
+    const lambdaPolicyStatement = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ['dynamodb:PutItem', 'dynamodb:UpdateItem'],
+      resources: [inputTable.table.tableArn],
+    });
+    lambda.function.addToRolePolicy(lambdaPolicyStatement);
+
+    // Create the EventBridge to Kinesis Firehose to S3 construct
     const eventDetailType = 'Incoming Data';
     const inputStream = new EventbridgeToKinesisFirehoseToS3(this, 'InputStream', {
       eventBusProps: { eventBusName: `${this.prefix}-ingestion-bus` },
@@ -62,7 +78,7 @@ export class RealtimeDataIngestionStack extends Stack {
         deliveryStreamName : `${this.prefix}-kf-stream`,
         extendedS3DestinationConfiguration: {
           processingConfiguration: {
-            enabled: false,
+            enabled: true,
             processors: [{
               type: 'Lambda',
               parameters: [
@@ -92,8 +108,8 @@ export class RealtimeDataIngestionStack extends Stack {
         statements: [
           new PolicyStatement({
             effect: Effect.ALLOW,
-            actions: ['lambda:InvokeFunction'],
-            resources: [lambda.function.functionArn],
+            actions: ['lambda:InvokeFunction', 'lambda:GetFunctionConfiguration'],
+            resources: [`${lambda.function.functionArn}*`],
           }),
         ],
       })
