@@ -1,9 +1,51 @@
 import * as path from 'path';
 import { Construct } from 'constructs';
-import { RemovalPolicy } from 'aws-cdk-lib';
+import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
+import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Repository, TagMutability, IRepository } from 'aws-cdk-lib/aws-ecr';
-import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
+import { DockerImageAsset, Platform } from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecrdeploy from 'cdk-ecr-deployment';
+
+// Custom Resource to clean up the ECR Repository when destroying the stack
+interface cleanupEcrRepoProps {
+  readonly prefix: string;
+  readonly ecrRepositoryName: string;
+  readonly ecrRepositoryArn: string;
+}
+
+export class cleanupEcrRepo extends Construct {
+
+  constructor(scope: Construct, id: string, props: cleanupEcrRepoProps) {
+    super(scope, id);
+
+    const connectionPolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ['ecr:ListImages', 'ecr:BatchDeleteImage'],
+      resources: [props.ecrRepositoryArn],
+    });
+
+    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
+      functionName: `${props.prefix}-cleanup-ecr-images`,
+      lambdaPurpose: 'CustomResourceToCleanupEcrImages',
+      uuid: '54gf6lx0-r58g-88j5-d44t-l40cef953pqn',
+      code: Code.fromAsset('resources/lambdas/cleanup_ecr'),
+      handler: 'main.lambda_handler',
+      environment: {
+        ECR_REPOSITORY_NAME: props.ecrRepositoryName,
+      },
+      timeout: Duration.seconds(60),
+      runtime: Runtime.PYTHON_3_9,
+      logRetention: RetentionDays.ONE_WEEK,
+    });
+    customResourceLambda.addToRolePolicy(connectionPolicy);
+
+    new CustomResource(this, 'Resource', {
+      serviceToken: customResourceLambda.functionArn,
+    });
+  }
+}
 
 interface RDIIngestionWorkerImageProps {
   readonly prefix: string;
@@ -32,9 +74,18 @@ export class RDIIngestionWorkerImage extends Construct {
     const ecrAsset = new DockerImageAsset(this, 'IngestionWorkerImage', {
       directory: path.join(__dirname, '../resources/services/ingestion-worker'),
     });
-    const assetDeployment = new ecrdeploy.ECRDeployment(this, 'DeployDockerImage', {
+    new ecrdeploy.ECRDeployment(this, 'DeployDockerImage', {
       src: new ecrdeploy.DockerImageName(ecrAsset.imageUri),
       dest: new ecrdeploy.DockerImageName(`${this.ecrRepo.repositoryUri}:latest`),
     });
+
+    // Custom Resource to clean up ECR Repository
+    if (props.removalPolicy === RemovalPolicy.DESTROY) {
+      new cleanupEcrRepo(this, 'CleanupEcrRepo', {
+        prefix: this.prefix,
+        ecrRepositoryName: this.ecrRepo.repositoryName,
+        ecrRepositoryArn: this.ecrRepo.repositoryArn,
+      });
+    }
   }
 }
