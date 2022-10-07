@@ -21,7 +21,8 @@ export class DataIngestionPipelineStack extends Stack {
     // Create a unique suffix based on the AWS account number and the branchName
     // to be used for resources this is used for S3 bucket bucket names for example
     const uniqueSuffix = getShortHashFromString(`${this.account}-${props.branchName}`, 8);
-    console.log('unique resource Suffix: 👉 ', uniqueSuffix);
+    console.log('unique resource Suffix source string: 👉 ', `${this.account}-${props.branchName}`);
+    console.log('unique resource Suffix hash: 👉 ', uniqueSuffix);
 
     const codestarConnection = new CodestarConnection(this, 'CsConnection', {
       prefix: props.prefix,
