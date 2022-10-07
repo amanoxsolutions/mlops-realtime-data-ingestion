@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { RemovalPolicy } from 'aws-cdk-lib';
-import { Table, ITable, AttributeType } from 'aws-cdk-lib/aws-dynamodb';
+import { Table, ITable, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 
 export interface RDIDynamodbTableProps {
   readonly prefix: string;
@@ -22,6 +22,7 @@ export class RDIDynamodbTable extends Construct {
   
       this.table = new Table(this, 'table', {
         tableName: `${this.prefix}-input-hash`,
+        billingMode: BillingMode.PAY_PER_REQUEST,
         partitionKey: { name: this.partitionKey, type: AttributeType.STRING },
         removalPolicy: props.removalPolicy,
         timeToLiveAttribute: this.timeToLiveAttribute,

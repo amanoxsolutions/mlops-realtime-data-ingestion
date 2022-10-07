@@ -21,6 +21,11 @@ const prefix = `mlops-rdi-${currentBranch.substring(0,4)}${branchHash}`;
 console.log('Prefix for all resources deployed by this stack: 👉 ', prefix);
 
 new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
+  // 👇 explicitly setting account and region
+  env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION
+  },
   prefix: prefix,
   repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
   codestarConnectionName: 'mlops-realtime-data-ingestion',

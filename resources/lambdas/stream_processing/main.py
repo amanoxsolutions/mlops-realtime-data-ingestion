@@ -25,14 +25,17 @@ table_of_seen_items = dynamodb_resource.Table(DYNAMODB_SEEN_TABLE_NAME)
 """ :type: pyboto3.dynamodb.resources.Table """
 
 # @logger.inject_lambda_context(log_event=True)
-@tracer.capture_lambda_handler
+# We need to set capture_response=False due the large return payload to avoid "Message Too Long" error
+# from the tracer. Refer to https://github.com/awslabs/aws-lambda-powertools-python/issues/476
+@tracer.capture_lambda_handler(capture_response=False)
 def lambda_handler(event, context):
-    result = []
+    record_results = []
     for raw_record in event["records"]:
         raw_data = raw_record["data"]
         # base64 decode the data and load the JSON data
         record = json.loads(base64.b64decode(raw_data))
-
+        transactions_to_store = []
+        logger.info(f"Processing block of {len(record['detail']['txs'])} transactions.")
         for transaction in record["detail"]["txs"]:
             transaction_hash = transaction[HASH_KEY_NAME]
 
@@ -65,5 +68,11 @@ def lambda_handler(event, context):
             except table_of_seen_items.meta.client.exceptions.ConditionalCheckFailedException as e:
                 logger.exception("been there seen that")
             else:
-                result.append(transaction)
-            return result  # TODO validate needed result format
+                transactions_to_store.append(transaction)
+        logger.info(f"Added  {len(transactions_to_store)} transactions out of {len(record['detail']['txs'])} from the stream block payload.")
+        record_results.append({
+            "recordId": raw_record["recordId"],
+            "result": "Ok",
+            "data": base64.b64encode(json.dumps(transactions_to_store).encode("utf-8"))
+        })
+    return { "records": record_results}  # TODO validate needed record_results format
