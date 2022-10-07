@@ -23,7 +23,9 @@ export function getCurrentBranchName(p = process.cwd()): string | undefined {
     if (fs.existsSync(p)) {
         if (fs.existsSync(gitHeadPath)){
             const head = fs.readFileSync(gitHeadPath, 'utf8').trim();
-            const start = nthIndexOf(head, '/', 2);
+            // Get the last string after the last "/" in the branch reference name
+            const nb_delimiters = (head.match(/\//g) || []).length;
+            const start = nthIndexOf(head, '/', nb_delimiters);
             branchName = head.substring(start+1);
         } else {
             branchName = getCurrentBranchName(path.resolve(p, '..'));
