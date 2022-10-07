@@ -27,10 +27,11 @@ def lambda_handler(event, context):
                 logger.error(f"CodeStar Connection ARN for '{CONNECTION_NAME}' not found")
                 cfnresponse.send(event, context, cfnresponse.FAILED, response_data, physicalResourceId=PHYSICAL_ID)
                 return
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=PHYSICAL_ID)
     except Exception as e:
         logger.exception(e)
         cfnresponse.send(event, context, cfnresponse.FAILED, response_data, physicalResourceId=PHYSICAL_ID)
+    else:
+        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=PHYSICAL_ID)
 
 def search_for_connection(next_token: str = None) -> tuple:
     if not next_token:

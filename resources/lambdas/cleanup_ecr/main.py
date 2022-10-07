@@ -19,10 +19,11 @@ def lambda_handler(event, context):
             next_token = delete_ecr_images()
             while next_token:
                 next_token = delete_ecr_images(next_token)
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=PHYSICAL_ID)
     except Exception as e:
         logger.exception(e)
         cfnresponse.send(event, context, cfnresponse.FAILED, response_data, physicalResourceId=PHYSICAL_ID)
+    else:
+        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=PHYSICAL_ID)
 
 def delete_ecr_images(next_token: str = None) -> str:
     """This function list images in ECR repository and delete them
