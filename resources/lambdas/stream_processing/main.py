@@ -25,7 +25,9 @@ table_of_seen_items = dynamodb_resource.Table(DYNAMODB_SEEN_TABLE_NAME)
 """ :type: pyboto3.dynamodb.resources.Table """
 
 # @logger.inject_lambda_context(log_event=True)
-@tracer.capture_lambda_handler
+# We need to set capture_response=False due the large return payload to avoid "Message Too Long" error
+# from the tracer. Refer to https://github.com/awslabs/aws-lambda-powertools-python/issues/476
+@tracer.capture_lambda_handler(capture_response=False)
 def lambda_handler(event, context):
     record_results = []
     for raw_record in event["records"]:
