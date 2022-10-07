@@ -1,6 +1,6 @@
 import { Construct } from "constructs";
 import { Stage, StageProps } from 'aws-cdk-lib';
-import { RealtimeDataIngestionStack } from './data-ingestion-stack';
+import { RealtimeDataIngestionStack } from './ingestion/data-ingestion-stack';
 
 export interface RealtimeDataIngestionStageProps extends StageProps {
   readonly prefix: string;
