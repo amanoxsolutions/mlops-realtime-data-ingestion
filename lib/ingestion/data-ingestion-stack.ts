@@ -156,17 +156,17 @@ export class RealtimeDataIngestionStack extends Stack {
     this.vpc = ingestionWorker.vpc;
 
     // Save into parameter store some configuration values
-    new RDIParameters(this, 'Param', {
+    new RDIParameters(this, 'BucketName', {
       prefix: this.prefix,
       name: 'dataBucketName',
       value: this.dataBucketName,
     });
-    new RDIParameters(this, 'Param', {
+    new RDIParameters(this, 'BucketArn', {
       prefix: this.prefix,
       name: 'dataBucketArn',
       value: this.dataBucketArn,
     });
-    new RDIParameters(this, 'Param', {
+    new RDIParameters(this, 'VpcId', {
       prefix: this.prefix,
       name: 'vpcId',
       value: this.vpc.vpcId,
