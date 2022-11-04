@@ -33,8 +33,8 @@ export class RDISagemakerStudio extends Construct {
         roleName: `${this.prefix}-sagemaker-studio-role`,
         assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
       });
-      this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonSageMakerFullAccess'));
-      this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonSageMakerCanvasFullAccess'));
+      this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
+      this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerCanvasFullAccess'));
 
     const policyDocument = new PolicyDocument({
       statements: [
