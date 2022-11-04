@@ -13,7 +13,7 @@ import { CfnDomain } from 'aws-cdk-lib/aws-sagemaker';
 
 interface RDISagemakerStudioProps {
   readonly prefix: string;
-  readonly dataS3BucketArn: string;
+  readonly dataBucketArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
 }
@@ -41,12 +41,12 @@ export class RDISagemakerStudio extends Construct {
         new PolicyStatement({
           actions: ['s3:ListBucket'],
           effect: Effect.ALLOW,
-          resources: [props.dataS3BucketArn],
+          resources: [props.dataBucketArn],
         }),
         new PolicyStatement({
           actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
           effect: Effect.ALLOW,
-          resources: [`${props.dataS3BucketArn}/*`],
+          resources: [`${props.dataBucketArn}/*`],
         }),
       ],
     });

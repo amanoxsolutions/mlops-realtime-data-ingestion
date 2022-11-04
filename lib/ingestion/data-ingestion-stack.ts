@@ -7,6 +7,7 @@ import { RDILambda } from './lambda';
 import { EventbridgeToKinesisFirehoseToS3 } from '@aws-solutions-constructs/aws-eventbridge-kinesisfirehose-s3';
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 
 export interface RealtimeDataIngestionStackProps extends StackProps {
@@ -25,6 +26,9 @@ export class RealtimeDataIngestionStack extends Stack {
   public readonly removalPolicy: RemovalPolicy;
   public readonly kinesisBufferInterval: Duration;
   public readonly kinesisBufferSize : Size;
+  public readonly dataBucketName : string;
+  public readonly dataBucketArn : string;
+  public readonly vpc: IVpc;
 
   constructor(scope: Construct, id: string, props: RealtimeDataIngestionStackProps) {
     super(scope, id, props);
@@ -35,6 +39,7 @@ export class RealtimeDataIngestionStack extends Stack {
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.kinesisBufferInterval = props.kinesisBufferInterval || Duration.seconds(60);
     this.kinesisBufferSize = props.kinesisBufferSize || Size.mebibytes(1);
+    this.dataBucketName = `${this.prefix}-input-bucket-${this.s3Suffix}`;
 
     const inputTable = new RDIDynamodbTable(this, 'inputHashTable', {
       prefix: this.prefix,
@@ -92,13 +97,19 @@ export class RealtimeDataIngestionStack extends Stack {
         }
       },
       bucketProps: { 
-        bucketName: `${this.prefix}-input-bucket-${this.s3Suffix}`,
+        bucketName: this.dataBucketName,
         autoDeleteObjects: true,
         removalPolicy: this.removalPolicy,
         versioned: this.s3Versioning,
       },
       logS3AccessLogs: false,
     });
+    
+    if (inputStream.s3Bucket) {
+      this.dataBucketArn = inputStream.s3Bucket.bucketArn;
+    } else {
+      `arn:aws:s3:::${this.dataBucketName}`;
+    }
 
     // Edit Kinesis Firehose Stream Role to allow invocation of Lambda
     const kinesisFirehoseStreamRole = inputStream.kinesisFirehoseRole;
@@ -141,6 +152,7 @@ export class RealtimeDataIngestionStack extends Stack {
       ingestionIntervalMSec: 1000, // 1 second
     });
     ingestionWorker.node.addDependency(ingestionWorkerImage);
+    this.vpc = ingestionWorker.vpc;
     
   }
 }
