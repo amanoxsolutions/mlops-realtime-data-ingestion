@@ -22,16 +22,23 @@ export class RealtimeDataIngestionStage extends Stage {
     }
 }
 
+export interface SagemakerStageProps extends DeploymentStageProps {
+  readonly dataBucketArn: string;
+  readonly vpc: IVpc;
+}
+
 export class SagemakerStage extends Stage {
   readonly sagemakerStack: SagemakerStack;
     
-  constructor(scope: Construct, id: string, props: DeploymentStageProps) {
+  constructor(scope: Construct, id: string, props: SagemakerStageProps) {
     super(scope, id, props);
 
     // Pipeline stage to deploy the Sagemaker stack
     this.sagemakerStack = new SagemakerStack(this, "Stack", {
       prefix: props.prefix,
       s3Suffix: props.uniqueSuffix,
+      dataBucketArn: props.dataBucketArn,
+      vpc: props.vpc,
     });      
   }
 }
