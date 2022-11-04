@@ -8,7 +8,6 @@ import { EventbridgeToKinesisFirehoseToS3 } from '@aws-solutions-constructs/aws-
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { RDIParameters } from '../parameters';
 
 
 export interface RealtimeDataIngestionStackProps extends StackProps {
@@ -105,7 +104,7 @@ export class RealtimeDataIngestionStack extends Stack {
       },
       logS3AccessLogs: false,
     });
-
+    
     if (inputStream.s3Bucket) {
       this.dataBucketArn = inputStream.s3Bucket.bucketArn;
     } else {
@@ -154,23 +153,6 @@ export class RealtimeDataIngestionStack extends Stack {
     });
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     this.vpc = ingestionWorker.vpc;
-
-    // Save into parameter store some configuration values
-    new RDIParameters(this, 'BucketName', {
-      prefix: this.prefix,
-      name: 'dataBucketName',
-      value: this.dataBucketName,
-    });
-    new RDIParameters(this, 'BucketArn', {
-      prefix: this.prefix,
-      name: 'dataBucketArn',
-      value: this.dataBucketArn,
-    });
-    new RDIParameters(this, 'VpcId', {
-      prefix: this.prefix,
-      name: 'vpcId',
-      value: this.vpc.vpcId,
-    });
-
+    
   }
 }
