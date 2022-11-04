@@ -1,7 +1,7 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
-import { RealtimeDataIngestionStage, SagemakerStage } from './pipeline-stage';
+import { RealtimeDataIngestionStage } from './pipeline-stage';
 import { CodestarConnection } from './ingestion/codestar-connection';
 import { ComputeType, LinuxArmBuildImage, BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 import { getShortHashFromString } from './git-branch';
@@ -61,19 +61,9 @@ export class DataIngestionPipelineStack extends Stack {
     });
     pipeline.node.addDependency(codestarConnection);
 
-    // Create a pipeline stage to deploy the Realtime Data Ingestion stack
-    const ingestionStage = new RealtimeDataIngestionStage(this, `${props.prefix}-RealtimeDataIngestion`, {
+    pipeline.addStage(new RealtimeDataIngestionStage(this, `${props.prefix}-RealtimeDataIngestion`, {
       prefix: props.prefix,
       uniqueSuffix: uniqueSuffix,
-    });
-    pipeline.addStage(ingestionStage);
-
-    // Create a pipeline stage to deploy the Sagemaker stack
-    pipeline.addStage(new SagemakerStage(this, `${props.prefix}-Sagemaker`, {
-      prefix: props.prefix,
-      uniqueSuffix: uniqueSuffix,
-      dataBucketArn: ingestionStage.ingestionStack.dataBucketArn,
-      vpc: ingestionStage.ingestionStack.vpc,
     }));
   }
 }
