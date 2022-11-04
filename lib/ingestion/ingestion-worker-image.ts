@@ -72,7 +72,7 @@ export class RDIIngestionWorkerImage extends Construct {
       removalPolicy: props.removalPolicy,
     });
     const ecrAsset = new DockerImageAsset(this, 'IngestionWorkerImage', {
-      directory: path.join(__dirname, '../resources/services/ingestion-worker'),
+      directory: path.join(__dirname, '../../resources/services/ingestion-worker'),
       platform: Platform.LINUX_ARM64,
     });
     new ecrdeploy.ECRDeployment(this, 'DeployDockerImage', {
