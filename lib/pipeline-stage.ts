@@ -14,13 +14,13 @@ export class RealtimeDataIngestionStage extends Stage {
       super(scope, id, props);
   
       // Stack to deploy the Realtime Data Ingestion 
-      const ingestionStack = new RealtimeDataIngestionStack(this, "Stack", {
+      const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", {
         prefix: props.prefix,
         s3Suffix: props.uniqueSuffix,
       });   
       
       // Stack to deploy SageMaker
-    new SagemakerStack(this, "Stack", {
+    new SagemakerStack(this, "SagemakerStack", {
       prefix: props.prefix,
       s3Suffix: props.uniqueSuffix,
       dataBucketArn: ingestionStack.dataBucketArn,
