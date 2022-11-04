@@ -19,7 +19,7 @@ export class RDIParameters extends Construct {
     this.prefix = props.prefix;
     this.name = props.name;
 
-    this.param = new StringParameter(this, 'Param', {
+    this.param = new StringParameter(this, this.name, {
       parameterName: `/${this.prefix}/${this.name}`,
       stringValue: props.value,
     });
