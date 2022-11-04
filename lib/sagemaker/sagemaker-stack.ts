@@ -1,14 +1,13 @@
 import { Stack, StackProps, RemovalPolicy, Duration, Size } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Vpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RDISagemakerStudio } from './sagemaker';
 
 export interface SagemakerStackProps extends StackProps {
   readonly prefix: string;
   readonly s3Suffix: string;
   readonly removalPolicy?: RemovalPolicy;
-  readonly dataBucketArn: string;
-  readonly vpc: IVpc;
 }
   
 export class SagemakerStack extends Stack {
@@ -24,11 +23,17 @@ export class SagemakerStack extends Stack {
     this.s3Suffix = props.s3Suffix;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
+    // Read values from the SSM Parameter Store
+    const vpcId = StringParameter.valueForStringParameter(this, `/${this.prefix}/vpcId`);
+    const dataBucketArn = StringParameter.valueForStringParameter(this, `/${this.prefix}/dataBucketArn`);
+    // Import the VPC from the vpdId
+    const vpc = Vpc.fromLookup(this, 'VPC', { vpcId: vpcId });
+
     this.sagemakerStudio = new RDISagemakerStudio(this, 'sagemakerStudio', {
       prefix: this.prefix,
-      dataBucketArn: props.dataBucketArn,
-      vpcId: props.vpc.vpcId,
-      subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
+      dataBucketArn: dataBucketArn,
+      vpcId: vpcId,
+      subnetIds: vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
     });
   }
 }
