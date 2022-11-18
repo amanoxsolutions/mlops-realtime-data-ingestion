@@ -1,0 +1,30 @@
+{
+    "description": "Aggregated features for streamed data",
+    "features": [
+          {
+              "name": "total_nb_trx_1h",
+              "type": "BIGINT",
+              "description": "Aggregated Metric: Total number of transactions"
+          },
+          {
+              "name": "total_fee_1h",
+              "type": "BIGINT",
+              "description": "Aggregated Metric: Total amount of transaction fees aggregated by past 1 hour"
+          },
+          {
+              "name": "avg_fee_1h",
+              "type": "DOUBLE",
+              "description": "Aggregated Metric: Average amount of transaction fees aggregated by past 1 hour"
+          },
+          {
+              "name": "trx_time",
+              "type": "DOUBLE",
+              "description": "Required feature for event timestamp"
+          }
+      ],
+    
+      "record_identifier_feature_name": "trx_time",
+      "event_time_feature_name": "trx_time",
+      "tags": [{"Key": "Project", "Value" : "mlops-realtime-data-ingeestion"}, 
+               {"Key": "IngestionType", "Value": "Streaming"}]
+}
