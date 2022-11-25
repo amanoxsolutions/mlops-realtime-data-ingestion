@@ -37,6 +37,7 @@ export class RDIFeatureStore extends Construct {
       autoDeleteObjects: this.removalPolicy == RemovalPolicy.DESTROY
     });
 
+
     // Create the IAM Role for Feature Store
     const fgRole = new Role(this, 'featureStoreRole', {
       roleName: `${this.prefix}-feature-store-role`,
@@ -71,11 +72,7 @@ export class RDIFeatureStore extends Construct {
     
       // the properties below are optional
       description: fgConfig.description,
-      offlineStoreConfig: {
-        S3StorageConfig: {
-          S3Uri: this.bucket.s3UrlForObject()
-        }
-      },
+
       onlineStoreConfig: {'EnableOnlineStore': true},
       roleArn: fgRole.roleArn,
     });
