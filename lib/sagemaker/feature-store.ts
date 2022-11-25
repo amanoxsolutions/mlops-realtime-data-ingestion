@@ -30,7 +30,7 @@ export class RDIFeatureStore extends Construct {
 
     // Create an S3 Bucket for the Offline Feature Store
     this.bucket = new Bucket(this, 'featureStoreBucket', {
-      bucketName: `${this.prefix}-feature-store-bucket`,
+      bucketName: `${this.prefix}-sagemaker-feature-store-bucket`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,
@@ -40,18 +40,25 @@ export class RDIFeatureStore extends Construct {
 
     // Create the IAM Role for Feature Store
     const fgRole = new Role(this, 'featureStoreRole', {
-      roleName: `${this.prefix}-feature-store-role`,
+      roleName: `${this.prefix}-sagemaker-feature-store-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
       managedPolicies: [
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess')],
     });
     fgRole.attachInlinePolicy(new Policy(this, 'EcsTaskPolicy', {
-      policyName: `${this.prefix}-feature-store-s3-bucket-access`,
+      policyName: `${this.prefix}-sagemaker-feature-store-s3-bucket-access`,
       document: new PolicyDocument({
         statements: [
           new PolicyStatement({
             effect: Effect.ALLOW,
-            actions: ['s3:PutObject', 's3:GetBucketAcl', 's3:PutObjectAcl'],
+            actions: [
+              's3:GetObject', 
+              's3:PutObject', 
+              's3:DeleteObject', 
+              's3:AbortMultipartUpload', 
+              's3:GetBucketAcl', 
+              's3:PutObjectAcl'
+            ],
             resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
           }),
         ],
@@ -72,7 +79,11 @@ export class RDIFeatureStore extends Construct {
     
       // the properties below are optional
       description: fgConfig.description,
-
+      offlineStoreConfig: {
+        S3StorageConfig: {
+          S3Uri: this.bucket.s3UrlForObject()
+        }
+      },
       onlineStoreConfig: {'EnableOnlineStore': true},
       roleArn: fgRole.roleArn,
     });
