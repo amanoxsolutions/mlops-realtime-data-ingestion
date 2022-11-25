@@ -32,7 +32,9 @@ export class RDIFeatureStore extends Construct {
     const fgRole = new Role(this, 'featureStoreRole', {
       roleName: `${this.prefix}-feature-store-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
-      managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess')],
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'),
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'),],
     });
 
     // Create an S3 Bucket for the Offline Feature Store
