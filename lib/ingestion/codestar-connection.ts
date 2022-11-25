@@ -17,7 +17,7 @@ interface CodestarConnectionProps {
 
       const connectionPolicy = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: ['codestar-connections:listConnections'],
+        actions: ['codestar-connections:ListConnections'],
         resources: ['*'],
       });
 

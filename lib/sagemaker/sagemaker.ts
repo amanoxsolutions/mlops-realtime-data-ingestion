@@ -35,7 +35,7 @@ export class RDISagemakerStudio extends Construct {
     // N.B.: As of now you can only have one domain per account and region
     const sagemakerListPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
-      actions: ['sagemaker:listDomains'],
+      actions: ['sagemaker:ListDomains'],
       resources: ['*'],
     });
 
