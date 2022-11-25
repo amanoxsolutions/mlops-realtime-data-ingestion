@@ -35,6 +35,7 @@ export class SagemakerStack extends Stack {
 
     this.featureStore = new RDIFeatureStore(this, 'featureStore', {
       prefix: this.prefix,
+      removalPolicy: this.removalPolicy,
     });
   }
 }

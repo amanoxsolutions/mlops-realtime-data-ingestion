@@ -1,14 +1,7 @@
 import { Construct } from 'constructs';
-import {
-  IRole,
-  ManagedPolicy,
-  Policy,
-  PolicyDocument,
-  PolicyStatement,
-  Role,
-  ServicePrincipal,
-  Effect
-} from 'aws-cdk-lib/aws-iam';
+import { RemovalPolicy } from 'aws-cdk-lib';
+import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
 
@@ -20,16 +13,20 @@ enum FeatureStoreTypes {
 
 interface RDIFeatureStoreProps {
   readonly prefix: string;
+  readonly removalPolicy: RemovalPolicy;
 }
 
 export class RDIFeatureStore extends Construct {
   public readonly prefix: string;
+  public readonly removalPolicy: RemovalPolicy;
   public readonly aggFeatureGroup: CfnFeatureGroup;
+  public readonly bucket: IBucket;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
+    this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
     // Create the IAM Role for Feature Store
     const fgRole = new Role(this, 'featureStoreRole', {
@@ -37,6 +34,16 @@ export class RDIFeatureStore extends Construct {
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
       managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess')],
     });
+
+    // Create an S3 Bucket for the Offline Feature Store
+    this.bucket = new Bucket(this, 'featureStoreBucket', {
+      bucketName: `${this.prefix}-feature-store-bucket`,
+      accessControl: BucketAccessControl.PRIVATE,
+      encryption: BucketEncryption.S3_MANAGED,
+      removalPolicy: this.removalPolicy,
+      autoDeleteObjects: this.removalPolicy == RemovalPolicy.DESTROY
+    });
+
 
     // Create the Feature Group
     const cfnFeatureGroup = new CfnFeatureGroup(this, 'MyCfnFeatureGroup', {
@@ -52,7 +59,11 @@ export class RDIFeatureStore extends Construct {
     
       // the properties below are optional
       description: fgConfig.description,
-      offlineStoreConfig: {'EnableOfflineStore': true},
+      offlineStoreConfig: {
+        S3StorageConfig: {
+          S3Uri: this.bucket.s3UrlForObject()
+        }
+      },
       onlineStoreConfig: {'EnableOnlineStore': true},
       roleArn: fgRole.roleArn,
     });
