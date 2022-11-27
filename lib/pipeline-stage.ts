@@ -25,6 +25,7 @@ export class RealtimeDataIngestionStage extends Stage {
       s3Suffix: props.uniqueSuffix,
       dataBucketArn: ingestionStack.dataBucketArn,
       vpc: ingestionStack.vpc,
+      ingestionFirehoseStreamArn: ingestionStack.firehoseStreamArn,
     });    
   }
 }

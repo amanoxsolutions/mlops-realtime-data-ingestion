@@ -10,6 +10,7 @@ export interface SagemakerStackProps extends StackProps {
   readonly removalPolicy?: RemovalPolicy;
   readonly dataBucketArn: string;
   readonly vpc: IVpc;
+  readonly ingestionFirehoseStreamArn: string;
 }
   
 export class SagemakerStack extends Stack {
@@ -36,6 +37,7 @@ export class SagemakerStack extends Stack {
     this.featureStore = new RDIFeatureStore(this, 'featureStore', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
+      firehoseStreamArn: props.ingestionFirehoseStreamArn,
     });
   }
 }
