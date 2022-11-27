@@ -61,13 +61,13 @@ export class RDISagemakerStudio extends Construct {
       serviceToken: customResourceLambda.functionArn,
     });
     // Get the list of {domainName, domainId} from the custom resource output SageMakerDomains attribute
-    const sagemakerDomains = JSON.parse(customResource.getAtt('SageMakerDomains').toString());
+    this.domainName = customResource.getAtt('SageMakerDomainName').toString();
+    this.domainId = customResource.getAtt('SageMakerDomainId').toString();
     // Should we need to create a new domain, we need a name for it
     const thisDomainName = `${this.prefix}-sagemaker-studio-domain`;
 
     // Create/Update/Delete SageMaker Studio Resources only if there is no domain already
-    // or the domain is the one in the list
-    if (sagemakerDomains.length === 0 || sagemakerDomains.includes(thisDomainName)) {
+    if (this.domainName === '') {
       // Create the IAM Role for SagMaker Studio
       this.role = new Role(this, 'studioRole', {
           roleName: `${this.prefix}-sagemaker-studio-role`,
@@ -108,11 +108,6 @@ export class RDISagemakerStudio extends Construct {
       });
       this.domainName = domain.domainName;
       this.domainId = domain.attrDomainId;
-    } else {
-      // If there is an existing domain, we need to get the name and ID from the list
-      // Ath the moment there is only one domain per account and region
-      this.domainName = sagemakerDomains[0].name;
-      this.domainId = sagemakerDomains[0].id;
     }
 
     // 
