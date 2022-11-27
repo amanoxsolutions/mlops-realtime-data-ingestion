@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { ManagedPolicy, Role, ServicePrincipal, Policy, PolicyStatement, PolicyDocument, Effect } from 'aws-cdk-lib/aws-iam';
+import { LogGroup, RetentionDays, LogStream } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
 import { RDILambda } from '../lambda';
@@ -34,7 +35,7 @@ export class RDIFeatureStore extends Construct {
     // SageMaker Feature Store
     //
     // Create an S3 Bucket for the Offline Feature Store
-    this.bucket = new Bucket(this, 'featureStoreBucket', {
+    this.bucket = new Bucket(this, 'FeatureStoreBucket', {
       bucketName: `${this.prefix}-sagemaker-feature-store-bucket`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
@@ -44,13 +45,13 @@ export class RDIFeatureStore extends Construct {
 
 
     // Create the IAM Role for Feature Store
-    const fgRole = new Role(this, 'featureStoreRole', {
+    const fgRole = new Role(this, 'FeatureStoreRole', {
       roleName: `${this.prefix}-sagemaker-feature-store-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
       managedPolicies: [
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess')],
     });
-    fgRole.attachInlinePolicy(new Policy(this, 'EcsTaskPolicy', {
+    fgRole.attachInlinePolicy(new Policy(this, 'FeatureStorePolicy', {
       policyName: `${this.prefix}-sagemaker-feature-store-s3-bucket-access`,
       document: new PolicyDocument({
         statements: [
@@ -110,6 +111,61 @@ export class RDIFeatureStore extends Construct {
         AGG_FEATURE_GROUP_NAME: cfnFeatureGroup.featureGroupName,
       }
     });
+
+    // Setup Kinesis Analytics CloudWatch Logs
+    const analyticsLogGroup = new LogGroup(this, 'AnalyticsLogGroup', {
+      logGroupName: analyticsAppName,
+      retention: RetentionDays.ONE_MONTH,
+      removalPolicy: this.removalPolicy,
+    });
+
+    const logStreamName = 'analytics-logstream'
+    const analyticsLogStream = new LogStream(this, 'AnalyticsLogStream', {
+      logGroup: analyticsLogGroup,
+      logStreamName: logStreamName,
+      removalPolicy: this.removalPolicy,
+    });
+
+    // IAM Role for Kinesis Data Analytics
+    const analyticsRole = new Role(this, 'AnalyticsRole', {
+      assumedBy: new ServicePrincipal('kinesisanalytics.amazonaws.com'),
+      inlinePolicies: {
+        AnalyticsRolePolicy: new PolicyDocument({
+          statements: [
+            new PolicyStatement({
+              sid: 'AnalyticsRolePolicy',
+              resources: [
+                props.firehoseStreamArn,
+                lambda.function.functionArn
+              ],
+              actions: [
+                'kinesis:*', 
+                'lambda:InvokeFunction',
+                'lambda:GetFunctionConfiguration',
+                'lambda:UpdateFunctionConfiguration',
+                'lambda:InvokeAsync',
+                'lambda:CreateEventSourceMapping',
+                'lambda:DeleteEventSourceMapping',
+                'lambda:ListEventSourceMappings',
+              ] 
+            }),
+            new PolicyStatement({
+              sid: 'AllowToPutCloudWatchLogEvents',
+              resources: [ 
+                analyticsLogGroup.logGroupArn,
+                `${analyticsLogGroup.logGroupArn}:*`,
+               ],
+              actions: [
+                'logs:PutLogEvents', 
+                'logs:DescribeLogGroups',
+                'logs:DescribeLogStreams'
+              ] 
+            })
+          ]
+        })
+      }
+    });
+
   
   }
 }
