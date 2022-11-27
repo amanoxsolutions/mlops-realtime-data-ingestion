@@ -12,7 +12,7 @@ import {
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { CfnDomain } from 'aws-cdk-lib/aws-sagemaker';
+import { CfnDomain, CfnUserProfile } from 'aws-cdk-lib/aws-sagemaker';
 
 interface RDISagemakerStudioProps {
   readonly prefix: string;
@@ -24,13 +24,18 @@ interface RDISagemakerStudioProps {
 export class RDISagemakerStudio extends Construct {
   public readonly prefix: string;
   public readonly role: IRole;
-  public readonly sagemakerDomainName: string;
+  public readonly domainName: string;
+  public readonly userName: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerStudioProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
+    this.userName = `${this.prefix}-sagemaker-user`;
 
+    //
+    // Create SageMaker Studio Domain
+    //
     // Custom Resource to check if there are any existing domains
     // N.B.: As of now you can only have one domain per account and region
     const sagemakerListPolicy = new PolicyStatement({
@@ -101,11 +106,50 @@ export class RDISagemakerStudio extends Construct {
           executionRole: this.role.roleArn,
         },
       });
-      this.sagemakerDomainName = domain.domainName;
+      this.domainName = domain.domainName;
     } else {
       // If there is an existing domain, we need to get the name from the list
       // Ath the moment there is only one domain per account and region
-      this.sagemakerDomainName = sagemakerDomainsList[0];
+      this.domainName = sagemakerDomainsList[0];
     }
+
+    // 
+    // Create a SageMaker Studio user
+    //
+    const userRole = new Role(this, 'userRole', {
+      roleName: `${this.prefix}-sagemaker-feature-store-role`,
+      assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'),
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerCanvasFullAccess')
+      ],
+    });
+    // Add access to raw data bucket
+    userRole.attachInlinePolicy(new Policy(this, 'userPolicy', {
+      policyName: `${this.prefix}-ingestion-bucket-access`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              's3:ListBucket', 
+              's3:GetObject*', 
+              's3:PutObject*', 
+              's3:DeleteObject', 
+              's3:DeleteObjectVersion', 
+            ],
+            resources: [props.dataBucketArn, `${props.dataBucketArn}/*`],
+          }),
+        ],
+      })
+    }));
+    // Create the user profile
+    new CfnUserProfile(this, 'studioUser', {
+      domainId: this.domainName,
+      userProfileName: this.userName,
+      userSettings: {
+        executionRole: userRole.roleArn,
+      },
+    });
   } 
 }
