@@ -117,7 +117,7 @@ export class RDISagemakerStudio extends Construct {
     // Create a SageMaker Studio user
     //
     const userRole = new Role(this, 'userRole', {
-      roleName: `${this.prefix}-sagemaker-feature-store-role`,
+      roleName: `${this.prefix}-sagemaker-user-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
       managedPolicies: [
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'),
