@@ -61,15 +61,15 @@ export class RDISagemakerStudio extends Construct {
       serviceToken: customResourceLambda.functionArn,
     });
     // Get the list of {domainName, domainId} from the custom resource output SageMakerDomains attribute
-    this.domainName = customResource.getAtt('SageMakerDomainName').toString();
-    this.domainId = customResource.getAtt('SageMakerDomainId').toString();
+    const domainName = customResource.getAtt('SagemakerDomainName').toString();
+    const domainId = customResource.getAtt('SagemakerDomainId').toString();
     // Should we need to create a new domain, we need a name for it
     const thisDomainName = `${this.prefix}-sagemaker-studio-domain`;
 
     // Create/Update/Delete SageMaker Studio Resources only if there is no domain already
     if (this.domainName === '') {
       // Create the IAM Role for SagMaker Studio
-      this.role = new Role(this, 'studioRole', {
+      this.role = new Role(this, 'StudioRole', {
           roleName: `${this.prefix}-sagemaker-studio-role`,
           assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
         });
@@ -97,7 +97,7 @@ export class RDISagemakerStudio extends Construct {
       });
 
       // Create the SageMaker Studio Domain
-      const domain = new CfnDomain(this, 'studioDomain', {
+      const domain = new CfnDomain(this, 'StudioDomain', {
         domainName: thisDomainName,
         vpcId: props.vpcId,
         subnetIds: props.subnetIds,
@@ -108,12 +108,15 @@ export class RDISagemakerStudio extends Construct {
       });
       this.domainName = domain.domainName;
       this.domainId = domain.attrDomainId;
+    } else {
+      this.domainName = domainName;
+      this.domainId = domainId;
     }
 
     // 
     // Create a SageMaker Studio user
     //
-    const userRole = new Role(this, 'userRole', {
+    const userRole = new Role(this, 'UserRole', {
       roleName: `${this.prefix}-sagemaker-user-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
       managedPolicies: [
@@ -122,7 +125,7 @@ export class RDISagemakerStudio extends Construct {
       ],
     });
     // Add access to raw data bucket
-    userRole.attachInlinePolicy(new Policy(this, 'userPolicy', {
+    userRole.attachInlinePolicy(new Policy(this, 'UserPolicy', {
       policyName: `${this.prefix}-ingestion-bucket-access`,
       document: new PolicyDocument({
         statements: [
@@ -140,13 +143,16 @@ export class RDISagemakerStudio extends Construct {
         ],
       })
     }));
+    
     // Create the user profile
-    new CfnUserProfile(this, 'studioUser', {
+    const studioUser = new CfnUserProfile(this, 'StudioUser', {
       domainId: this.domainId,
       userProfileName: this.userName,
       userSettings: {
         executionRole: userRole.roleArn,
       },
     });
+    // It depends on the custom resource
+    studioUser.node.addDependency(customResource);
   } 
 }

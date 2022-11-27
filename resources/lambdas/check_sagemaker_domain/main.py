@@ -11,10 +11,9 @@ PHYSICAL_ID = "CustomResourceToCheckForExistingSageMakerStudioDomain"
 
 def lambda_handler(event, context):
     response_data = {
-        "SageMakerDomainName": "",
-        "SageMakerDomainId": ""
+        "SagemakerDomainName": "",
+        "SagemakerDomainId": ""
     }
-    sagemaker_domains_list = []
     try:
         request = event.get("RequestType").lower()
         logger.info(f"Type of request: {request}")
@@ -26,8 +25,8 @@ def lambda_handler(event, context):
     else:
         domains_list = sm_response.get("Domains", [])
         if domains_list:
-            response_data["SageMakerDomainName"] = domains_list[0].get("DomainName")
-            response_data["SageMakerDomainId"] = domains_list[0].get("DomainId")
+            response_data["SagemakerDomainName"] = domains_list[0].get("DomainName")
+            response_data["SagemakerDomainId"] = domains_list[0].get("DomainId")
             logger.info(f"Existing SageMaker Studio Domain: {response_data}")
         else:
             logger.info("No SageMaker Studio Domain found")
