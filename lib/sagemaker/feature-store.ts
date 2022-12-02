@@ -4,8 +4,12 @@ import { ManagedPolicy, Role, ServicePrincipal, Policy, PolicyStatement, PolicyD
 import { LogGroup, RetentionDays, LogStream } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
+import { CfnApplication, CfnApplicationOutput, CfnApplicationCloudWatchLoggingOption } from 'aws-cdk-lib/aws-kinesisanalyticsv2';
 import { RDILambda } from '../lambda';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
+
+const fs = require('fs');
+const path = require('path');
 
 enum FeatureStoreTypes {
   DOUBLE  = 'Fractional',
@@ -24,6 +28,7 @@ export class RDIFeatureStore extends Construct {
   public readonly removalPolicy: RemovalPolicy;
   public readonly aggFeatureGroup: CfnFeatureGroup;
   public readonly bucket: IBucket;
+  public readonly analyticsStream: CfnApplication;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
     super(scope, id);
@@ -166,6 +171,81 @@ export class RDIFeatureStore extends Construct {
       }
     });
 
-  
+    // Kinesis Data Analytics Application
+    this.analyticsStream = new CfnApplication(this, 'Analytics', {
+      runtimeEnvironment: 'SQL-1_0',
+      applicationName: analyticsAppName,
+      serviceExecutionRole: analyticsRole.roleArn,
+      applicationConfiguration: {
+        applicationCodeConfiguration: {
+          codeContent: {
+              textContent: fs.readFileSync(path.join(__dirname, '../../resources/kinesis/analytics.sql')).toString(),
+          },
+          codeContentType: "PLAINTEXT",
+        },
+        sqlApplicationConfiguration: {
+          inputs: [
+            {
+              namePrefix: "SOURCE_SQL_STREAM",
+              kinesisFirehoseInput: {
+                resourceArn: props.firehoseStreamArn
+              },
+              inputParallelism: { count: 1 },
+              inputSchema: {
+                recordFormat: {
+                  recordFormatType: "JSON",
+                  mappingParameters: { jsonMappingParameters: { recordRowPath: "$" } }
+                },
+                recordEncoding: "UTF-8",
+                recordColumns: [
+                  {
+                    name: "hash",
+                    mapping: "$.hash",
+                    sqlType: "VARCHAR(64)"
+                  },
+                  {
+                    name: "size",
+                    mapping: "$.size",
+                    sqlType: "INTEGER"
+                  },
+                  {
+                    name: "weight",
+                    mapping: "$.weight",
+                    sqlType: "VARCHAR(256)"
+                  },
+                  {
+                    name: "fee",
+                    mapping: "$.fee",
+                    sqlType: "INTEGER"
+                  }
+                ]
+              },
+            }
+          ],
+        }
+      }
+    });
+
+    const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
+      applicationName: analyticsAppName,
+      output: {
+        destinationSchema: {
+          recordFormatType: 'JSON'
+        },
+        lambdaOutput: {
+          resourceArn: lambda.function.functionArn,
+        },
+        name: 'DESTINATION_SQL_STREAM',
+      }
+    });
+    analyticsOutput.node.addDependency(this.analyticsStream);
+
+    const analyticsLogging = new CfnApplicationCloudWatchLoggingOption(this, 'AnalyticsLogging', {
+      applicationName: analyticsAppName,
+      cloudWatchLoggingOption: {
+        logStreamArn: `${analyticsLogGroup.logGroupArn}:${logStreamName}`,
+      },
+    });
+    analyticsLogging.node.addDependency(this.analyticsStream);
   }
 }
