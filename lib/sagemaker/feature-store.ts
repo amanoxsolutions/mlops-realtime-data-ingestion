@@ -133,18 +133,17 @@ export class RDIFeatureStore extends Construct {
 
     // IAM Role for Kinesis Data Analytics
     const analyticsRole = new Role(this, 'AnalyticsRole', {
+      roleName: `${this.prefix}-analytics-role`,
       assumedBy: new ServicePrincipal('kinesisanalytics.amazonaws.com'),
       inlinePolicies: {
         AnalyticsRolePolicy: new PolicyDocument({
           statements: [
             new PolicyStatement({
-              sid: 'AnalyticsRolePolicy',
+              sid: 'LambdaPermissions',
               resources: [
-                props.firehoseStreamArn,
                 lambda.function.functionArn
               ],
               actions: [
-                'kinesis:*', 
                 'lambda:InvokeFunction',
                 'lambda:GetFunctionConfiguration',
                 'lambda:UpdateFunctionConfiguration',
@@ -153,6 +152,13 @@ export class RDIFeatureStore extends Construct {
                 'lambda:DeleteEventSourceMapping',
                 'lambda:ListEventSourceMappings',
               ] 
+            }),
+            new PolicyStatement({
+              sid: 'AllowAccessToSourceStream',
+              resources: [
+                props.firehoseStreamArn
+              ],
+              actions: ['firehose:*'] 
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
@@ -226,6 +232,12 @@ export class RDIFeatureStore extends Construct {
       }
     });
 
+    analyticsRole.addToPolicy(new PolicyStatement({
+      sid: 'AllowAccessToAnalyticsStream',
+      resources: ['*'],
+      actions: ['kinesisanalytics:*']
+    }));
+
     const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
       applicationName: analyticsAppName,
       output: {
@@ -240,12 +252,13 @@ export class RDIFeatureStore extends Construct {
     });
     analyticsOutput.node.addDependency(this.analyticsStream);
 
-    const analyticsLogging = new CfnApplicationCloudWatchLoggingOption(this, 'AnalyticsLogging', {
-      applicationName: analyticsAppName,
-      cloudWatchLoggingOption: {
-        logStreamArn: `${analyticsLogGroup.logGroupArn}:${logStreamName}`,
-      },
-    });
-    analyticsLogging.node.addDependency(this.analyticsStream);
+    // const analyticsLogging = new CfnApplicationCloudWatchLoggingOption(this, 'AnalyticsLogging', {
+    //   applicationName: analyticsAppName,
+    //   cloudWatchLoggingOption: {
+    //     // remove the ":*" from the end of the log group ARN analyticsLogGroup.logGroupArn
+    //     logStreamArn: `${analyticsLogGroup.logGroupArn.substring(0, analyticsLogGroup.logGroupArn.length - 2)}:log-stream:${logStreamName}`,
+    //   },
+    // });
+    // analyticsLogging.node.addDependency(this.analyticsStream);
   }
 }
