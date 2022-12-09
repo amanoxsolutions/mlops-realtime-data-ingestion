@@ -222,16 +222,11 @@ export class RDIFeatureStore extends Construct {
               {
                 name: "weight",
                 mapping: "$.weight",
-                sqlType: "VARCHAR(256)"
+                sqlType: "INTEGER"
               },
               {
                 name: "fee",
                 mapping: "$.fee",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "time",
-                mapping: "$.time",
                 sqlType: "INTEGER"
               }
             ]
