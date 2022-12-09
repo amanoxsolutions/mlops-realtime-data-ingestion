@@ -4,7 +4,7 @@ import { ManagedPolicy, Role, ServicePrincipal, Policy, PolicyStatement, PolicyD
 import { LogGroup, RetentionDays, LogStream } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
-import { CfnApplication, CfnApplicationOutput, CfnApplicationCloudWatchLoggingOption } from 'aws-cdk-lib/aws-kinesisanalyticsv2';
+import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
 import { RDILambda } from '../lambda';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
 
@@ -145,12 +145,7 @@ export class RDIFeatureStore extends Construct {
               ],
               actions: [
                 'lambda:InvokeFunction',
-                'lambda:GetFunctionConfiguration',
-                'lambda:UpdateFunctionConfiguration',
-                'lambda:InvokeAsync',
-                'lambda:CreateEventSourceMapping',
-                'lambda:DeleteEventSourceMapping',
-                'lambda:ListEventSourceMappings',
+                'lambda:GetFunctionConfiguration'
               ] 
             }),
             new PolicyStatement({
@@ -158,7 +153,25 @@ export class RDIFeatureStore extends Construct {
               resources: [
                 props.firehoseStreamArn
               ],
-              actions: ['firehose:*'] 
+              actions: [
+                'firehose:DescribeDeliveryStream',
+                'firehose:Get*'
+              ] 
+            }),
+            new PolicyStatement({
+              sid: 'ReadEncryptedInputKinesisFirehose',
+              resources: ['*'], // TODO: Put the ARN of the encryption key
+              actions: [
+                'kms:Decrypt'
+              ],
+              conditions: {
+                StringEquals: {
+                  'kms:ViaService': 'firehose.us-east-1.amazonaws.com'
+                },
+                StringLike: {
+                  'kms:EncryptionContext:aws:firehose:arn': props.firehoseStreamArn
+                }
+              }
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
@@ -179,64 +192,53 @@ export class RDIFeatureStore extends Construct {
 
     // Kinesis Data Analytics Application
     this.analyticsStream = new CfnApplication(this, 'Analytics', {
-      runtimeEnvironment: 'SQL-1_0',
       applicationName: analyticsAppName,
-      serviceExecutionRole: analyticsRole.roleArn,
-      applicationConfiguration: {
-        applicationCodeConfiguration: {
-          codeContent: {
-              textContent: fs.readFileSync(path.join(__dirname, '../../resources/kinesis/analytics.sql')).toString(),
+      applicationCode: fs.readFileSync(path.join(__dirname, '../../resources/kinesis/analytics.sql')).toString(),
+      inputs: [
+        {
+          namePrefix: "SOURCE_SQL_STREAM",
+          kinesisFirehoseInput: {
+            resourceArn: props.firehoseStreamArn,
+            roleArn: analyticsRole.roleArn,
           },
-          codeContentType: "PLAINTEXT",
-        },
-        sqlApplicationConfiguration: {
-          inputs: [
-            {
-              namePrefix: "SOURCE_SQL_STREAM",
-              kinesisFirehoseInput: {
-                resourceArn: props.firehoseStreamArn
+          inputParallelism: { count: 1 },
+          inputSchema: {
+            recordFormat: {
+              recordFormatType: "JSON",
+              mappingParameters: { jsonMappingParameters: { recordRowPath: "$" } }
+            },
+            recordEncoding: "UTF-8",
+            recordColumns: [
+              {
+                name: "hash",
+                mapping: "$.hash",
+                sqlType: "VARCHAR(64)"
               },
-              inputParallelism: { count: 1 },
-              inputSchema: {
-                recordFormat: {
-                  recordFormatType: "JSON",
-                  mappingParameters: { jsonMappingParameters: { recordRowPath: "$" } }
-                },
-                recordEncoding: "UTF-8",
-                recordColumns: [
-                  {
-                    name: "hash",
-                    mapping: "$.hash",
-                    sqlType: "VARCHAR(64)"
-                  },
-                  {
-                    name: "size",
-                    mapping: "$.size",
-                    sqlType: "INTEGER"
-                  },
-                  {
-                    name: "weight",
-                    mapping: "$.weight",
-                    sqlType: "VARCHAR(256)"
-                  },
-                  {
-                    name: "fee",
-                    mapping: "$.fee",
-                    sqlType: "INTEGER"
-                  }
-                ]
+              {
+                name: "size",
+                mapping: "$.size",
+                sqlType: "INTEGER"
               },
-            }
-          ],
+              {
+                name: "weight",
+                mapping: "$.weight",
+                sqlType: "VARCHAR(256)"
+              },
+              {
+                name: "fee",
+                mapping: "$.fee",
+                sqlType: "INTEGER"
+              },
+              {
+                name: "time",
+                mapping: "$.time",
+                sqlType: "INTEGER"
+              }
+            ]
+          },
         }
-      }
+      ],
     });
-
-    analyticsRole.addToPolicy(new PolicyStatement({
-      sid: 'AllowAccessToAnalyticsStream',
-      resources: ['*'],
-      actions: ['kinesisanalytics:*']
-    }));
 
     const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
       applicationName: analyticsAppName,
@@ -246,19 +248,11 @@ export class RDIFeatureStore extends Construct {
         },
         lambdaOutput: {
           resourceArn: lambda.function.functionArn,
+          roleArn: analyticsRole.roleArn,
         },
         name: 'DESTINATION_SQL_STREAM',
       }
     });
     analyticsOutput.node.addDependency(this.analyticsStream);
-
-    // const analyticsLogging = new CfnApplicationCloudWatchLoggingOption(this, 'AnalyticsLogging', {
-    //   applicationName: analyticsAppName,
-    //   cloudWatchLoggingOption: {
-    //     // remove the ":*" from the end of the log group ARN analyticsLogGroup.logGroupArn
-    //     logStreamArn: `${analyticsLogGroup.logGroupArn.substring(0, analyticsLogGroup.logGroupArn.length - 2)}:log-stream:${logStreamName}`,
-    //   },
-    // });
-    // analyticsLogging.node.addDependency(this.analyticsStream);
   }
 }
