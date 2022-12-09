@@ -11,8 +11,7 @@ export interface DataIngestionPipelineStackProps extends StackProps {
   readonly prefix: string;
   readonly repoName: string;
   readonly codestarConnectionName: string;
-  readonly fullBranchName: string;
-  readonly shortBranchName: string;
+  readonly branchName: string;
 }
 
 export class DataIngestionPipelineStack extends Stack {
@@ -21,8 +20,8 @@ export class DataIngestionPipelineStack extends Stack {
 
     // Create a unique suffix based on the AWS account number and the branchName
     // to be used for resources this is used for S3 bucket bucket names for example
-    const uniqueSuffix = getShortHashFromString(`${this.account}-${props.shortBranchName}`, 8);
-    console.log('unique resource Suffix source string: 👉 ', `${this.account}-${props.shortBranchName}`);
+    const uniqueSuffix = getShortHashFromString(`${this.account}-${props.branchName}`, 8);
+    console.log('unique resource Suffix source string: 👉 ', `${this.account}-${props.branchName}`);
     console.log('unique resource Suffix hash: 👉 ', uniqueSuffix);
 
     const codestarConnection = new CodestarConnection(this, 'CsConnection', {
@@ -33,19 +32,19 @@ export class DataIngestionPipelineStack extends Stack {
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: `${props.prefix}-pipeline`,
       synth: new ShellStep('Synth', {
-        input: CodePipelineSource.connection(props.repoName, props.fullBranchName,
+        input: CodePipelineSource.connection(props.repoName, props.branchName,
           { 
             connectionArn: codestarConnection.arn,
             codeBuildCloneOutput: true,
           }
         ),
         // We pass to the CodeBuild job the branchName as a context parameter
-        commands: [`git checkout ${props.fullBranchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth']
+        commands: [`git checkout ${props.branchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth']
       }),
       dockerEnabledForSynth: true,
       // The Default ARM Amazon Linux 2 v2 Build image comes with Node.js 12.x which creates issues with CDK v2...
       // see: https://github.com/aws/aws-cdk/issues/20739
-      cliVersion: '2.51.1',
+      cliVersion: '2.54.0',
       assetPublishingCodeBuildDefaults: {
         partialBuildSpec: BuildSpec.fromObject({
           phases: {
