@@ -211,22 +211,22 @@ export class RDIFeatureStore extends Construct {
             recordColumns: [
               {
                 name: "hash",
-                mapping: "$.hash",
+                mapping: "$.detail.txs[0:].hash",
                 sqlType: "VARCHAR(64)"
               },
               {
                 name: "size",
-                mapping: "$.size",
+                mapping: "$.detail.txs[0:].size",
                 sqlType: "INTEGER"
               },
               {
                 name: "weight",
-                mapping: "$.weight",
+                mapping: "$.detail.txs[0:].weight",
                 sqlType: "INTEGER"
               },
               {
                 name: "fee",
-                mapping: "$.fee",
+                mapping: "$.detail.txs[0:].fee",
                 sqlType: "INTEGER"
               }
             ]
