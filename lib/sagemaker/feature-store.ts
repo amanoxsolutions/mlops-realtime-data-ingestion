@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { RemovalPolicy, Duration } from 'aws-cdk-lib';
+import { Stack, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { ManagedPolicy, Role, ServicePrincipal, Policy, PolicyStatement, PolicyDocument, Effect } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays, LogStream } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
@@ -35,6 +35,9 @@ export class RDIFeatureStore extends Construct {
 
     this.prefix = props.prefix;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
+
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
 
     //
     // SageMaker Feature Store
@@ -116,6 +119,14 @@ export class RDIFeatureStore extends Construct {
         AGG_FEATURE_GROUP_NAME: cfnFeatureGroup.featureGroupName,
       }
     });
+
+    // Add the PutItem permissions on the DynamoDB table to the Lambda function's policy
+    const lambdaPolicyStatement = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ['sagemaker:PutRecord'],
+      resources: [`arn:aws:sagemaker:${region}:${account}:feature-group/${cfnFeatureGroup.featureGroupName}`],
+    });
+    lambda.function.addToRolePolicy(lambdaPolicyStatement);
 
     // Setup Kinesis Analytics CloudWatch Logs
     const analyticsLogGroup = new LogGroup(this, 'AnalyticsLogGroup', {
