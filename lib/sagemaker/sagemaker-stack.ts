@@ -38,6 +38,7 @@ export class SagemakerStack extends Stack {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
       firehoseStreamArn: props.ingestionFirehoseStreamArn,
+      s3Suffix: this.s3Suffix,
     });
   }
 }
