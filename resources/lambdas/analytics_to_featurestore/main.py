@@ -52,7 +52,8 @@ def update_agg(fg_name, tx_hour, total_nb_trx_1h, total_fee_1h, avg_fee_1h):
     record = [{'FeatureName':'tx_hour', 'ValueAsString': tx_hour},
               {'FeatureName':'total_nb_trx_1h', 'ValueAsString': str(total_nb_trx_1h)},
               {'FeatureName':'total_fee_1h', 'ValueAsString': str(total_fee_1h)},
-              {'FeatureName':'avg_fee_1h', 'ValueAsString': str(avg_fee_1h)}
+              {'FeatureName':'avg_fee_1h', 'ValueAsString': str(avg_fee_1h)},
+              {'FeatureName':'event_time', 'ValueAsString': str(int(round(time.time())))}
              ]
     sm_fs.put_record(FeatureGroupName=fg_name, Record=record)
     return
