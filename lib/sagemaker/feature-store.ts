@@ -315,11 +315,6 @@ export class RDIFeatureStore extends Construct {
                 sqlType: "VARCHAR(1024)"
               },
               {
-                name: "tx_inputs",
-                mapping: "$.detail.txs[0:].inputs[0:]",
-                sqlType: "VARCHAR(1024)"
-              },
-              {
                 name: "tx_out",
                 mapping: "$.detail.txs[0:].out[0:]",
                 sqlType: "VARCHAR(1024)"
