@@ -260,7 +260,7 @@ export class RDIFeatureStore extends Construct {
                 sqlType: "INTEGER"
               },
               {
-                name: "tx_yvin_sz",
+                name: "tx_vin_sz",
                 mapping: "$.detail.txs[0:].vin_sz",
                 sqlType: "INTEGER"
               },
