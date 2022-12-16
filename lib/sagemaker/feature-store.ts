@@ -80,7 +80,7 @@ export class RDIFeatureStore extends Construct {
     }));
 
     // Create the Feature Group
-    const cfnFeatureGroup = new CfnFeatureGroup(this, 'MyCfnFeatureGroup', {
+    const cfnFeatureGroup = new CfnFeatureGroup(this, 'FeatureGroup', {
       eventTimeFeatureName: fgConfig.event_time_feature_name,
       featureDefinitions: fgConfig.features.map(
         (feature: { name: string; type: string }) => ({
