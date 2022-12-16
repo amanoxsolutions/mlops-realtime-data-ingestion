@@ -1,0 +1,15 @@
+CREATE OR REPLACE STREAM "DESTINATION_SQL_STREAM" (
+    "total_nb_trx_1h" BIGINT,
+    "total_fee_1h"    BIGINT,
+    "avg_fee_1h"      REAL
+);
+CREATE OR REPLACE PUMP "STREAM_PUMP" AS INSERT INTO "DESTINATION_SQL_STREAM"
+    SELECT STREAM  
+        COUNT("tx_hash") OVER LAST_1_HOUR, 
+        SUM("tx_fee") OVER LAST_1_HOUR, 
+        AVG("tx_fee") OVER LAST_1_HOUR
+        FROM "SOURCE_SQL_STREAM_001"
+        WINDOW LAST_1_HOUR AS (
+            RANGE INTERVAL '60' MINUTE PRECEDING
+        );
+
