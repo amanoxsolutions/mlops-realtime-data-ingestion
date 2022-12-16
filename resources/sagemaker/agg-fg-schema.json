@@ -1,30 +1,30 @@
 {
     "description": "Aggregated features for streamed data",
     "features": [
-          {
-              "name": "total_nb_trx_1h",
-              "type": "BIGINT",
-              "description": "Aggregated Metric: Total number of transactions"
-          },
-          {
-              "name": "total_fee_1h",
-              "type": "BIGINT",
-              "description": "Aggregated Metric: Total amount of transaction fees aggregated by past 1 hour"
-          },
-          {
-              "name": "avg_fee_1h",
-              "type": "DOUBLE",
-              "description": "Aggregated Metric: Average amount of transaction fees aggregated by past 1 hour"
-          },
-          {
-              "name": "tx_time",
-              "type": "DOUBLE",
-              "description": "Required feature for event timestamp"
-          }
-      ],
-    
-      "record_identifier_feature_name": "tx_time",
-      "event_time_feature_name": "tx_time",
-      "tags": [{"Key": "Project", "Value" : "mlops-realtime-data-ingeestion"}, 
-               {"Key": "IngestionType", "Value": "Streaming"}]
+        {
+            "name": "tx_hour",
+            "type": "STRING",
+            "description": "The timestamp of the hour of the aggregated transactions"
+        },
+        {
+            "name": "total_nb_trx_1h",
+            "type": "BIGINT",
+            "description": "Aggregated Metric: Total number of transactions"
+        },
+        {
+            "name": "total_fee_1h",
+            "type": "BIGINT",
+            "description": "Aggregated Metric: Total amount of transaction fees aggregated by past 1 hour"
+        },
+        {
+            "name": "avg_fee_1h",
+            "type": "DOUBLE",
+            "description": "Aggregated Metric: Average amount of transaction fees aggregated by past 1 hour"
+        }
+    ],
+
+    "record_identifier_feature_name": "tx_hour",
+    "event_time_feature_name": "tx_hour",
+    "tags": [{"Key": "Project", "Value" : "mlops-realtime-data-ingeestion"}, 
+            {"Key": "IngestionType", "Value": "Streaming"}]
 }
