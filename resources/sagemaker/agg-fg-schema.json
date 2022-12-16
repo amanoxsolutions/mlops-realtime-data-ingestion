@@ -23,7 +23,7 @@
         },
         {
             "name": "event_time",
-            "type": "STRING",
+            "type": "DOUBLE",
             "description": "Required feature for event timestamp"
         }
     ],
