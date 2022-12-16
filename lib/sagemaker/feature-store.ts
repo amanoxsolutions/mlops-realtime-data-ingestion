@@ -19,6 +19,7 @@ enum FeatureStoreTypes {
 
 interface RDIFeatureStoreProps {
   readonly prefix: string;
+  readonly s3Suffix: string;
   readonly removalPolicy: RemovalPolicy;
   readonly firehoseStreamArn: string;
 }
@@ -44,7 +45,7 @@ export class RDIFeatureStore extends Construct {
     //
     // Create an S3 Bucket for the Offline Feature Store
     this.bucket = new Bucket(this, 'FeatureStoreBucket', {
-      bucketName: `${this.prefix}-sagemaker-feature-store-bucket`,
+      bucketName: `${this.prefix}-sagemaker-feature-store-bucket-${props.s3Suffix}`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,
