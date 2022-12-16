@@ -7,6 +7,7 @@ import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
 import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
 import { RDILambda } from '../lambda';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
+import * as sourceSchema from '../../resources/sagemaker/source-schema.json';
 
 const fs = require('fs');
 const path = require('path');
@@ -220,123 +221,7 @@ export class RDIFeatureStore extends Construct {
               mappingParameters: { jsonMappingParameters: { recordRowPath: "$" } }
             },
             recordEncoding: "UTF-8",
-            recordColumns: [
-              {
-                name: "ingestion_version",
-                mapping: "$.version",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "ingestion_id",
-                mapping: "$.id",
-                sqlType: "VARCHAR(64)"
-              },
-              {
-                name: "ingestion_detail_type",
-                mapping: "$.detail-type",
-                sqlType: "VARCHAR(16)"
-              },
-              {
-                name: "ingestion_source",
-                mapping: "$.source",
-                sqlType: "VARCHAR(32)"
-              },
-              {
-                name: "ingestion_account",
-                mapping: "$.account",
-                sqlType: "BIGINT"
-              },
-              {
-                name: "ingestion_time",
-                mapping: "$.time",
-                sqlType: "VARCHAR(32)"
-              },
-              {
-                name: "ingestion_region",
-                mapping: "$.region",
-                sqlType: "VARCHAR(16)"
-              },
-              {
-                name: "ingestion_resources",
-                mapping: "$.resources[0:]",
-                sqlType: "VARCHAR(128)"
-              },
-              {
-                name: "tx_hash",
-                mapping: "$.detail.txs[0:].hash",
-                sqlType: "VARCHAR(64)"
-              },
-              {
-                name: "tx_ver",
-                mapping: "$.detail.txs[0:].ver",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_vin_sz",
-                mapping: "$.detail.txs[0:].vin_sz",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_vout_sz",
-                mapping: "$.detail.txs[0:].vout_sz",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_size",
-                mapping: "$.detail.txs[0:].size",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_weight",
-                mapping: "$.detail.txs[0:].weight",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_fee",
-                mapping: "$.detail.txs[0:].fee",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_relayed_by",
-                mapping: "$.detail.txs[0:].relayed_by",
-                sqlType: "VARCHAR(8)"
-              },
-              {
-                name: "tx_lock_time",
-                mapping: "$.detail.txs[0:].lock_time",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_index",
-                mapping: "$.detail.txs[0:].tx_index",
-                sqlType: "BIGINT"
-              },
-              {
-                name: "tx_double_spend",
-                mapping: "$.detail.txs[0:].double_spend",
-                sqlType: "BOOLEAN"
-              },
-              {
-                name: "tx_time",
-                mapping: "$.detail.txs[0:].time",
-                sqlType: "INTEGER"
-              },
-              {
-                name: "tx_inputs",
-                mapping: "$.detail.txs[0:].inputs[0:]",
-                sqlType: "VARCHAR(1024)"
-              },
-              {
-                name: "tx_out",
-                mapping: "$.detail.txs[0:].out[0:]",
-                sqlType: "VARCHAR(1024)"
-              },
-              {
-                name: "tx_rbf",
-                mapping: "$.detail.txs[0:].rbf",
-                sqlType: "BOOLEAN"
-              }
-            ]
+            recordColumns: sourceSchema.columns
           },
         }
       ],
