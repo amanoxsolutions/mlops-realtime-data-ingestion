@@ -36,7 +36,7 @@ export class RDIFeatureStore extends Construct {
     super(scope, id);
 
     this.prefix = props.prefix;
-    this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
+    this.removalPolicy = props.removalPolicy;
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
@@ -50,7 +50,7 @@ export class RDIFeatureStore extends Construct {
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,
-      autoDeleteObjects: this.removalPolicy == RemovalPolicy.DESTROY
+      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
     });
 
 
