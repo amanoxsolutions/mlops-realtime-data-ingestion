@@ -71,9 +71,10 @@ def delete_sagemaker_studio_apps(domain_id: str):
     logger.info(f"Deleting all the user created SageMaker Studio apps for the domain {SAGEMAKER_DOMAIN_ID}")
     for app in apps:
         app_name = app.get("AppName")
+        status = app.get("Status")
         # The app created by the SageMaker stack will be automatically destroyed
-        # Here we are deleting the apps created by the user
-        if app_name != SAGEMAKER_APP_NAME:
+        # Here we are deleting the apps created by the user if they are not already deleted or being deleted
+        if app_name != SAGEMAKER_APP_NAME and status != "Deleting" and status != "Deleted":
             logger.info(f"Deleting the user created SageMaker Studio app {app_name}")
             sagemaker.delete_app(
                 DomainId=domain_id,

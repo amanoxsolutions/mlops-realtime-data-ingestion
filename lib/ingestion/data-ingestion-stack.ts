@@ -110,7 +110,7 @@ export class RealtimeDataIngestionStack extends Stack {
     if (inputStream.s3Bucket) {
       this.dataBucketArn = inputStream.s3Bucket.bucketArn;
     } else {
-      `arn:aws:s3:::${this.dataBucketName}`;
+      this.dataBucketArn = `arn:aws:s3:::${this.dataBucketName}`;
     }
 
     // Edit Kinesis Firehose Stream Role to allow invocation of Lambda
