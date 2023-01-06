@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Duration, CustomResource } from 'aws-cdk-lib';
+import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -12,10 +12,12 @@ import {
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { CfnDomain, CfnUserProfile } from 'aws-cdk-lib/aws-sagemaker';
+import { CfnDomain, CfnUserProfile, CfnApp } from 'aws-cdk-lib/aws-sagemaker';
+
 
 interface RDISagemakerStudioProps {
   readonly prefix: string;
+  readonly removalPolicy: RemovalPolicy;
   readonly dataBucketArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
@@ -155,5 +157,16 @@ export class RDISagemakerStudio extends Construct {
     });
     // It depends on the custom resource
     studioUser.node.addDependency(customResource);
+
+    // Create an app for the SageMaker studio user
+    const studioApp = new CfnApp(this, 'StudioApp', {
+      appName: `${this.prefix}-sagemaker-studio-app`,
+      appType: 'JupyterServer',
+      domainId: this.domainId,
+      userProfileName: this.userName,
+      resourceSpec: {
+        instanceType: 'ml.t3.medium',
+      },
+    });
   } 
 }

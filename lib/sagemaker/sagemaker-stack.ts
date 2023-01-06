@@ -29,6 +29,7 @@ export class SagemakerStack extends Stack {
 
     this.studio = new RDISagemakerStudio(this, 'sagemakerStudio', {
       prefix: this.prefix,
+      removalPolicy: this.removalPolicy,
       dataBucketArn: props.dataBucketArn,
       vpcId: props.vpc.vpcId,
       subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
