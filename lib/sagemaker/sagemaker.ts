@@ -15,6 +15,50 @@ import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { CfnDomain, CfnUserProfile, CfnApp } from 'aws-cdk-lib/aws-sagemaker';
 
 
+interface cleanupSagemakerStudioProps {
+  readonly prefix: string;
+  readonly sagemakerStudioDomainName: string;
+  readonly sagemakerStudioUserProfile: string;
+  readonly sagemakerStudioAppName: string;
+}
+
+export class cleanupSagemakerStudio extends Construct {
+
+  constructor(scope: Construct, id: string, props: cleanupSagemakerStudioProps) {
+    super(scope, id);
+
+    const connectionPolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sagemaker:List*', 
+        'sagemaker:DeleteApp'
+      ],
+      resources: ['*'],
+    });
+
+    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
+      functionName: `${props.prefix}-cleanup-sagemaker-studio`,
+      lambdaPurpose: 'CustomResourceToCleanupSageMakerStudio',
+      uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
+      code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_studio'),
+      handler: 'main.lambda_handler',
+      environment: {
+        SAGEMAKER_DOMAIN_NAME: props.sagemakerStudioDomainName,
+        SAGEMAKER_USER_PROFILE: props.sagemakerStudioUserProfile,
+        SAGEMAKER_APP_NAME: props.sagemakerStudioAppName,
+      },
+      timeout: Duration.minutes(10),
+      runtime: Runtime.PYTHON_3_9,
+      logRetention: RetentionDays.ONE_WEEK,
+    });
+    customResourceLambda.addToRolePolicy(connectionPolicy);
+
+    new CustomResource(this, 'Resource', {
+      serviceToken: customResourceLambda.functionArn,
+    });
+  }
+}
+
 interface RDISagemakerStudioProps {
   readonly prefix: string;
   readonly removalPolicy: RemovalPolicy;
@@ -173,5 +217,17 @@ export class RDISagemakerStudio extends Construct {
     studioApp.node.addDependency(studioUser);
     // add removal policy to the app
     studioApp.applyRemovalPolicy(this.removalPolicy);
+
+    // Custom Resource to clean upp the SageMaker Studio Domain and User by
+    // deleting the apps which might have been created by the user
+    if (props.removalPolicy === RemovalPolicy.DESTROY) {
+      new cleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
+        prefix: this.prefix,
+        sagemakerStudioDomainName: this.domainName,
+        sagemakerStudioUserProfile: this.userName,
+        sagemakerStudioAppName: studioApp.appName,
+      });
+      // add dependency on the user profile
+      studioApp.node.addDependency(studioUser);
   } 
 }
