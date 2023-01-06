@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
+import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -17,7 +17,7 @@ import { CfnDomain, CfnUserProfile, CfnApp } from 'aws-cdk-lib/aws-sagemaker';
 
 interface cleanupSagemakerStudioProps {
   readonly prefix: string;
-  readonly sagemakerStudioDomainName: string;
+  readonly sagemakerStudioDomainId: string;
   readonly sagemakerStudioUserProfile: string;
   readonly sagemakerStudioAppName: string;
 }
@@ -27,16 +27,25 @@ export class cleanupSagemakerStudio extends Construct {
   constructor(scope: Construct, id: string, props: cleanupSagemakerStudioProps) {
     super(scope, id);
 
-    const connectionPolicy = new PolicyStatement({
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
+    const lambdaPurpose = 'CustomResourceToCleanupSageMakerStudio'
+
+    const sagemakerList = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
-        'sagemaker:List*', 
-        'sagemaker:DeleteApp'
+        'sagemaker:List*'
       ],
       resources: ['*'],
     });
 
-    const lambdaPurpose = 'CustomResourceToCleanupSageMakerStudio'
+    const sagemakerDeleteApp = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sagemaker:DeleteApp'
+      ],
+      resources: [`arn:aws:sagemaker:${region}:${account}:app/${props.sagemakerStudioDomainId}/${props.sagemakerStudioUserProfile}/*/*`],
+    });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${props.prefix}-cleanup-sagemaker-studio`,
@@ -46,7 +55,7 @@ export class cleanupSagemakerStudio extends Construct {
       handler: 'main.lambda_handler',
       environment: {
         PHYSICAL_ID: lambdaPurpose,
-        SAGEMAKER_DOMAIN_NAME: props.sagemakerStudioDomainName,
+        SAGEMAKER_DOMAIN_ID: props.sagemakerStudioDomainId,
         SAGEMAKER_USER_PROFILE: props.sagemakerStudioUserProfile,
         SAGEMAKER_APP_NAME: props.sagemakerStudioAppName,
       },
@@ -54,7 +63,7 @@ export class cleanupSagemakerStudio extends Construct {
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
     });
-    customResourceLambda.addToRolePolicy(connectionPolicy);
+    customResourceLambda.addToRolePolicy(sagemakerList);
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
@@ -227,7 +236,7 @@ export class RDISagemakerStudio extends Construct {
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
       new cleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
         prefix: this.prefix,
-        sagemakerStudioDomainName: this.domainName,
+        sagemakerStudioDomainId: this.domainId,
         sagemakerStudioUserProfile: this.userName,
         sagemakerStudioAppName: studioApp.appName,
       });
