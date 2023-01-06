@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Duration, CustomResource, RemovalPolicy, CfnWaitCondition } from 'aws-cdk-lib';
+import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -36,13 +36,16 @@ export class cleanupSagemakerStudio extends Construct {
       resources: ['*'],
     });
 
+    const lambdaPurpose = 'CustomResourceToCleanupSageMakerStudio'
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${props.prefix}-cleanup-sagemaker-studio`,
-      lambdaPurpose: 'CustomResourceToCleanupSageMakerStudio',
+      lambdaPurpose: lambdaPurpose,
       uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
       code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_studio'),
       handler: 'main.lambda_handler',
       environment: {
+        PHYSICAL_ID: lambdaPurpose,
         SAGEMAKER_DOMAIN_NAME: props.sagemakerStudioDomainName,
         SAGEMAKER_USER_PROFILE: props.sagemakerStudioUserProfile,
         SAGEMAKER_APP_NAME: props.sagemakerStudioAppName,

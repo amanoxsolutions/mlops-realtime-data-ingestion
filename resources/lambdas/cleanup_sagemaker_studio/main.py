@@ -2,7 +2,7 @@ import os
 import boto3
 import logging
 import lib.cfnresponse as cfnresponse
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -11,7 +11,7 @@ sagemaker = boto3.client("sagemaker")
 SAGEMAKER_DOMAIN_NAME = os.environ["SAGEMAKER_DOMAIN_NAME"]
 SAGEMAKER_USER_PROFILE = os.environ["SAGEMAKER_USER_PROFILE"]
 SAGEMAKER_APP_NAME = os.environ["SAGEMAKER_APP_NAME"]
-PHYSICAL_ID = "CustomResourceToCleanupSageMakerStudio"
+PHYSICAL_ID = os.environ["PHYSICAL_ID"]
 
 def lambda_handler(event, context):
     response_data = {"deletedImages": []}
@@ -39,7 +39,7 @@ def filter_domain(next_token: str = None) -> Tuple[str, str]:
     """
     domain_id = None
     # List the SageMaker domains from the next token
-    response = sagemaker.list_domains(NexToken=next_token)
+    response = sagemaker.list_domains(NextToken=next_token)
     next_token = response.get("NextToken")
     domains = response.get("Domains")
     # Search for the domain name in the list of domains
@@ -59,7 +59,7 @@ def get_sagemaker_domain_id() -> str:
     logger.info("Looking for the SageMaker Studio ID")
     # List all the SageMaker domain
     domain_id, next_token = filter_domain()
-    while next_token:
+    while not domain_id and next_token:
         domain_id, next_token = filter_domain(next_token)
         if domain_id:
             break
