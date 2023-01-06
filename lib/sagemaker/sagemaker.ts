@@ -64,6 +64,7 @@ export class cleanupSagemakerStudio extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
     });
     customResourceLambda.addToRolePolicy(sagemakerList);
+    customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
