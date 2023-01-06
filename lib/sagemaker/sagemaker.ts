@@ -164,9 +164,6 @@ export class RDISagemakerStudio extends Construct {
       appType: 'JupyterServer',
       domainId: this.domainId,
       userProfileName: this.userName,
-      resourceSpec: {
-        instanceType: 'ml.t3.medium',
-      },
     });
   } 
 }
