@@ -220,7 +220,8 @@ export class RDISagemakerStudio extends Construct {
 
     // Custom Resource to clean upp the SageMaker Studio Domain and User by
     // deleting the apps which might have been created by the user
-    if (props.removalPolicy === RemovalPolicy.DESTROY) {
+    // The SageMaker user can't be deleted if there are apps associated with it
+    if (this.removalPolicy === RemovalPolicy.DESTROY) {
       new cleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
         prefix: this.prefix,
         sagemakerStudioDomainName: this.domainName,
@@ -229,5 +230,6 @@ export class RDISagemakerStudio extends Construct {
       });
       // add dependency on the user profile
       studioApp.node.addDependency(studioUser);
+    }
   } 
 }
