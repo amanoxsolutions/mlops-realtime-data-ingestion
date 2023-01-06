@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
+import { Duration, CustomResource, RemovalPolicy, CfnWaitCondition } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -25,6 +25,7 @@ interface RDISagemakerStudioProps {
 
 export class RDISagemakerStudio extends Construct {
   public readonly prefix: string;
+  public readonly removalPolicy: RemovalPolicy;
   public readonly role: IRole;
   public readonly domainName: string;
   public readonly domainId: string;
@@ -35,6 +36,7 @@ export class RDISagemakerStudio extends Construct {
 
     this.prefix = props.prefix;
     this.userName = `${this.prefix}-sagemaker-user`;
+    this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
     //
     // Create SageMaker Studio Domain
@@ -157,6 +159,8 @@ export class RDISagemakerStudio extends Construct {
     });
     // It depends on the custom resource
     studioUser.node.addDependency(customResource);
+    // Add removal policy to the user profile
+    studioUser.applyRemovalPolicy(this.removalPolicy);
 
     // Create an app for the SageMaker studio user
     const studioApp = new CfnApp(this, 'StudioApp', {
@@ -165,5 +169,9 @@ export class RDISagemakerStudio extends Construct {
       domainId: this.domainId,
       userProfileName: this.userName,
     });
+    // add dependency on the user profile
+    studioApp.node.addDependency(studioUser);
+    // add removal policy to the app
+    studioApp.applyRemovalPolicy(this.removalPolicy);
   } 
 }
