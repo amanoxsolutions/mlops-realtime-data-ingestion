@@ -35,24 +35,24 @@ def lambda_handler(event, context):
         agg_data_str = base64.b64decode(data) 
         agg_data = json.loads(agg_data_str)
         
-        tx_hour = agg_data['tx_hour']
-        total_nb_trx_1h = agg_data['total_nb_trx_1h']
-        total_fee_1h = agg_data['total_fee_1h']
-        avg_fee_1h = agg_data['avg_fee_1h']
+        tx_minute = agg_data['tx_minute']
+        total_nb_trx_1min = agg_data['total_nb_trx_1min']
+        total_fee_1min = agg_data['total_fee_1min']
+        avg_fee_1min = agg_data['avg_fee_1min']
 
-        logger.info(f"Aggregated transaction data over the hour {tx_hour}, total_nb_trx_1h: {total_nb_trx_1h}, total_fee_1h: {total_fee_1h}, avg_fee_1h: {avg_fee_1h}")
-        update_agg(AGG_FEATURE_GROUP_NAME, tx_hour, total_nb_trx_1h, total_fee_1h, avg_fee_1h)
+        logger.info(f"Aggregated transaction data over the minute {tx_minute}, total_nb_trx_1min: {total_nb_trx_1min}, total_fee_1min: {total_fee_1min}, avg_fee_1min: {avg_fee_1min}")
+        update_agg(AGG_FEATURE_GROUP_NAME, tx_minute, total_nb_trx_1min, total_fee_1min, avg_fee_1min)
         
         # Flag each record as being "Ok", so that Kinesis won't try to re-send 
         agg_records.append({'recordId': rec['recordId'],
                             'result': 'Ok'})
     return {'records': agg_records}
 
-def update_agg(fg_name, tx_hour, total_nb_trx_1h, total_fee_1h, avg_fee_1h):
-    record = [{'FeatureName':'tx_hour', 'ValueAsString': tx_hour},
-              {'FeatureName':'total_nb_trx_1h', 'ValueAsString': str(total_nb_trx_1h)},
-              {'FeatureName':'total_fee_1h', 'ValueAsString': str(total_fee_1h)},
-              {'FeatureName':'avg_fee_1h', 'ValueAsString': str(avg_fee_1h)},
+def update_agg(fg_name, tx_minute, total_nb_trx_1min, total_fee_1min, avg_fee_1min):
+    record = [{'FeatureName':'tx_minute', 'ValueAsString': tx_minute},
+              {'FeatureName':'total_nb_trx_1min', 'ValueAsString': str(total_nb_trx_1min)},
+              {'FeatureName':'total_fee_1min', 'ValueAsString': str(total_fee_1min)},
+              {'FeatureName':'avg_fee_1min', 'ValueAsString': str(avg_fee_1min)},
               {'FeatureName':'event_time', 'ValueAsString': str(int(round(time.time())))}
              ]
     sm_fs.put_record(FeatureGroupName=fg_name, Record=record)
