@@ -10,14 +10,14 @@ export interface RealtimeDataIngestionStageProps extends StageProps {
 
 export class RealtimeDataIngestionStage extends Stage {
     
-    constructor(scope: Construct, id: string, props: RealtimeDataIngestionStageProps) {
-      super(scope, id, props);
-  
-      // Stack to deploy the Realtime Data Ingestion 
-      const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", {
-        prefix: props.prefix,
-        s3Suffix: props.uniqueSuffix,
-      });   
+  constructor(scope: Construct, id: string, props: RealtimeDataIngestionStageProps) {
+    super(scope, id, props);
+
+    // Stack to deploy the Realtime Data Ingestion 
+    const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", {
+      prefix: props.prefix,
+      s3Suffix: props.uniqueSuffix,
+    });   
       
       // Stack to deploy SageMaker
     new SagemakerStack(this, "SagemakerStack", {
@@ -25,6 +25,7 @@ export class RealtimeDataIngestionStage extends Stage {
       s3Suffix: props.uniqueSuffix,
       dataBucketArn: ingestionStack.dataBucketArn,
       vpc: ingestionStack.vpc,
+      ingestionFirehoseStreamArn: ingestionStack.firehoseStreamArn,
     });    
-    }
+  }
 }

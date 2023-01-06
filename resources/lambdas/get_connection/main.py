@@ -13,7 +13,7 @@ PHYSICAL_ID = "CustomResourceToGetCodeStarConnectionArn"
 def lambda_handler(event, context):
     response_data = {"ConnectionArn": ""}
     try:
-        request =event.get("RequestType").lower()
+        request = event.get("RequestType").lower()
         resource = event.get("ResourceProperties", {}).get("Resource")
         config = event.get("ResourceProperties")
         if request == "create" or request == "update":

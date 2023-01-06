@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import { RDIDynamodbTable } from './dynamodb';
 import { RDIIngestionWorker } from './fargate-worker';
 import { RDIIngestionWorkerImage } from './ingestion-worker-image';
-import { RDILambda } from './lambda';
+import { RDILambda } from '../lambda';
 import { EventbridgeToKinesisFirehoseToS3 } from '@aws-solutions-constructs/aws-eventbridge-kinesisfirehose-s3';
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -15,8 +15,8 @@ export interface RealtimeDataIngestionStackProps extends StackProps {
   readonly s3Suffix: string;
   readonly s3Versioning?: boolean;
   readonly removalPolicy?: RemovalPolicy;
-  readonly kinesisBufferInterval?: Duration;
-  readonly kinesisBufferSize?: Size;
+  readonly firehoseBufferInterval?: Duration;
+  readonly firehoseBufferSize?: Size;
 }
 
 export class RealtimeDataIngestionStack extends Stack {
@@ -24,8 +24,9 @@ export class RealtimeDataIngestionStack extends Stack {
   public readonly s3Suffix: string;
   public readonly s3Versioning: boolean;
   public readonly removalPolicy: RemovalPolicy;
-  public readonly kinesisBufferInterval: Duration;
-  public readonly kinesisBufferSize : Size;
+  public readonly firehoseStreamArn: string;
+  public readonly firehoseBufferInterval: Duration;
+  public readonly firehoseBufferSize : Size;
   public readonly dataBucketName : string;
   public readonly dataBucketArn : string;
   public readonly vpc: IVpc;
@@ -37,8 +38,8 @@ export class RealtimeDataIngestionStack extends Stack {
     this.s3Suffix = props.s3Suffix;
     this.s3Versioning = props.s3Versioning || false;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
-    this.kinesisBufferInterval = props.kinesisBufferInterval || Duration.seconds(60);
-    this.kinesisBufferSize = props.kinesisBufferSize || Size.mebibytes(1);
+    this.firehoseBufferInterval = props.firehoseBufferInterval || Duration.seconds(60);
+    this.firehoseBufferSize = props.firehoseBufferSize || Size.mebibytes(1);
     this.dataBucketName = `${this.prefix}-input-bucket-${this.s3Suffix}`;
 
     const inputTable = new RDIDynamodbTable(this, 'inputHashTable', {
@@ -104,11 +105,12 @@ export class RealtimeDataIngestionStack extends Stack {
       },
       logS3AccessLogs: false,
     });
+    this.firehoseStreamArn = inputStream.kinesisFirehose.attrArn;
     
     if (inputStream.s3Bucket) {
       this.dataBucketArn = inputStream.s3Bucket.bucketArn;
     } else {
-      `arn:aws:s3:::${this.dataBucketName}`;
+      this.dataBucketArn = `arn:aws:s3:::${this.dataBucketName}`;
     }
 
     // Edit Kinesis Firehose Stream Role to allow invocation of Lambda

@@ -8,6 +8,7 @@ logger.setLevel(logging.INFO)
 ecr = boto3.client("ecr")
 
 ECR_REPOSITORY_NAME = os.environ["ECR_REPOSITORY_NAME"]
+PHYSICAL_ID = os.environ["PHYSICAL_ID"]
 PHYSICAL_ID = "CustomResourceToCleanupEcrImages"
 
 def lambda_handler(event, context):

@@ -2,22 +2,27 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { DataIngestionPipelineStack } from '../lib/pipeline-stack';
-import { getCurrentBranchName, getShortHashFromString } from '../lib/git-branch';
+import { nthIndexOf, getCurrentBranchName, getShortHashFromString } from '../lib/git-branch';
 
 const app = new cdk.App();
 
 // Finds the current branch name from the .git/HEAD file
-const currentBranch = getCurrentBranchName() || 'unknown';
-if (currentBranch === 'unknown') {
+const fullBranchName = getCurrentBranchName() || 'unknown';
+if (fullBranchName === 'unknown') {
   throw new Error('Could not determine the branch name to deploy from the local .git/HEAD file');
 }
-console.log('Current branch name: 👉 ', currentBranch);
+console.log('Current branch name: 👉 ', fullBranchName);
+// Get the last string after the last "/" in the branch reference name
+const nb_delimiters = (fullBranchName.match(/\//g) || []).length;
+const start = nthIndexOf(fullBranchName, '/', nb_delimiters);
+const shortBranchName = fullBranchName.substring(start+1);
+console.log('Short branch name used for naming: 👉 ', shortBranchName);            
 
 // Get the first 6 characters of the hash value computed from the Git branch name
 // and use it in the prefix of all the resource names
-const branchHash = getShortHashFromString(currentBranch);
+const branchHash = getShortHashFromString(shortBranchName);
 console.log('Hash value computed from the branch name and used for resource names: 👉 ', branchHash);
-const prefix = `mlops-rdi-${currentBranch.substring(0,4)}${branchHash}`;
+const prefix = `mlops-rdi-${shortBranchName.substring(0,4)}${branchHash}`;
 console.log('Prefix for all resources deployed by this stack: 👉 ', prefix);
 
 new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
@@ -29,7 +34,8 @@ new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
   prefix: prefix,
   repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
   codestarConnectionName: 'mlops-realtime-data-ingestion',
-  branchName: currentBranch,
+  fullBranchName: fullBranchName,
+  shortBranchName: shortBranchName
 });
 
 app.synth();
