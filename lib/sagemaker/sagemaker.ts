@@ -207,12 +207,7 @@ export class RDISagemakerStudio extends Construct {
     const thisDomainName = `${this.prefix}-sagemaker-studio-domain`;
 
     // Create/Update/Delete SageMaker Studio Resources only if there is no domain already
-    let shouldCreateSageMakerDomain = false;
     if (domainName === '') {
-      shouldCreateSageMakerDomain = true;
-    }
-
-    if (shouldCreateSageMakerDomain) {
       // Create the IAM Role for SagMaker Studio
       this.role = new Role(this, 'StudioRole', {
         roleName: `${this.prefix}-sagemaker-studio-role`,
@@ -236,7 +231,7 @@ export class RDISagemakerStudio extends Construct {
           }),
         ],
       });
-      const studioRolePoliy = new Policy(this, 'lambdaPolicy', {
+      new Policy(this, 'lambdaPolicy', {
         policyName: `${this.prefix}-sagemaker-studio-s3-access-policy`,
         document: policyDocument,
         roles: [this.role],
@@ -257,14 +252,12 @@ export class RDISagemakerStudio extends Construct {
 
       // Create the user profile
       const studioUser = new CfnUserProfile(this, 'StudioUser', {
-        domainId: this.domainId,
+        domainId: domain.attrDomainId,
         userProfileName: this.userName,
         userSettings: {
           executionRole: userRole.roleArn,
         },
       });
-      // It depends on the domain creation
-      studioUser.node.addDependency(domain);
       // Add removal policy to the user profile
       studioUser.applyRemovalPolicy(this.removalPolicy);
 
@@ -272,7 +265,7 @@ export class RDISagemakerStudio extends Construct {
       const studioApp = new CfnApp(this, 'StudioApp', {
         appName: `${this.prefix}-sagemaker-studio-app`,
         appType: 'JupyterServer',
-        domainId: this.domainId,
+        domainId: domain.attrDomainId,
         userProfileName: studioUser.userProfileName,
       });
       // add removal policy to the app
@@ -284,17 +277,15 @@ export class RDISagemakerStudio extends Construct {
       if (this.removalPolicy === RemovalPolicy.DESTROY) {
         new CleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
           prefix: this.prefix,
-          sagemakerStudioDomainId: this.domainId,
-          sagemakerStudioUserProfile: this.userName,
+          sagemakerStudioDomainId: domain.attrDomainId,
+          sagemakerStudioUserProfile: studioUser.userProfileName,
           sagemakerStudioAppName: studioApp.appName,
         });
-        // add dependency on the user profile
-        studioApp.node.addDependency(studioUser);
 
         // If we created a new domain we will need to clean it up
         const cleanupSagemakerDomain = new CleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
           prefix: this.prefix,
-          sagemakerStudioDomainId: this.domainId,
+          sagemakerStudioDomainId: domain.attrDomainId,
         });
         cleanupSagemakerDomain.node.addDependency(domain);
       }
@@ -330,11 +321,9 @@ export class RDISagemakerStudio extends Construct {
         new CleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
           prefix: this.prefix,
           sagemakerStudioDomainId: this.domainId,
-          sagemakerStudioUserProfile: this.userName,
+          sagemakerStudioUserProfile: studioUser.userProfileName,
           sagemakerStudioAppName: studioApp.appName,
         });
-        // add dependency on the user profile
-        studioApp.node.addDependency(studioUser);
       }
     }
   } 
