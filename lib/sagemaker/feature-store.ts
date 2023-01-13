@@ -21,7 +21,7 @@ enum FeatureStoreTypes {
 interface RDIFeatureStoreProps {
   readonly prefix: string;
   readonly s3Suffix: string;
-  readonly removalPolicy: RemovalPolicy;
+  readonly removalPolicy?: RemovalPolicy;
   readonly firehoseStreamArn: string;
 }
 
@@ -36,7 +36,7 @@ export class RDIFeatureStore extends Construct {
     super(scope, id);
 
     this.prefix = props.prefix;
-    this.removalPolicy = props.removalPolicy;
+    this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;

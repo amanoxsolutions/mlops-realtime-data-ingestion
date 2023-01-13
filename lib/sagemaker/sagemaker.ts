@@ -17,16 +17,16 @@ import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { CfnDomain, CfnUserProfile, CfnApp } from 'aws-cdk-lib/aws-sagemaker';
 
 
-interface cleanupSagemakerStudioProps {
+interface CleanupSagemakerStudioProps {
   readonly prefix: string;
   readonly sagemakerStudioDomainId: string;
   readonly sagemakerStudioUserProfile: string;
   readonly sagemakerStudioAppName: string;
 }
 
-export class cleanupSagemakerStudio extends Construct {
+export class CleanupSagemakerStudio extends Construct {
 
-  constructor(scope: Construct, id: string, props: cleanupSagemakerStudioProps) {
+  constructor(scope: Construct, id: string, props: CleanupSagemakerStudioProps) {
     super(scope, id);
 
     const region = Stack.of(this).region;
@@ -67,6 +67,52 @@ export class cleanupSagemakerStudio extends Construct {
     });
     customResourceLambda.addToRolePolicy(sagemakerList);
     customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
+
+    new CustomResource(this, 'Resource', {
+      serviceToken: customResourceLambda.functionArn,
+    });
+  }
+}
+
+interface CleanupSagemakerDomainProps {
+  readonly prefix: string;
+  readonly sagemakerStudioDomainId: string;
+}
+
+export class CleanupSagemakerDomain extends Construct {
+
+  constructor(scope: Construct, id: string, props: CleanupSagemakerDomainProps) {
+    super(scope, id);
+
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
+    const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomain'
+
+    const sagemakerPolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sagemaker:*',
+        'efs:*',
+        'ec2:*',
+      ],
+      resources: ['*'],
+    });
+
+    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
+      functionName: `${props.prefix}-cleanup-sagemaker-domain`,
+      lambdaPurpose: lambdaPurpose,
+      uuid: 'bdaf37bd-4318-8cde--7af6b0b23758dd1f',
+      code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_domain'),
+      handler: 'main.lambda_handler',
+      environment: {
+        PHYSICAL_ID: lambdaPurpose,
+        SAGEMAKER_DOMAIN_ID: props.sagemakerStudioDomainId,
+      },
+      timeout: Duration.minutes(10),
+      runtime: Runtime.PYTHON_3_9,
+      logRetention: RetentionDays.ONE_WEEK,
+    });
+    customResourceLambda.addToRolePolicy(sagemakerPolicy);
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
@@ -196,7 +242,7 @@ export class RDISagemakerStudio extends Construct {
     });
     (studioRolePoliy.node.defaultChild as CfnPolicy).cfnOptions.condition = shouldCreateSageMakerStudioCondition;
 
-    // Create the SageMaker Studio Domain
+    // Create the SageMaker Studio Domain only if there is no domain already
     const domain = new CfnDomain(this, 'StudioDomain', {
       domainName: thisDomainName,
       vpcId: props.vpcId,
@@ -206,7 +252,7 @@ export class RDISagemakerStudio extends Construct {
         executionRole: this.role.roleArn,
       },
     });
-    (domain.node.defaultChild as CfnDomain).cfnOptions.condition = shouldCreateSageMakerStudioCondition;
+    domain.cfnOptions.condition = shouldCreateSageMakerStudioCondition;
 
     let dependencyOnSageMakerStudioDomain = false;
     if (domainName === '') {
@@ -252,7 +298,7 @@ export class RDISagemakerStudio extends Construct {
     // deleting the apps which might have been created by the user
     // The SageMaker user can't be deleted if there are apps associated with it
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
-      new cleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
+      new CleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
         prefix: this.prefix,
         sagemakerStudioDomainId: this.domainId,
         sagemakerStudioUserProfile: this.userName,
@@ -260,6 +306,15 @@ export class RDISagemakerStudio extends Construct {
       });
       // add dependency on the user profile
       studioApp.node.addDependency(studioUser);
+
+      // If we created a new domain we will need to clean it up
+      if (dependencyOnSageMakerStudioDomain) {
+        const cleanupSagemakerDomain = new CleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
+          prefix: this.prefix,
+          sagemakerStudioDomainId: this.domainId,
+        });
+        cleanupSagemakerDomain.node.addDependency(domain);
+      }
     }
   } 
 }

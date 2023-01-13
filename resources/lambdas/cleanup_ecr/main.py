@@ -12,7 +12,6 @@ PHYSICAL_ID = os.environ["PHYSICAL_ID"]
 PHYSICAL_ID = "CustomResourceToCleanupEcrImages"
 
 def lambda_handler(event, context):
-    response_data = {"deletedImages": []}
     try:
         request = event.get("RequestType").lower()
         logger.info(f"Type of request: {request}")
@@ -22,9 +21,9 @@ def lambda_handler(event, context):
                 next_token = delete_ecr_images(next_token)
     except Exception as e:
         logger.exception(e)
-        cfnresponse.send(event, context, cfnresponse.FAILED, response_data, physicalResourceId=PHYSICAL_ID)
+        cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=PHYSICAL_ID)
     else:
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=PHYSICAL_ID)
+        cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=PHYSICAL_ID)
 
 def delete_ecr_images(next_token: str = None) -> str:
     """This function list images in ECR repository and delete them

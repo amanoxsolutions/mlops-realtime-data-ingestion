@@ -14,7 +14,6 @@ SAGEMAKER_APP_NAME = os.environ["SAGEMAKER_APP_NAME"]
 PHYSICAL_ID = os.environ["PHYSICAL_ID"]
 
 def lambda_handler(event, context):
-    response_data = {"deletedImages": []}
     try:
         request = event.get("RequestType").lower()
         logger.info(f"Type of request: {request}")
@@ -22,9 +21,9 @@ def lambda_handler(event, context):
             delete_sagemaker_studio_apps(SAGEMAKER_DOMAIN_ID)
     except Exception as e:
         logger.exception(e)
-        cfnresponse.send(event, context, cfnresponse.FAILED, response_data, physicalResourceId=PHYSICAL_ID)
+        cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=PHYSICAL_ID)
     else:
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=PHYSICAL_ID)
+        cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=PHYSICAL_ID)
 
 
 def get_sagemaker_studio_apps(domain_id: str) -> List[Dict]:
