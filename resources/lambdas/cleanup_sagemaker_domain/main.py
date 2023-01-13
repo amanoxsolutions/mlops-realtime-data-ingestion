@@ -85,10 +85,6 @@ def delete_efs(efs_id: str) -> None:
         # Delete the ENI
         logger.info(f"Deleting ENI {eni_id}")
         eni.delete()
-
-            
     # Delete the EFS file system
     logger.info(f"Deleting EFS file system {efs_id}")
     efs.delete_file_system(FileSystemId=efs_id)
-
-

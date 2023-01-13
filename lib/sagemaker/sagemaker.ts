@@ -207,113 +207,134 @@ export class RDISagemakerStudio extends Construct {
     const thisDomainName = `${this.prefix}-sagemaker-studio-domain`;
 
     // Create/Update/Delete SageMaker Studio Resources only if there is no domain already
-    const shouldCreateSageMakerStudioCondition = new CfnCondition(this, 'ShouldCreateSageMakerStudio', {
-      expression: Fn.conditionEquals(domainName, ''),
-    });
-
-    // Create the IAM Role for SagMaker Studio only if there is no domain already
-    this.role = new Role(this, 'StudioRole', {
-      roleName: `${this.prefix}-sagemaker-studio-role`,
-      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    });
-    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
-    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerCanvasFullAccess'));
-    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'));
-    (this.role.node.defaultChild as CfnRole).cfnOptions.condition = shouldCreateSageMakerStudioCondition;
-
-    const policyDocument = new PolicyDocument({
-      statements: [
-        new PolicyStatement({
-          actions: ['s3:ListBucket'],
-          effect: Effect.ALLOW,
-          resources: [props.dataBucketArn],
-        }),
-        new PolicyStatement({
-          actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-          effect: Effect.ALLOW,
-          resources: [`${props.dataBucketArn}/*`],
-        }),
-      ],
-    });
-    const studioRolePoliy = new Policy(this, 'lambdaPolicy', {
-      policyName: `${this.prefix}-sagemaker-studio-s3-access-policy`,
-      document: policyDocument,
-      roles: [this.role],
-    });
-    (studioRolePoliy.node.defaultChild as CfnPolicy).cfnOptions.condition = shouldCreateSageMakerStudioCondition;
-
-    // Create the SageMaker Studio Domain only if there is no domain already
-    const domain = new CfnDomain(this, 'StudioDomain', {
-      domainName: thisDomainName,
-      vpcId: props.vpcId,
-      subnetIds: props.subnetIds,
-      authMode: 'IAM',
-      defaultUserSettings: {
-        executionRole: this.role.roleArn,
-      },
-    });
-    domain.cfnOptions.condition = shouldCreateSageMakerStudioCondition;
-
-    let dependencyOnSageMakerStudioDomain = false;
+    let shouldCreateSageMakerDomain = false;
     if (domainName === '') {
+      shouldCreateSageMakerDomain = true;
+    }
+
+    if (shouldCreateSageMakerDomain) {
+      // Create the IAM Role for SagMaker Studio
+      this.role = new Role(this, 'StudioRole', {
+        roleName: `${this.prefix}-sagemaker-studio-role`,
+        assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      });
+      this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
+      this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerCanvasFullAccess'));
+      this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'));
+
+      const policyDocument = new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            actions: ['s3:ListBucket'],
+            effect: Effect.ALLOW,
+            resources: [props.dataBucketArn],
+          }),
+          new PolicyStatement({
+            actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+            effect: Effect.ALLOW,
+            resources: [`${props.dataBucketArn}/*`],
+          }),
+        ],
+      });
+      const studioRolePoliy = new Policy(this, 'lambdaPolicy', {
+        policyName: `${this.prefix}-sagemaker-studio-s3-access-policy`,
+        document: policyDocument,
+        roles: [this.role],
+      });
+
+      // Create the SageMaker Studio Domain
+      const domain = new CfnDomain(this, 'StudioDomain', {
+        domainName: thisDomainName,
+        vpcId: props.vpcId,
+        subnetIds: props.subnetIds,
+        authMode: 'IAM',
+        defaultUserSettings: {
+          executionRole: this.role.roleArn,
+        },
+      });
       this.domainName = domain.domainName;
       this.domainId = domain.attrDomainId;
-      dependencyOnSageMakerStudioDomain = true;
-    } else {
-      this.domainName = domainName;
-      this.domainId = domainId;
-    }
-    
-    // Create the user profile
-    const studioUser = new CfnUserProfile(this, 'StudioUser', {
-      domainId: this.domainId,
-      userProfileName: this.userName,
-      userSettings: {
-        executionRole: userRole.roleArn,
-      },
-    });
-    // It depends on the custom resource and the domain if it was created
-    studioUser.node.addDependency(customResource);
-    if (dependencyOnSageMakerStudioDomain) {
-      studioUser.node.addDependency(domain);
-    }
-    // Add removal policy to the user profile
-    studioUser.applyRemovalPolicy(this.removalPolicy);
 
-    // Create an app for the SageMaker studio user
-    const studioApp = new CfnApp(this, 'StudioApp', {
-      appName: `${this.prefix}-sagemaker-studio-app`,
-      appType: 'JupyterServer',
-      domainId: this.domainId,
-      userProfileName: studioUser.userProfileName,
-    });
-    // add dependency on the domain if it was created
-    if (dependencyOnSageMakerStudioDomain) {
-      studioApp.node.addDependency(domain);
-    }
-    // add removal policy to the app
-    studioApp.applyRemovalPolicy(this.removalPolicy);
-
-    // Custom Resource to clean upp the SageMaker Studio Domain and User by
-    // deleting the apps which might have been created by the user
-    // The SageMaker user can't be deleted if there are apps associated with it
-    if (this.removalPolicy === RemovalPolicy.DESTROY) {
-      new CleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
-        prefix: this.prefix,
-        sagemakerStudioDomainId: this.domainId,
-        sagemakerStudioUserProfile: this.userName,
-        sagemakerStudioAppName: studioApp.appName,
+      // Create the user profile
+      const studioUser = new CfnUserProfile(this, 'StudioUser', {
+        domainId: this.domainId,
+        userProfileName: this.userName,
+        userSettings: {
+          executionRole: userRole.roleArn,
+        },
       });
-      // add dependency on the user profile
-      studioApp.node.addDependency(studioUser);
+      // It depends on the domain creation
+      studioUser.node.addDependency(domain);
+      // Add removal policy to the user profile
+      studioUser.applyRemovalPolicy(this.removalPolicy);
 
-      // If we created a new domain we will need to clean it up
-      if (dependencyOnSageMakerStudioDomain) {
+      // Create an app for the SageMaker studio user
+      const studioApp = new CfnApp(this, 'StudioApp', {
+        appName: `${this.prefix}-sagemaker-studio-app`,
+        appType: 'JupyterServer',
+        domainId: this.domainId,
+        userProfileName: studioUser.userProfileName,
+      });
+      // add removal policy to the app
+      studioApp.applyRemovalPolicy(this.removalPolicy);
+
+      // Custom Resource to clean upp the SageMaker Studio Domain and User by
+      // deleting the apps which might have been created by the user
+      // The SageMaker user can't be deleted if there are apps associated with it
+      if (this.removalPolicy === RemovalPolicy.DESTROY) {
+        new CleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
+          prefix: this.prefix,
+          sagemakerStudioDomainId: this.domainId,
+          sagemakerStudioUserProfile: this.userName,
+          sagemakerStudioAppName: studioApp.appName,
+        });
+        // add dependency on the user profile
+        studioApp.node.addDependency(studioUser);
+
+        // If we created a new domain we will need to clean it up
         const cleanupSagemakerDomain = new CleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
           prefix: this.prefix,
           sagemakerStudioDomainId: this.domainId,
         });
         cleanupSagemakerDomain.node.addDependency(domain);
+      }
+    } else {
+      this.domainName = domainName;
+      this.domainId = domainId;
+
+      // Create the user profile
+      const studioUser = new CfnUserProfile(this, 'StudioUser', {
+        domainId: this.domainId,
+        userProfileName: this.userName,
+        userSettings: {
+          executionRole: userRole.roleArn,
+        },
+      });
+      // Add removal policy to the user profile
+      studioUser.applyRemovalPolicy(this.removalPolicy);
+
+      // Create an app for the SageMaker studio user
+      const studioApp = new CfnApp(this, 'StudioApp', {
+        appName: `${this.prefix}-sagemaker-studio-app`,
+        appType: 'JupyterServer',
+        domainId: this.domainId,
+        userProfileName: studioUser.userProfileName,
+      });
+      // add removal policy to the app
+      studioApp.applyRemovalPolicy(this.removalPolicy);
+
+      // Custom Resource to clean upp the SageMaker Studio Domain and User by
+      // deleting the apps which might have been created by the user
+      // The SageMaker user can't be deleted if there are apps associated with it
+      if (this.removalPolicy === RemovalPolicy.DESTROY) {
+        new CleanupSagemakerStudio(this, 'CleanupSagemakerStudio', {
+          prefix: this.prefix,
+          sagemakerStudioDomainId: this.domainId,
+          sagemakerStudioUserProfile: this.userName,
+          sagemakerStudioAppName: studioApp.appName,
+        });
+        // add dependency on the user profile
+        studioApp.node.addDependency(studioUser);
       }
     }
   } 
