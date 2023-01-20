@@ -120,7 +120,7 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
         efs.delete_mount_target(MountTargetId=mount_target_id)
     # Wait for all mount_targets to be deleted
     while True:
-    time.sleep(5)
+        time.sleep(5)
         response = efs.describe_mount_targets(FileSystemId=efs_id)
         mount_targets = response.get("MountTargets")
         if len(mount_targets) == 0:

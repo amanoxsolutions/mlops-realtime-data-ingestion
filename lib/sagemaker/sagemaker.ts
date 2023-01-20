@@ -9,8 +9,6 @@ import {
   Role,
   ServicePrincipal,
   Effect,
-  CfnRole,
-  CfnPolicy
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
