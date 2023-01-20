@@ -1,6 +1,7 @@
 import os
 import boto3
 import logging
+import time
 import lib.cfnresponse as cfnresponse
 from typing import Dict, List, Tuple
 
@@ -65,8 +66,6 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
         mount_target_id = mount_target.get("MountTargetId")
         eni_id = mount_target.get("NetworkInterfaceId")
         eni_ids.append(eni_id)
-        logger.info(f"Deleting EFS file system {efs_id} mount target {mount_target_id}")
-        efs.delete_mount_target(MountTargetId=mount_target_id)
     logger.info(f"Found {len(eni_ids)} ENIs for the EFS file system {efs_id}: {eni_ids}")
     # For all all ENIs, get their Network Security Groups
     eni_nsgs = []
@@ -114,13 +113,31 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
                                     logger.info(f"Found references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
                                     logger.info(f"Removing references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
                                     other_nsg.revoke_egress(IpPermissions=[ip_permission])
-    # Delete the EFS file system first so that the ENIs can be deleted later
-    # This will also delete the corresponding ENI
+    # Delete the mount targets first in order to be able to delete the EFS file system
+    for mount_target in mount_targets:
+        mount_target_id = mount_target.get("MountTargetId")
+        logger.info(f"Deleting EFS file system {efs_id} mount target {mount_target_id}")
+        efs.delete_mount_target(MountTargetId=mount_target_id)
+    # Wait for all mount_targets to be deleted
+    while True:
+    time.sleep(5)
+        response = efs.describe_mount_targets(FileSystemId=efs_id)
+        mount_targets = response.get("MountTargets")
+        if len(mount_targets) == 0:
+            break
+        logger.info(f"Waiting for EFS file system {efs_id} mount targets to be deleted")
+    # Delete the EFS file system
     logger.info(f"Deleting EFS file system {efs_id}")
     efs.delete_file_system(FileSystemId=efs_id)
-    # Delete the ENI
-    # logger.info(f"Deleting ENI {eni_id}")
-    # eni.delete()
+    # Wait for the EFS file system to be deleted
+#     while True:
+#         try:
+#             efs.describe_file_systems(FileSystemId=efs_id)
+#         except efs.exceptions.FileSystemNotFound:
+#             logger.info(f"EFS file system {efs_id} has been deleted")
+#             break
+#         time.sleep(3)
+#         logger.info(f"Waiting for EFS file system {efs_id} to be deleted")
     # Once all NSGs are empty of any cross reference, and the ENI they are attached to are deleted,
     # we can delete the NSGs
     for eni_nsg in eni_nsgs:
