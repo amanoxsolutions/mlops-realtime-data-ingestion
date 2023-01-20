@@ -104,14 +104,15 @@ def delete_efs(efs_id: str) -> None:
                                     logger.info(f"Found references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
                                     logger.info(f"Removing references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
                                     other_nsg.revoke_egress(IpPermissions=[ip_permission])
-        # Once all NSGs are empty of any cross reference, we can delete them
+        # Delete the ENI
+        logger.info(f"Deleting ENI {eni_id}")
+        eni.delete()
+        # Once all NSGs are empty of any cross reference, and the ENI they are attached to are deleted,
+        # we can delete the NSGs
         for eni_nsg in eni_nsgs:
             nsg_id = eni_nsg.get("GroupId")
             logger.info(f"Deleting Network Security Group {nsg_id}")
             nsg.delete()
-        # Delete the ENI
-        logger.info(f"Deleting ENI {eni_id}")
-        eni.delete()
     # Delete the EFS file system
     logger.info(f"Deleting EFS file system {efs_id}")
     efs.delete_file_system(FileSystemId=efs_id)
