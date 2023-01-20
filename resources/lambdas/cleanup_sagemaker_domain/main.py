@@ -41,7 +41,7 @@ def get_sagemaker_domain_efs(domain_id: str) -> str:
     """
     # Describe the sagemaker domain and extract the EFS ID from it
     logger.info(f"Cleaning up EFS for SageMaker domain {domain_id}")
-    response = sagemaker.describe_domain(DomainIdEquals=domain_id)
+    response = sagemaker.describe_domain(DomainId=domain_id)
     efs_id = response.get("HomeEfsFileSystemId")
     logger.info(f"The EFS ID of the SageMaker domain {domain_id} is {efs_id}")
     return efs_id
