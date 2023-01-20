@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Stack, Duration, CustomResource, RemovalPolicy, CfnCondition, Fn } from 'aws-cdk-lib';
+import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -9,12 +9,11 @@ import {
   Role,
   ServicePrincipal,
   Effect,
-  CfnRole,
-  CfnPolicy
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { CfnDomain, CfnUserProfile, CfnApp } from 'aws-cdk-lib/aws-sagemaker';
+import { SageMakerClient, ListDomainsCommand } from "@aws-sdk/client-sagemaker";
 
 
 interface CleanupSagemakerStudioProps {
@@ -77,6 +76,7 @@ export class CleanupSagemakerStudio extends Construct {
 interface CleanupSagemakerDomainProps {
   readonly prefix: string;
   readonly sagemakerStudioDomainId: string;
+  readonly vpcId: string;
 }
 
 export class CleanupSagemakerDomain extends Construct {
@@ -88,12 +88,20 @@ export class CleanupSagemakerDomain extends Construct {
     const account = Stack.of(this).account;
     const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomain'
 
-    const sagemakerPolicy = new PolicyStatement({
+    // SageMaker, EC2, EFS access policy
+    const accessPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
-        'sagemaker:*',
-        'efs:*',
-        'ec2:*',
+        'sagemaker:Describe*',
+        'sagemaker:List*',
+        'ec2:Describe*',
+        'ec2:RevokeSecurityGroupEgress',
+        'ec2:RevokeSecurityGroupIngress',
+        'ec2:DeleteSecurityGroup',
+        'ec2:DeleteNetworkInterface',
+        'elasticfilesystem:DescribeMountTargets',
+        'elasticfilesystem:DeleteMountTarget',
+        'elasticfilesystem:DeleteFileSystem',
       ],
       resources: ['*'],
     });
@@ -107,12 +115,13 @@ export class CleanupSagemakerDomain extends Construct {
       environment: {
         PHYSICAL_ID: lambdaPurpose,
         SAGEMAKER_DOMAIN_ID: props.sagemakerStudioDomainId,
+        VPC_ID: props.vpcId,
       },
       timeout: Duration.minutes(10),
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
     });
-    customResourceLambda.addToRolePolicy(sagemakerPolicy);
+    customResourceLambda.addToRolePolicy(accessPolicy);
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
@@ -177,32 +186,24 @@ export class RDISagemakerStudio extends Construct {
     //
     // Create SageMaker Studio Domain
     //
-    // Custom Resource to check if there are any existing domains
+    // Check if there are any existing domains
     // N.B.: As of now you can only have one domain per account and region
-    const sagemakerListPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: ['sagemaker:ListDomains'],
-      resources: ['*'],
-    });
-
-    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${props.prefix}-check-sagemaker-domain`,
-      lambdaPurpose: 'CustomResourceToCheckForExistingSageMakerStudioDomain',
-      uuid: '06f1074e-1221-4317-83cc-498f60746e09',
-      code: Code.fromAsset('resources/lambdas/check_sagemaker_domain'),
-      handler: 'main.lambda_handler',
-      timeout: Duration.seconds(3),
-      runtime: Runtime.PYTHON_3_9,
-      logRetention: RetentionDays.ONE_WEEK,
-    });
-    customResourceLambda.addToRolePolicy(sagemakerListPolicy);
-
-    const customResource = new CustomResource(this, 'Resource', {
-      serviceToken: customResourceLambda.functionArn,
-    });
-    // Get the list of {domainName, domainId} from the custom resource output SageMakerDomains attribute
-    const domainName = customResource.getAtt('SagemakerDomainName').toString();
-    const domainId = customResource.getAtt('SagemakerDomainId').toString();
+    const client = new SageMakerClient({ region: process.env.region });
+    const command = new ListDomainsCommand({});
+    let domainName = '';
+    let domainId = '';
+    client.send(command).then(
+      (data:any) => {
+        // Get the first domain name and id
+        if (data.Domains.length > 0) {
+          domainName = data.Domains[0].DomainDetails.DomainName;
+          domainId = data.Domains[0].DomainDetails.DomainId;
+        }
+      },
+      (error) => {
+        console.log(`Error: ${error}`);
+      }
+    );
     // Should we need to create a new domain, we need a name for it
     const thisDomainName = `${this.prefix}-sagemaker-studio-domain`;
 
@@ -268,6 +269,8 @@ export class RDISagemakerStudio extends Construct {
         domainId: domain.attrDomainId,
         userProfileName: studioUser.userProfileName,
       });
+      // Force dependency on the user profile
+      studioApp.node.addDependency(studioUser);
       // add removal policy to the app
       studioApp.applyRemovalPolicy(this.removalPolicy);
 
@@ -286,6 +289,7 @@ export class RDISagemakerStudio extends Construct {
         const cleanupSagemakerDomain = new CleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
           prefix: this.prefix,
           sagemakerStudioDomainId: domain.attrDomainId,
+          vpcId: props.vpcId,
         });
         cleanupSagemakerDomain.node.addDependency(domain);
       }
@@ -311,6 +315,8 @@ export class RDISagemakerStudio extends Construct {
         domainId: this.domainId,
         userProfileName: studioUser.userProfileName,
       });
+      // Force dependency on the user profile
+      studioApp.node.addDependency(studioUser);
       // add removal policy to the app
       studioApp.applyRemovalPolicy(this.removalPolicy);
 
