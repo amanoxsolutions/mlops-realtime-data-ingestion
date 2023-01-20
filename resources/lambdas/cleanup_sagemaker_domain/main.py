@@ -9,6 +9,7 @@ logger.setLevel(logging.INFO)
 sagemaker = boto3.client("sagemaker")
 efs = boto3.client("efs")
 ec2 = boto3.resource('ec2')
+ec2_client = boto3.client('ec2')
 
 SAGEMAKER_DOMAIN_ID = os.environ["SAGEMAKER_DOMAIN_ID"]
 PHYSICAL_ID = os.environ["PHYSICAL_ID"]
@@ -39,10 +40,12 @@ def get_sagemaker_domain_efs(domain_id: str) -> str:
         str: the EFS ID of the SageMaker domain
     """
     # Describe the sagemaker domain and extract the EFS ID from it
-    response = sagemaker.describe_domain(DomainId=domain_id)
+    logger.info(f"Cleaning up EFS for SageMaker domain {domain_id}")
+    response = sagemaker.describe_domain(DomainIdEquals=domain_id)
     efs_id = response.get("HomeEfsFileSystemId")
     logger.info(f"The EFS ID of the SageMaker domain {domain_id} is {efs_id}")
     return efs_id
+
 
 def delete_efs(efs_id: str) -> None:
     """Delete the EFS mount target and the file system.
@@ -79,6 +82,28 @@ def delete_efs(efs_id: str) -> None:
             if nsg.ip_permissions_egress:
                 logger.info(f"Removing all egress rules from Network Security Group {nsg.ip_permissions_egress}")
                 nsg.revoke_egress(IpPermissions=nsg.ip_permissions_egress)
+            # List all the other NSGs and check if they reference the EFS NSG
+            # If they do, delete the rule with the reference
+            all_nsgs = ec2_client.describe_security_groups()
+            for nsg_details in all_nsgs.get("SecurityGroups", []):
+                other_nsg_id = nsg_details.get("GroupId")
+                if nsg_id != other_nsg_id:
+                    other_nsg = ec2.SecurityGroup(other_nsg_id)
+                    logger.info(f"Checking Network Security Group {other_nsg_id} for references to the EFS NSG {nsg_id}")
+                    if other_nsg.ip_permissions:
+                        for ip_permission in other_nsg.ip_permissions:
+                            for user_id_group_pair in ip_permission.get("UserIdGroupPairs", []):
+                                if user_id_group_pair.get("GroupId") == nsg_id:
+                                    logger.info(f"Found references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} ingress rules")
+                                    logger.info(f"Removing references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} ingress rules")
+                                    other_nsg.revoke_ingress(IpPermissions=[ip_permission])
+                    if other_nsg.ip_permissions_egress:
+                        for ip_permission in other_nsg.ip_permissions_egress:
+                            for user_id_group_pair in ip_permission.get("UserIdGroupPairs", []):
+                                if user_id_group_pair.get("GroupId") == nsg_id:
+                                    logger.info(f"Found references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
+                                    logger.info(f"Removing references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
+                                    other_nsg.revoke_egress(IpPermissions=[ip_permission])
         # Once all NSGs are empty of any cross reference, we can delete them
         for eni_nsg in eni_nsgs:
             nsg_id = eni_nsg.get("GroupId")

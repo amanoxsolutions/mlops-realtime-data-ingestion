@@ -94,6 +94,7 @@ export class CleanupSagemakerDomain extends Construct {
       effect: Effect.ALLOW,
       actions: [
         'sagemaker:Describe*',
+        'sagemaker:List*',
         'ec2:Describe*',
         'ec2:RevokeSecurityGroupEgress',
         'ec2:RevokeSecurityGroupIngress',
