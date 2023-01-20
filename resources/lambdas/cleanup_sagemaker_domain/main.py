@@ -69,6 +69,7 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
         efs.delete_mount_target(MountTargetId=mount_target_id)
     logger.info(f"Found {len(eni_ids)} ENIs for the EFS file system {efs_id}: {eni_ids}")
     # For all all ENIs, get their Network Security Groups
+    eni_nsgs = []
     for eni_id in eni_ids:
         eni = ec2.NetworkInterface(eni_id)
         logger.info(f"Cleaning up ENI {eni_id}")
@@ -113,15 +114,16 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
                                     logger.info(f"Found references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
                                     logger.info(f"Removing references to the EFS NSG {nsg_id} in Network Security Group {other_nsg_id} egress rules")
                                     other_nsg.revoke_egress(IpPermissions=[ip_permission])
-        # Delete the ENI
-        logger.info(f"Deleting ENI {eni_id}")
-        eni.delete()
-        # Once all NSGs are empty of any cross reference, and the ENI they are attached to are deleted,
-        # we can delete the NSGs
-        for eni_nsg in eni_nsgs:
-            nsg_id = eni_nsg.get("GroupId")
-            logger.info(f"Deleting Network Security Group {nsg_id}")
-            nsg.delete()
-    # Delete the EFS file system
+    # Delete the EFS file system first so that the ENIs can be deleted later
+    # This will also delete the corresponding ENI
     logger.info(f"Deleting EFS file system {efs_id}")
     efs.delete_file_system(FileSystemId=efs_id)
+    # Delete the ENI
+    # logger.info(f"Deleting ENI {eni_id}")
+    # eni.delete()
+    # Once all NSGs are empty of any cross reference, and the ENI they are attached to are deleted,
+    # we can delete the NSGs
+    for eni_nsg in eni_nsgs:
+        nsg_id = eni_nsg.get("GroupId")
+        logger.info(f"Deleting Network Security Group {nsg_id}")
+        nsg.delete()
