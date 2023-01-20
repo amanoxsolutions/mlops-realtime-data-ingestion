@@ -261,6 +261,8 @@ export class RDISagemakerStudio extends Construct {
         domainId: domain.attrDomainId,
         userProfileName: studioUser.userProfileName,
       });
+      // Add dependency to the user profile
+      studioApp.node.addDependency(studioUser);
       // add removal policy to the app
       studioApp.applyRemovalPolicy(this.removalPolicy);
 
@@ -304,6 +306,8 @@ export class RDISagemakerStudio extends Construct {
         domainId: this.domainId,
         userProfileName: studioUser.userProfileName,
       });
+      // Add dependency to the user profile
+      studioApp.node.addDependency(studioUser);
       // add removal policy to the app
       studioApp.applyRemovalPolicy(this.removalPolicy);
 
