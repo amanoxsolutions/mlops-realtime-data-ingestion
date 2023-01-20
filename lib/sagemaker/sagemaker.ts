@@ -89,12 +89,19 @@ export class CleanupSagemakerDomain extends Construct {
     const account = Stack.of(this).account;
     const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomain'
 
-    const sagemakerPolicy = new PolicyStatement({
+    // SageMaker, EC2, EFS access policy
+    const accessPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
-        'sagemaker:*',
-        'efs:*',
-        'ec2:*',
+        'sagemaker:Describe*',
+        'ec2:Describe*',
+        'ec2:RevokeSecurityGroupEgress',
+        'ec2:RevokeSecurityGroupIngress',
+        'ec2:DeleteSecurityGroup',
+        'ec2:DeleteNetworkInterface',
+        'elasticfilesystem:DescribeMountTargets',
+        'elasticfilesystem:DeleteMountTarget',
+        'elasticfilesystem:DeleteFileSystem',
       ],
       resources: ['*'],
     });
@@ -113,7 +120,7 @@ export class CleanupSagemakerDomain extends Construct {
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
     });
-    customResourceLambda.addToRolePolicy(sagemakerPolicy);
+    customResourceLambda.addToRolePolicy(accessPolicy);
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
@@ -261,7 +268,7 @@ export class RDISagemakerStudio extends Construct {
         domainId: domain.attrDomainId,
         userProfileName: studioUser.userProfileName,
       });
-      // Add dependency to the user profile
+      // Force dependency on the user profile
       studioApp.node.addDependency(studioUser);
       // add removal policy to the app
       studioApp.applyRemovalPolicy(this.removalPolicy);
@@ -306,7 +313,7 @@ export class RDISagemakerStudio extends Construct {
         domainId: this.domainId,
         userProfileName: studioUser.userProfileName,
       });
-      // Add dependency to the user profile
+      // Force dependency on the user profile
       studioApp.node.addDependency(studioUser);
       // add removal policy to the app
       studioApp.applyRemovalPolicy(this.removalPolicy);

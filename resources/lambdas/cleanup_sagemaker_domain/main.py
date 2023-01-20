@@ -71,15 +71,17 @@ def delete_efs(efs_id: str) -> None:
         logger.info(f"Found {len(eni_nsgs)} Network Security Groups for the ENI {eni_id}: {eni_nsgs}")
         # For all Network Security Groups, remove all the rules
         for eni_nsg in eni_nsgs:
-            nsg_id = eni_nsg.GroupId
+            nsg_id = eni_nsg.get("GroupId")
             nsg = ec2.SecurityGroup(nsg_id)
-            logger.info(f"Removing all ingress rules from Network Security Group {nsg.ip_permissions}")
-            nsg.revoke_ingress(IpPermissions=nsg.ip_permissions)
-            logger.info(f"Removing all rules from Network Security Group {nsg.ip_permissions_egress}")
-            nsg.revoke_egress(IpPermissions=nsg.ip_permissions_egress)
+            if nsg.ip_permissions:
+                logger.info(f"Removing all ingress rules from Network Security Group {nsg.ip_permissions}")
+                nsg.revoke_ingress(IpPermissions=nsg.ip_permissions)
+            if nsg.ip_permissions_egress:
+                logger.info(f"Removing all egress rules from Network Security Group {nsg.ip_permissions_egress}")
+                nsg.revoke_egress(IpPermissions=nsg.ip_permissions_egress)
         # Once all NSGs are empty of any cross reference, we can delete them
         for eni_nsg in eni_nsgs:
-            nsg_id = eni_nsg.GroupId
+            nsg_id = eni_nsg.get("GroupId")
             logger.info(f"Deleting Network Security Group {nsg_id}")
             nsg.delete()
         # Delete the ENI
