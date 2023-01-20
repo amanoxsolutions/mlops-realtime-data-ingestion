@@ -129,15 +129,6 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
     # Delete the EFS file system
     logger.info(f"Deleting EFS file system {efs_id}")
     efs.delete_file_system(FileSystemId=efs_id)
-    # Wait for the EFS file system to be deleted
-#     while True:
-#         try:
-#             efs.describe_file_systems(FileSystemId=efs_id)
-#         except efs.exceptions.FileSystemNotFound:
-#             logger.info(f"EFS file system {efs_id} has been deleted")
-#             break
-#         time.sleep(3)
-#         logger.info(f"Waiting for EFS file system {efs_id} to be deleted")
     # Once all NSGs are empty of any cross reference, and the ENI they are attached to are deleted,
     # we can delete the NSGs
     for eni_nsg in eni_nsgs:
