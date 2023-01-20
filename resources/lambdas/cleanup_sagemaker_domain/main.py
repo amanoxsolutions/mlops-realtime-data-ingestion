@@ -13,6 +13,7 @@ ec2_client = boto3.client('ec2')
 
 SAGEMAKER_DOMAIN_ID = os.environ["SAGEMAKER_DOMAIN_ID"]
 PHYSICAL_ID = os.environ["PHYSICAL_ID"]
+VPC_ID = os.environ["VPC_ID"]
 
 def lambda_handler(event, context):
     try:
@@ -22,7 +23,7 @@ def lambda_handler(event, context):
             # Get the EFS ID of the SageMaker domain
             efs_id = get_sagemaker_domain_efs(SAGEMAKER_DOMAIN_ID)
             # Delete the EFS
-            delete_efs(efs_id)
+            delete_efs(efs_id, VPC_ID)
     except Exception as e:
         logger.exception(e)
         cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=PHYSICAL_ID)
@@ -47,11 +48,12 @@ def get_sagemaker_domain_efs(domain_id: str) -> str:
     return efs_id
 
 
-def delete_efs(efs_id: str) -> None:
+def delete_efs(efs_id: str, vpc_id: str) -> None:
     """Delete the EFS mount target and the file system.
 
     Args:
         efs_id (str): the EFS ID
+        vpc_id (str): the VPC ID
     """
     # Get the mount targets of the EFS file system and delete them
     response = efs.describe_mount_targets(FileSystemId=efs_id)
@@ -84,7 +86,14 @@ def delete_efs(efs_id: str) -> None:
                 nsg.revoke_egress(IpPermissions=nsg.ip_permissions_egress)
             # List all the other NSGs and check if they reference the EFS NSG
             # If they do, delete the rule with the reference
-            all_nsgs = ec2_client.describe_security_groups()
+            all_nsgs = ec2_client.describe_security_groups(
+                Filters=[
+                    {
+                        'Name': 'vpc-id',
+                        'Values': [
+                            vpc_id,
+                        ]
+                    }])
             for nsg_details in all_nsgs.get("SecurityGroups", []):
                 other_nsg_id = nsg_details.get("GroupId")
                 if nsg_id != other_nsg_id:

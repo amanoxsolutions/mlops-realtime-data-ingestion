@@ -78,6 +78,7 @@ export class CleanupSagemakerStudio extends Construct {
 interface CleanupSagemakerDomainProps {
   readonly prefix: string;
   readonly sagemakerStudioDomainId: string;
+  readonly vpcId: string;
 }
 
 export class CleanupSagemakerDomain extends Construct {
@@ -116,6 +117,7 @@ export class CleanupSagemakerDomain extends Construct {
       environment: {
         PHYSICAL_ID: lambdaPurpose,
         SAGEMAKER_DOMAIN_ID: props.sagemakerStudioDomainId,
+        VPC_ID: props.vpcId,
       },
       timeout: Duration.minutes(10),
       runtime: Runtime.PYTHON_3_9,
@@ -289,6 +291,7 @@ export class RDISagemakerStudio extends Construct {
         const cleanupSagemakerDomain = new CleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
           prefix: this.prefix,
           sagemakerStudioDomainId: domain.attrDomainId,
+          vpcId: props.vpcId,
         });
         cleanupSagemakerDomain.node.addDependency(domain);
       }
