@@ -2,7 +2,7 @@ import { Construct } from "constructs";
 import { Stage, StageProps } from 'aws-cdk-lib';
 import { RealtimeDataIngestionStack } from './ingestion/data-ingestion-stack';
 import { SagemakerStack } from './sagemaker/sagemaker-stack';
-import { IVpc } from 'aws-cdk-lib/aws-ec2';
+
 export interface RealtimeDataIngestionStageProps extends StageProps {
   readonly prefix: string;
   readonly uniqueSuffix: string;

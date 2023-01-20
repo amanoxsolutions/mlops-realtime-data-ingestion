@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Stack, Duration, CustomResource, RemovalPolicy, CfnCondition, Fn } from 'aws-cdk-lib';
+import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -15,6 +15,7 @@ import {
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { CfnDomain, CfnUserProfile, CfnApp } from 'aws-cdk-lib/aws-sagemaker';
+import { SageMakerClient, ListDomainsCommand } from "@aws-sdk/client-sagemaker";
 
 
 interface CleanupSagemakerStudioProps {
@@ -177,32 +178,24 @@ export class RDISagemakerStudio extends Construct {
     //
     // Create SageMaker Studio Domain
     //
-    // Custom Resource to check if there are any existing domains
+    // Check if there are any existing domains
     // N.B.: As of now you can only have one domain per account and region
-    const sagemakerListPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: ['sagemaker:ListDomains'],
-      resources: ['*'],
-    });
-
-    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${props.prefix}-check-sagemaker-domain`,
-      lambdaPurpose: 'CustomResourceToCheckForExistingSageMakerStudioDomain',
-      uuid: '06f1074e-1221-4317-83cc-498f60746e09',
-      code: Code.fromAsset('resources/lambdas/check_sagemaker_domain'),
-      handler: 'main.lambda_handler',
-      timeout: Duration.seconds(3),
-      runtime: Runtime.PYTHON_3_9,
-      logRetention: RetentionDays.ONE_WEEK,
-    });
-    customResourceLambda.addToRolePolicy(sagemakerListPolicy);
-
-    const customResource = new CustomResource(this, 'Resource', {
-      serviceToken: customResourceLambda.functionArn,
-    });
-    // Get the list of {domainName, domainId} from the custom resource output SageMakerDomains attribute
-    const domainName = customResource.getAtt('SagemakerDomainName').toString();
-    const domainId = customResource.getAtt('SagemakerDomainId').toString();
+    const client = new SageMakerClient({ region: process.env.region });
+    const command = new ListDomainsCommand({});
+    let domainName = '';
+    let domainId = '';
+    client.send(command).then(
+      (data:any) => {
+        // Get the first domain name and id
+        if (data.Domains.length > 0) {
+          domainName = data.Domains[0].DomainDetails.DomainName;
+          domainId = data.Domains[0].DomainDetails.DomainId;
+        }
+      },
+      (error) => {
+        console.log(`Error: ${error}`);
+      }
+    );
     // Should we need to create a new domain, we need a name for it
     const thisDomainName = `${this.prefix}-sagemaker-studio-domain`;
 
