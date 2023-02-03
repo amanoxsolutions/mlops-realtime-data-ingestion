@@ -98,7 +98,7 @@ def wait_studio_app_deletion(domain_id: str, app_names: List[str]):
         domain_id (str): the SageMaker domain ID
         app_names (List[str]): the list of SageMaker Studio app names
     """
-    logger.info(f"Waiting for the SageMaker Studio app {app_name} to be deleted")
+    logger.info(f"Waiting for the SageMaker Studio apps {app_names} to be deleted")
     all_apps_deleted = False
     # Wait until all apps are deleted
     while not all_apps_deleted:
