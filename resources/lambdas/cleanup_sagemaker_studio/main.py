@@ -20,7 +20,7 @@ def lambda_handler(event, context):
         logger.info(f"Type of request: {request}")
         if request == "delete":
             delete_sagemaker_studio_apps(SAGEMAKER_DOMAIN_ID)
-            wait_studio_app_deletion(SAGEMAKER_DOMAIN_ID, domain_apps)
+            wait_studio_app_deletion(SAGEMAKER_DOMAIN_ID)
     except Exception as e:
         logger.exception(e)
         cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=PHYSICAL_ID)
