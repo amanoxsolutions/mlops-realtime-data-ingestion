@@ -60,7 +60,7 @@ export class CleanupSagemakerStudio extends Construct {
         SAGEMAKER_USER_PROFILE: props.sagemakerStudioUserProfile,
         SAGEMAKER_APP_NAME: props.sagemakerStudioAppName,
       },
-      timeout: Duration.minutes(10),
+      timeout: Duration.minutes(15),
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
     });
