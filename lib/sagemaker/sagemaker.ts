@@ -238,6 +238,8 @@ export class RDISagemakerStudio extends Construct {
         executionRole: userRole.roleArn,
       },
     });
+    // Force dependency on the SageMaker domain
+    studioUser.node.addDependency(domain);
     // Add removal policy to the user profile
     studioUser.applyRemovalPolicy(this.removalPolicy);
 
