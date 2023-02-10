@@ -111,13 +111,13 @@ def wait_studio_app_deletion(domain_id: str):
                 AppName=app_name,
                 AppType=app.get("AppType")
             )
-            status = response.get("AppStatus")
+            status = response.get("Status")
             if status == "Deleting":
                 logger.info(f"SageMaker Studio app {app_name} is still being deleted")
                 all_apps_deleted = False
             elif status == "Deleted":
                 logger.info(f"SageMaker Studio app {app_name} is deleted")
             else:
-                logger.error(f"SageMaker Studio app {app_name} is in status {status}")
+                logger.error(f"SageMaker Studio app {app_name} is in status {status}. It should be either in a 'Deleting' or 'Deleted' state.")
         if not all_apps_deleted:
             time.sleep(10)
