@@ -42,6 +42,7 @@ export class CleanupSagemakerStudio extends Construct {
     const sagemakerDeleteApp = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
+        'sagemaker:DescribeApp',
         'sagemaker:DeleteApp'
       ],
       resources: [`arn:aws:sagemaker:${region}:${account}:app/${props.sagemakerStudioDomainId}/${props.sagemakerStudioUserProfile}/*/*`],
