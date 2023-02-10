@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@aws-cdk/aws-lambda-python-alpha": "^2.61.1-alpha.0",
-    "@aws-sdk/client-sagemaker": "^3.254.0",
     "@aws-solutions-constructs/aws-eventbridge-kinesisfirehose-s3": "^2.30.0",
     "@aws-solutions-constructs/core": "^2.30.0",
     "aws-cdk-lib": "^2.61.1",
