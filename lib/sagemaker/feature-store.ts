@@ -117,9 +117,10 @@ export class RDIFeatureStore extends Construct {
       codePath: 'resources/lambdas/analytics_to_featurestore',
       memorySize: 512,
       timeout: Duration.seconds(60),
+      hasLayer: true,
       environment: {
         AGG_FEATURE_GROUP_NAME: cfnFeatureGroup.featureGroupName,
-      }
+      },
     });
 
     // Add the PutItem permissions on the DynamoDB table to the Lambda function's policy

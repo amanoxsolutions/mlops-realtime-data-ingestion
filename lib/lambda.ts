@@ -50,6 +50,7 @@ interface RDILambdaProps {
   readonly architecture?: Architecture;
   readonly additionalPolicyStatements?: PolicyStatement[];
   readonly environment?: { [key: string]: string };
+  readonly hasLayer?: boolean;
 }
 
 export class RDILambda extends Construct {
@@ -68,6 +69,7 @@ export class RDILambda extends Construct {
     this.prefix = props.prefix;
     this.name = props.name;
     this.codePath = props.codePath;
+    const hasLayer = props.hasLayer || false;
 
     this.properties = {
       functionName: `${this.prefix}-${this.name}`,
@@ -113,13 +115,16 @@ export class RDILambda extends Construct {
       this.properties.environment = props.environment;
     }
 
-    const layers: ILayerVersion[] = [
-      new PythonLayerVersion(this, 'Layer', {
-        entry: `${props.codePath}/layer`,
-        description: `${this.prefix}-${this.name} Lambda Layer`,
-        compatibleRuntimes: [this.properties.runtime],
-      }),
-    ];
+    let layers: ILayerVersion[] = [];
+    if (hasLayer) {
+        layers = [
+        new PythonLayerVersion(this, 'Layer', {
+          entry: `${props.codePath}/layer`,
+          description: `${this.prefix}-${this.name} Lambda Layer`,
+          compatibleRuntimes: [this.properties.runtime],
+        }),
+      ];
+    }
 
     const lambda = new Function(this, 'function', {
       ...this.properties,

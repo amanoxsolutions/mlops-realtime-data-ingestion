@@ -54,6 +54,7 @@ export class RealtimeDataIngestionStack extends Stack {
       codePath: 'resources/lambdas/stream_processing',
       memorySize: 256,
       timeout: Duration.seconds(60),
+      hasLayer: true,
       environment: {
         DYNAMODB_SEEN_TABLE_NAME: inputTable.table.tableName,
         HASH_KEY_NAME: inputTable.partitionKey,

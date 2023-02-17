@@ -1,26 +1,40 @@
 import os
 import boto3
 import logging
-import time
+import json
 import lib.cfnresponse as cfnresponse
-from typing import Dict, List, Tuple
+
+from typing import List, Dict
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+stepfunctions = boto3.client('stepfunctions')
 sagemaker = boto3.client("sagemaker")
 
 SAGEMAKER_DOMAIN_ID = os.environ["SAGEMAKER_DOMAIN_ID"]
 SAGEMAKER_USER_PROFILE = os.environ["SAGEMAKER_USER_PROFILE"]
 SAGEMAKER_APP_NAME = os.environ["SAGEMAKER_APP_NAME"]
 PHYSICAL_ID = os.environ["PHYSICAL_ID"]
+STEP_FUNCTION_ARN = os.environ["STEP_FUNCTION_ARN"]
+CF_CALLBACK_URL = os.environ["CF_CALLBACK_URL"]
 
 def lambda_handler(event, context):
     try:
         request = event.get("RequestType").lower()
         logger.info(f"Type of request: {request}")
         if request == "delete":
-            delete_sagemaker_studio_apps(SAGEMAKER_DOMAIN_ID)
-            wait_studio_app_deletion(SAGEMAKER_DOMAIN_ID)
+            # Launch the deletion of the SageMaker Studio apps
+            apps = delete_sagemaker_studio_apps(SAGEMAKER_DOMAIN_ID)
+            # Launch the Step Function to wait for the deletion of the SageMaker Studio apps
+            stepfunctions.start_execution(
+                stateMachineArn=STEP_FUNCTION_ARN,
+                input=json.dumps({
+                    "sagemaker_domain_id": SAGEMAKER_DOMAIN_ID,
+                    "sagemaker_user_profile": SAGEMAKER_USER_PROFILE,
+                    "sagemaker_user_apps": apps,
+                    "status": "DELETING",
+                    "cf_callback_url": CF_CALLBACK_URL})
+            )
     except Exception as e:
         logger.exception(e)
         cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=PHYSICAL_ID)
@@ -58,21 +72,28 @@ def get_sagemaker_studio_apps(domain_id: str) -> List[Dict]:
         logger.info(f"SageMaker Studio app: {app.get('AppName')}")
     return apps
 
-def delete_sagemaker_studio_apps(domain_id: str):
+
+def delete_sagemaker_studio_apps(domain_id: str) -> List[Dict]:
     """List and delete all the SageMaker Studio apps for the domain and user profile
     escept the one created by the CDK SageMaker stack.
 
     Args:
         domain_id (str): the SageMaker domain ID
+
+    Returns:
+        List[Dict]: the list of SageMaker Studio apps
     """
     apps = get_sagemaker_studio_apps(domain_id)
+    apps_list = []
     if not apps:
         logger.info(f"No SageMaker Studio apps found for the domain {SAGEMAKER_DOMAIN_ID}")
-        return
+        return apps_list
     logger.info(f"Deleting all the user created SageMaker Studio apps for the domain {SAGEMAKER_DOMAIN_ID}")
     for app in apps:
         app_name = app.get("AppName")
         status = app.get("Status")
+        type = app.get("AppType")
+        apps_list.append({"name": app_name, "type": type})
         # The app created by the SageMaker stack will be automatically destroyed
         # Here we are deleting the apps created by the user if they are not already deleted or being deleted
         if app_name != SAGEMAKER_APP_NAME and status != "Deleting" and status != "Deleted":
@@ -81,43 +102,7 @@ def delete_sagemaker_studio_apps(domain_id: str):
                 DomainId=domain_id,
                 UserProfileName=SAGEMAKER_USER_PROFILE,
                 AppName=app_name,
-                AppType=app.get("AppType")
+                AppType=type
             )
-
-
-def wait_studio_app_deletion(domain_id: str):
-    """Wait until all the SageMaker Studio apps are deleted.
-
-    Args:
-        domain_id (str): the SageMaker domain ID
-        app_names (List[str]): the list of SageMaker Studio app names
-    """
-    # List all the apps in the domain
-    apps = get_sagemaker_studio_apps(domain_id)
-    if not apps:
-        logger.info(f"No SageMaker Studio apps found for the domain {SAGEMAKER_DOMAIN_ID}")
-        return
-    logger.info(f"Waiting for the SageMaker Studio apps og the domain {domain_id} to be deleted")
-    all_apps_deleted = False
-    # Wait until all apps are deleted
-    while not all_apps_deleted:
-        all_apps_deleted = True
-        # For each app in the SageMaker domain, check if it is deleted
-        for app in apps:
-            app_name = app.get("AppName")
-            response = sagemaker.describe_app(
-                DomainId=domain_id,
-                UserProfileName=SAGEMAKER_USER_PROFILE,
-                AppName=app_name,
-                AppType=app.get("AppType")
-            )
-            status = response.get("Status")
-            if status == "Deleting":
-                logger.info(f"SageMaker Studio app {app_name} is still being deleted")
-                all_apps_deleted = False
-            elif status == "Deleted":
-                logger.info(f"SageMaker Studio app {app_name} is deleted")
-            else:
-                logger.error(f"SageMaker Studio app {app_name} is in status {status}. It should be either in a 'Deleting' or 'Deleted' state.")
-        if not all_apps_deleted:
-            time.sleep(10)
+    return apps_list
+    
