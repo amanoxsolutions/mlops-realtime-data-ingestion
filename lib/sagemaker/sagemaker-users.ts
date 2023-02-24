@@ -235,11 +235,9 @@ export class RDISagemakerUser extends Construct {
       const wait = new Wait(this, 'wait', { time: WaitTime.duration(Duration.seconds(60))});
       const success = new Succeed(this, 'Deletion Finished');
       // State Machine Definition
-      const smDefinition = wait.next(checkStatus)
-        .next(new Choice(this, 'Is the SageMaker User App Cleanup finished?')
-          .when(Condition.stringEquals('$.status', 'DELETING'), wait)
-          .otherwise(sendResponse.next(success))
-        );
+      const smDefinition = checkStatus.next(new Choice(this, 'Is the SageMaker User App Cleanup finished?')
+        .when(Condition.stringEquals('$.status', 'DELETING'), wait.next(checkStatus))
+        .otherwise(sendResponse.next(success)));
       // Create the State Machine based on the definition
       const stateMachine = new StateMachine(this, 'CleanupProcess', {
         definition: smDefinition,

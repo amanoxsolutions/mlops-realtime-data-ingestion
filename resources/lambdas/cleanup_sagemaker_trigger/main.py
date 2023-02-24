@@ -35,6 +35,19 @@ def lambda_handler(event, context):
                     "status": "DELETING",
                     "cf_callback_url": CF_CALLBACK_URL})
             )
+        else:
+            # Id we are not deleting the stack, we don't need to do anything,
+            # so we just send a SUCCESS response to CloudFormation
+            logger.info("No action required")
+            stepfunctions.start_execution(
+                stateMachineArn=STEP_FUNCTION_ARN,
+                input=json.dumps({
+                    "sagemaker_domain_id": SAGEMAKER_DOMAIN_ID,
+                    "sagemaker_user_profile": SAGEMAKER_USER_PROFILE,
+                    "sagemaker_user_apps": apps,
+                    "status": "SUCCESS",
+                    "cf_callback_url": CF_CALLBACK_URL})
+            )
     except Exception as e:
         logger.exception(e)
         cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=PHYSICAL_ID)
