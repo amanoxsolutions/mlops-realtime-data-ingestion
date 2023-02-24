@@ -8,14 +8,14 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 sagemaker = boto3.client("sagemaker")
 
-
 def lambda_handler(event, context):
     try:
+        logger.info(f"Event: {event}")
         domain_id = event.get("sagemaker_domain_id")
         user_profile = event.get("sagemaker_user_profile")
         apps = event.get("sagemaker_user_apps")
         status = event.get("status")
-        if status != "SUCCESS" or status != "FAILED":
+        if status != "SUCCESS" and status != "FAILED":
             # Check the status of the SageMaker Studio apps deletion
             status = check_studio_app_deletion(domain_id, user_profile, apps)
         event["status"] = status
