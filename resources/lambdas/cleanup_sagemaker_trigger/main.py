@@ -44,7 +44,7 @@ def lambda_handler(event, context):
                 input=json.dumps({
                     "sagemaker_domain_id": SAGEMAKER_DOMAIN_ID,
                     "sagemaker_user_profile": SAGEMAKER_USER_PROFILE,
-                    "sagemaker_user_apps": apps,
+                    "sagemaker_user_apps": "",
                     "status": "SUCCESS",
                     "cf_callback_url": CF_CALLBACK_URL})
             )
