@@ -8,9 +8,13 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     cf_callback_url = event.get("cf_callback_url")
-    status = event.get("status")
-    logger.info(f"The status of the cleanup of the SageMaker Studio domain is: '{status}'")
-    cfn_status = "SUCCESS" if status == "DELETED" or status == "SUCCESS" else "FAILED"
+    if error_details := event.get("error"):
+        logger.info(f"Previous steps in the cleanup process failed with error: {error_details}")
+        cfn_status = "FAILED"
+    else:
+        status = event.get("status")
+        logger.info(f"The status of the cleanup of the SageMaker Studio domain is: '{status}'")
+        cfn_status = "SUCCESS" if status == "DELETED" or status == "SUCCESS" else "FAILED"
     logger.info(f" Sending status '{cfn_status}' to CloudFormation callback url: {cf_callback_url}")
     
     responseBody = {
