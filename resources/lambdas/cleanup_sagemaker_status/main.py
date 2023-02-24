@@ -54,6 +54,7 @@ def check_studio_app_deletion(domain_id: str, user_profile: str, apps: List[Dict
         elif status == "Deleted":
             logger.info(f"SageMaker Studio app {app_name} is deleted")
         else:
+            all_apps_deleted = False
             logger.error(f"SageMaker Studio app {app_name} is in status {status}. It should be either in a 'Deleting' or 'Deleted' state.")
     if all_apps_deleted:
         return "DELETED"

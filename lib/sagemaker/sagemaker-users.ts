@@ -39,7 +39,7 @@ interface CleanupSagemakerUserTriggerProps {
 }
 
 export class CleanupSagemakerUserTrigger extends Construct {
-  public readonly function: string;
+  public readonly customResource: CustomResource;
 
   constructor(scope: Construct, id: string, props: CleanupSagemakerUserTriggerProps) {
     super(scope, id);
@@ -95,7 +95,7 @@ export class CleanupSagemakerUserTrigger extends Construct {
     customResourceLambda.addToRolePolicy(sagemakerList);
     customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
 
-    new CustomResource(this, 'Resource', {
+    this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
     });
   }
@@ -232,6 +232,10 @@ export class RDISagemakerUser extends Construct {
         lambdaFunction: lambdaCleanupResponse.function,
         payloadResponseOnly: true
       });
+      checkStatus.addCatch(sendResponse, {
+        errors: ['States.ALL'],
+        resultPath: '$.error'
+      });
       const wait = new Wait(this, 'wait', { time: WaitTime.duration(Duration.seconds(60))});
       const success = new Succeed(this, 'Deletion Finished');
       // State Machine Definition
@@ -271,7 +275,7 @@ export class RDISagemakerUser extends Construct {
         timeout: '1800',
         handle: waitDeletionHandle.ref,
       });
-      waitDeletion.node.addDependency(cleanupUser);
+      waitDeletion.node.addDependency(cleanupUser.customResource);
     }
   } 
 }
