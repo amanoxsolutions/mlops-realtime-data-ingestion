@@ -262,7 +262,7 @@ export class RDISagemakerUser extends Construct {
       const waitDeletionHandle = new CfnWaitConditionHandle(this, 'WaitAppDeletionHandle'.concat(dataHash));
       const cleanupUser = new CleanupSagemakerUserTrigger(this, 'CleanupUser', {
         prefix: this.prefix,
-        stepFunctionArn: '',
+        stepFunctionArn: stateMachine.stateMachineArn,
         sagemakerStudioDomainId: this.domainId,
         sagemakerStudioUserProfile: studioUser.userProfileName,
         sagemakerStudioAppName: studioApp.appName,
