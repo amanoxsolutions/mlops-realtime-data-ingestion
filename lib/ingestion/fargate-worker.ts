@@ -64,6 +64,7 @@ export class RDIIngestionWorker extends Construct {
       ],
       natGateways: 0,
     });
+    this.vpc.applyRemovalPolicy(props.removalPolicy);
 
     const sg = new SecurityGroup(this, 'FargateSG', {
       securityGroupName: `${this.prefix}-ingestion-worker-sg`,
