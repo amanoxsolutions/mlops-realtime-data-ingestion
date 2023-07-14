@@ -50,7 +50,7 @@ export class DataIngestionPipelineStack extends Stack {
         partialBuildSpec: BuildSpec.fromObject({
           phases: {
             install: {
-              commands: ["n 16.20.1"]
+              commands: ["n 18.16.1"]
             }
           }
         }),
