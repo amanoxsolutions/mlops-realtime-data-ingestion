@@ -271,7 +271,7 @@ export class RDISagemakerUser extends Construct {
       });
       const waitDeletion = new CfnWaitCondition(this, 'WaitAppDeletion'.concat(dataHash), {
         count: 1,
-        timeout: '300',
+        timeout: '1800',
         handle: waitDeletionHandle.ref,
       });
       waitDeletion.node.addDependency(cleanupUser.customResource);
