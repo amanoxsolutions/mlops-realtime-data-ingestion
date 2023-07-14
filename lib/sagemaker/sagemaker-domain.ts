@@ -153,6 +153,15 @@ export class RDISagemakerDomain extends Construct {
     });
     sagemakerUser.node.addDependency(domain);
 
-
+    // Custom Resource to clean upp the SageMaker Studio Domain 
+    if (this.removalPolicy === RemovalPolicy.DESTROY) {
+      const cleanupSagemakerDomain = new CleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
+        prefix: this.prefix,
+        sagemakerStudioDomainId: domain.attrDomainId,
+        vpcId: props.vpcId,
+      });
+      cleanupSagemakerDomain.node.addDependency(domain);
+      cleanupSagemakerDomain.node.addDependency(sagemakerUser);
+    }
   } 
 }
