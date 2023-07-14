@@ -144,5 +144,6 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
     # we can delete the NSGs
     for eni_nsg in eni_nsgs:
         nsg_id = eni_nsg.get("GroupId")
+        nsg = ec2.SecurityGroup(nsg_id)
         logger.info(f"Deleting Network Security Group {nsg_id}")
         nsg.delete()
