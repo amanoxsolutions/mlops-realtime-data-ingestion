@@ -104,7 +104,7 @@ export class RDISagemakerDomain extends Construct {
     // Create the IAM Role for SagMaker Studio Domain
     this.role = new Role(this, 'StudioRole', {
       roleName: `${this.prefix}-sagemaker-studio-role`,
-      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
     });
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerCanvasFullAccess'));
