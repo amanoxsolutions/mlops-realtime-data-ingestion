@@ -129,6 +129,17 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
     # Delete the EFS file system
     logger.info(f"Deleting EFS file system {efs_id}")
     efs.delete_file_system(FileSystemId=efs_id)
+    # Get the EFS outbound security group
+    efs_outbound_nsg = ec2_client.describe_security_groups(
+        Filters=[
+            {
+                "Name": "group-name",
+                "Values": [f"security-group-for-outbound-nfs-{domain_id}"]
+            }
+        ]
+    ).get("SecurityGroups")[0]
+    # Add the EFS outbound security group to the list of NSGs to delete
+    eni_nsgs.append(efs_outbound_nsg)
     # Once all NSGs are empty of any cross reference, and the ENI they are attached to are deleted,
     # we can delete the NSGs
     for eni_nsg in eni_nsgs:
