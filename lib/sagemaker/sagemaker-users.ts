@@ -255,8 +255,7 @@ export class RDISagemakerUser extends Construct {
 
 
       const dataHash = hash({
-        prefix: this.prefix,
-        ts: Date.now().toString()
+        prefix: this.prefix
       });
       
       // CloudFormation Wait Condition to wait to receive a signal that all the 
@@ -272,7 +271,7 @@ export class RDISagemakerUser extends Construct {
       });
       const waitDeletion = new CfnWaitCondition(this, 'WaitAppDeletion'.concat(dataHash), {
         count: 1,
-        timeout: '1800',
+        timeout: '300',
         handle: waitDeletionHandle.ref,
       });
       waitDeletion.node.addDependency(cleanupUser.customResource);
