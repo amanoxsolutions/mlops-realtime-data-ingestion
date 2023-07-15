@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
+import { RemovalPolicy } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -10,67 +10,9 @@ import {
   ServicePrincipal,
   Effect,
 } from 'aws-cdk-lib/aws-iam';
-import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { CfnDomain } from 'aws-cdk-lib/aws-sagemaker';
 import { RDISagemakerUser } from './sagemaker-users';
-
-
-interface CleanupSagemakerDomainProps {
-  readonly prefix: string;
-  readonly sagemakerStudioDomainId: string;
-  readonly vpcId: string;
-}
-
-export class CleanupSagemakerDomain extends Construct {
-
-  constructor(scope: Construct, id: string, props: CleanupSagemakerDomainProps) {
-    super(scope, id);
-
-    const region = Stack.of(this).region;
-    const account = Stack.of(this).account;
-    const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomain'
-
-    // SageMaker, EC2, EFS access policy
-    const accessPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:Describe*',
-        'sagemaker:List*',
-        'ec2:Describe*',
-        'ec2:RevokeSecurityGroupEgress',
-        'ec2:RevokeSecurityGroupIngress',
-        'ec2:DeleteSecurityGroup',
-        'ec2:DeleteNetworkInterface',
-        'elasticfilesystem:DescribeMountTargets',
-        'elasticfilesystem:DeleteMountTarget',
-        'elasticfilesystem:DeleteFileSystem',
-      ],
-      resources: ['*'],
-    });
-
-    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${props.prefix}-cleanup-sagemaker-domain`,
-      lambdaPurpose: lambdaPurpose,
-      uuid: 'bdaf37bd-4318-8cde--7af6b0b23758dd1f',
-      code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_domain'),
-      handler: 'main.lambda_handler',
-      environment: {
-        PHYSICAL_ID: lambdaPurpose,
-        SAGEMAKER_DOMAIN_ID: props.sagemakerStudioDomainId,
-        VPC_ID: props.vpcId,
-      },
-      timeout: Duration.minutes(10),
-      runtime: Runtime.PYTHON_3_9,
-      logRetention: RetentionDays.ONE_WEEK,
-    });
-    customResourceLambda.addToRolePolicy(accessPolicy);
-
-    new CustomResource(this, 'Resource', {
-      serviceToken: customResourceLambda.functionArn,
-    });
-  }
-}
+import { RDICleanupSagemakerDomain } from './sagemaker-cleanup';
 
 interface RDISagemakerDomainProps {
   readonly prefix: string;
@@ -155,13 +97,14 @@ export class RDISagemakerDomain extends Construct {
 
     // Custom Resource to clean upp the SageMaker Studio Domain 
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
-      const cleanupSagemakerDomain = new CleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
+      const cleanupSagemakerDomain = new RDICleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
         prefix: this.prefix,
-        sagemakerStudioDomainId: domain.attrDomainId,
+        domainName: this.domainName,
+        domainId: domain.attrDomainId,
+        studioUserName: sagemakerUser.userName,
+        studioAppName: sagemakerUser.appName,
         vpcId: props.vpcId,
       });
-      cleanupSagemakerDomain.node.addDependency(domain);
-      cleanupSagemakerDomain.node.addDependency(sagemakerUser);
     }
   } 
 }
