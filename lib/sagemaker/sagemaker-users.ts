@@ -253,9 +253,9 @@ export class RDISagemakerUser extends Construct {
         },
       });
 
-
       const dataHash = hash({
-        prefix: this.prefix
+        prefix: this.prefix,
+        ts: Date.now().toString()
       });
       
       // CloudFormation Wait Condition to wait to receive a signal that all the 
@@ -275,6 +275,7 @@ export class RDISagemakerUser extends Construct {
         handle: waitDeletionHandle.ref,
       });
       waitDeletion.node.addDependency(cleanupUser.customResource);
+
     }
   } 
 }
