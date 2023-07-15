@@ -134,7 +134,7 @@ def delete_efs(efs_id: str, vpc_id: str) -> None:
         Filters=[
             {
                 "Name": "group-name",
-                "Values": [f"security-group-for-outbound-nfs-{domain_id}"]
+                "Values": [f"security-group-for-outbound-nfs-{SAGEMAKER_DOMAIN_ID}"]
             }
         ]
     ).get("SecurityGroups")[0]
