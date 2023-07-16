@@ -18,7 +18,7 @@ import { RDICleanupSagemakerDomain } from './sagemaker-cleanup';
 
 interface RDISagemakerDomainCustomResourceProps {
   readonly prefix: string;
-  readonly sagemakerStudioDomainId: string;
+  readonly sagemakerStudioDomainName: string;
   readonly defaultUserSettings: { [key: string]: string };
   readonly vpcId: string;
   readonly subnetIds: string[];
@@ -26,6 +26,7 @@ interface RDISagemakerDomainCustomResourceProps {
 
 export class RDISagemakerDomainCustomResource extends Construct {
   public readonly customResource: CustomResource;
+  public readonly domainId: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerDomainCustomResourceProps) {
     super(scope, id);
@@ -38,18 +39,9 @@ export class RDISagemakerDomainCustomResource extends Construct {
       effect: Effect.ALLOW,
       actions: [
         'sagemaker:CreateDomain',
-        'sagemaker:DescribeDomain'
+        'sagemaker:DescribeDomain',
       ],
       resources: [`arn:aws:sagemaker:${region}:${account}:domain/*`],
-    });
-
-    const sagemakerUpdateDelete = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:DeleteDomain',
-        'sagemaker:UpdateDomain'
-      ],
-      resources: [`arn:aws:sagemaker:${region}:${account}:domain/${props.sagemakerStudioDomainId}`],
     });
 
     const cloudWatchLogsPolicy = new PolicyStatement({
@@ -73,18 +65,30 @@ export class RDISagemakerDomainCustomResource extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
     });
     customResourceLambda.addToRolePolicy(sagemakerCreate);
-    customResourceLambda.addToRolePolicy(sagemakerUpdateDelete);
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
       properties: {
-        DomainId: props.sagemakerStudioDomainId,
+        DomainName: props.sagemakerStudioDomainName,
         DefaultUserSettings: props.defaultUserSettings,
         VpcId: props.vpcId,
         SubnetIds: props.subnetIds,
       }
     });
+    this.domainId = this.customResource.getAttString('DomainId');
+
+    //Create and add policy to update and delete the domain
+    // We need to do this after the domain creation to get the domain id
+    const sagemakerUpdateDelete = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sagemaker:DeleteDomain',
+        'sagemaker:UpdateDomain'
+      ],
+      resources: [`arn:aws:sagemaker:${region}:${account}:domain/${this.domainId}`],
+    });
+    customResourceLambda.addToRolePolicy(sagemakerUpdateDelete);
   }
 }
 
@@ -149,14 +153,14 @@ export class RDISagemakerDomain extends Construct {
     // Create the SageMaker Studio Domain using the custom resource
     const domain = new RDISagemakerDomainCustomResource(this, 'SagemakerDomain', {
       prefix: this.prefix,
-      sagemakerStudioDomainId: this.domainName,
+      sagemakerStudioDomainName: this.domainName,
       defaultUserSettings: {
         executionRole: this.role.roleArn,
       },
       vpcId: props.vpcId,
       subnetIds: props.subnetIds,
     });
-    this.domainId = domain.customResource.getAttString('DomainId');
+    this.domainId = domain.domainId;
 
     // Create SageMaker User
     const sagemakerUser = new RDISagemakerUser( this, 'User', {
