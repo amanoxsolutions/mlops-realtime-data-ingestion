@@ -12,7 +12,6 @@ import {
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { CfnDomain } from 'aws-cdk-lib/aws-sagemaker';
 import { RDISagemakerUser } from './sagemaker-users';
 import { RDICleanupSagemakerDomain } from './sagemaker-cleanup';
 
@@ -57,7 +56,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${props.prefix}-manage-sagemaker-domain`,
       lambdaPurpose: lambdaPurpose,
-      uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
+      uuid: '61e6b537-fe77-4e73-8304-1eb3480b0867',
       code: Code.fromAsset('resources/lambdas/sagemaker_domain'),
       handler: 'main.lambda_handler',
       timeout: Duration.minutes(10),
