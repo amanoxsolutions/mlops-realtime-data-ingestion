@@ -151,36 +151,6 @@ export class RDICleanupSagemakerDomain extends Construct {
           })
         ]
       });
-      // Lambda Function to delete the SageMaker domain EFS resources
-      const lambdaDeleteEfs = new RDILambda(this, 'Efs', {
-        prefix: this.prefix,
-        name: 'cleanup-sagemaker-domain-efs',
-        codePath: 'resources/lambdas/cleanup_sagemaker_efs',
-        memorySize: 256,
-        timeout: Duration.minutes(10),
-        environment: {
-          SAGEMAKER_DOMAIN_ID: this.domainId,
-          VPC_ID: this.vpcId,
-        },
-        additionalPolicyStatements: [
-          new PolicyStatement({
-            effect: Effect.ALLOW,
-            actions: [
-              'sagemaker:Describe*',
-              'sagemaker:List*',
-              'ec2:Describe*',
-              'ec2:RevokeSecurityGroupEgress',
-              'ec2:RevokeSecurityGroupIngress',
-              'ec2:DeleteSecurityGroup',
-              'ec2:DeleteNetworkInterface',
-              'elasticfilesystem:DescribeMountTargets',
-              'elasticfilesystem:DeleteMountTarget',
-              'elasticfilesystem:DeleteFileSystem',
-            ],
-            resources: ['*'],
-          })
-        ]
-      });
       // Lambda function to send a response to CloudFormation stack
       const lambdaCleanupResponse = new RDILambda(this, 'CleanupResponse', {
         prefix: this.prefix,
@@ -204,10 +174,6 @@ export class RDICleanupSagemakerDomain extends Construct {
         lambdaFunction: lambdaCleanupStatus.function,
         payloadResponseOnly: true
       });
-      const cleanupEfs = new LambdaInvoke(this, 'Delete the SageMaker domain EFS resources', {
-        lambdaFunction: lambdaDeleteEfs.function,
-        payloadResponseOnly: true
-      });
       const sendResponse = new LambdaInvoke(this, 'Send the Response to CloudFormation', {
         lambdaFunction: lambdaCleanupResponse.function,
         payloadResponseOnly: true
@@ -221,7 +187,7 @@ export class RDICleanupSagemakerDomain extends Construct {
       // State Machine Definition
       const smDefinition = checkStatus.next(new Choice(this, 'Is the SageMaker User App Cleanup finished?')
         .when(Condition.stringEquals('$.status', 'DELETING'), wait.next(checkStatus))
-        .otherwise(cleanupEfs.next(sendResponse.next(success))));
+        .otherwise(sendResponse.next(success)));
       // Create the State Machine based on the definition
       const stateMachine = new StateMachine(this, 'CleanupProcess', {
         definition: smDefinition,
