@@ -34,10 +34,6 @@ export class cleanupEcrRepo extends Construct {
       uuid: '54gf6lx0-r58g-88j5-d44t-l40cef953pqn',
       code: Code.fromAsset('resources/lambdas/cleanup_ecr'),
       handler: 'main.lambda_handler',
-      environment: {
-        PHYSICAL_ID: lambdaPurpose,
-        ECR_REPOSITORY_NAME: props.ecrRepositoryName,
-      },
       timeout: Duration.seconds(60),
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
@@ -46,6 +42,10 @@ export class cleanupEcrRepo extends Construct {
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
+      properties: {
+        PhysicalResourceId: lambdaPurpose,
+        EcrRepositoryName: props.ecrRepositoryName,
+      },
     });
   }
 }
