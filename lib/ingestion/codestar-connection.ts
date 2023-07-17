@@ -21,15 +21,14 @@ interface CodestarConnectionProps {
         resources: ['*'],
       });
 
+      const lambdaPurpose = 'CustomResourceToGetCodeStarConnectionArn';
+
       const customResourceLambda = new SingletonFunction(this, 'Singleton', {
         functionName: `${props.prefix}-get-codestar-connection`,
-        lambdaPurpose: 'CustomResourceToGetCodeStarConnectionArn',
+        lambdaPurpose: lambdaPurpose,
         uuid: 'gx84f7l0-1rr5-88j5-3dd4-qb0be01bg0lp',
         code: Code.fromAsset('resources/lambdas/get_connection'),
         handler: 'main.lambda_handler',
-        environment: {
-          CONNECTION_NAME: props.name,
-        },
         timeout: Duration.seconds(60),
         runtime: Runtime.PYTHON_3_9,
         logRetention: RetentionDays.ONE_WEEK,
@@ -38,6 +37,10 @@ interface CodestarConnectionProps {
 
       const customResource = new CustomResource(this, 'Resource', {
         serviceToken: customResourceLambda.functionArn,
+        properties: {
+          PhysicalResourceId: lambdaPurpose,
+          ConnectionName: props.name,
+        },
       });
 
       this.arn = customResource.getAtt('ConnectionArn').toString();
