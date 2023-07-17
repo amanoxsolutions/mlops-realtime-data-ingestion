@@ -18,9 +18,10 @@ import { RDICleanupSagemakerDomain } from './sagemaker-cleanup';
 interface RDISagemakerDomainCustomResourceProps {
   readonly prefix: string;
   readonly sagemakerStudioDomainName: string;
-  readonly defaultUserSettings: { [key: string]: string };
+  readonly defaultUserSettingsExecutionRoleArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
+  readonly removalPolicy: RemovalPolicy;
 }
 
 export class RDISagemakerDomainCustomResource extends Construct {
@@ -34,11 +35,13 @@ export class RDISagemakerDomainCustomResource extends Construct {
     const account = Stack.of(this).account;
     const lambdaPurpose = 'CustomResourceToCreateUpdateDeleteSagemakerDomain'
 
-    const sagemakerCreate = new PolicyStatement({
+    const sagemakerManage = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
         'sagemaker:CreateDomain',
         'sagemaker:DescribeDomain',
+        'sagemaker:DeleteDomain',
+        'sagemaker:UpdateDomain'
       ],
       resources: [`arn:aws:sagemaker:${region}:${account}:domain/*`],
     });
@@ -53,6 +56,14 @@ export class RDISagemakerDomainCustomResource extends Construct {
       resources: [`arn:aws:logs:${region}:${account}:*`	],
     });
 
+    const sagemakerExecPassRole = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'iam:PassRole',
+      ],
+      resources: [ props.defaultUserSettingsExecutionRoleArn	],
+    });
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${props.prefix}-manage-sagemaker-domain`,
       lambdaPurpose: lambdaPurpose,
@@ -63,35 +74,26 @@ export class RDISagemakerDomainCustomResource extends Construct {
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
     });
-    customResourceLambda.addToRolePolicy(sagemakerCreate);
+    customResourceLambda.addToRolePolicy(sagemakerManage);
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
+    customResourceLambda.addToRolePolicy(sagemakerExecPassRole);
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
       properties: {
         DomainName: props.sagemakerStudioDomainName,
-        DefaultUserSettings: props.defaultUserSettings,
+        DefaultUserSettings: {
+          ExecutionRole: props.defaultUserSettingsExecutionRoleArn,
+        },
         VpcId: props.vpcId,
         SubnetIds: props.subnetIds,
+        RemovalPolicy: props.removalPolicy,
       }
     });
     this.domainId = this.customResource.getAttString('DomainId');
-
-    //Create and add policy to update and delete the domain
-    // We need to do this after the domain creation to get the domain id
-    const sagemakerUpdateDelete = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:DeleteDomain',
-        'sagemaker:UpdateDomain'
-      ],
-      resources: [`arn:aws:sagemaker:${region}:${account}:domain/${this.domainId}`],
-    });
-    customResourceLambda.addToRolePolicy(sagemakerUpdateDelete);
   }
 }
-
-interface RDISagemakerDomainProps {
+interface RDISagemakerStudioProps {
   readonly prefix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly dataBucketArn: string;
@@ -99,7 +101,7 @@ interface RDISagemakerDomainProps {
   readonly subnetIds: string[];
 }
 
-export class RDISagemakerDomain extends Construct {
+export class RDISagemakerStudio extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly role: IRole;
@@ -107,7 +109,7 @@ export class RDISagemakerDomain extends Construct {
   public readonly domainId: string;
   public readonly userName: string;
 
-  constructor(scope: Construct, id: string, props: RDISagemakerDomainProps) {
+  constructor(scope: Construct, id: string, props: RDISagemakerStudioProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
@@ -150,14 +152,13 @@ export class RDISagemakerDomain extends Construct {
     });
 
     // Create the SageMaker Studio Domain using the custom resource
-    const domain = new RDISagemakerDomainCustomResource(this, 'SagemakerDomain', {
+    const domain = new RDISagemakerDomainCustomResource(this, 'Domain', {
       prefix: this.prefix,
       sagemakerStudioDomainName: this.domainName,
-      defaultUserSettings: {
-        executionRole: this.role.roleArn,
-      },
+      defaultUserSettingsExecutionRoleArn:  this.role.roleArn,
       vpcId: props.vpcId,
       subnetIds: props.subnetIds,
+      removalPolicy: this.removalPolicy,
     });
     this.domainId = domain.domainId;
 
@@ -173,7 +174,7 @@ export class RDISagemakerDomain extends Construct {
 
     // Custom Resource to clean upp the SageMaker Studio Domain 
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
-      const cleanupSagemakerDomain = new RDICleanupSagemakerDomain(this, 'CleanupSagemakerDomain', {
+      const cleanupSagemakerDomain = new RDICleanupSagemakerDomain(this, 'CleanupDomain', {
         prefix: this.prefix,
         domainName: this.domainName,
         domainId: this.domainId,

@@ -1,7 +1,7 @@
 import { Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { RDISagemakerDomain } from './sagemaker-domain';
+import { RDISagemakerStudio } from './sagemaker-domain';
 import { RDIFeatureStore } from './feature-store';
 
 export interface SagemakerStackProps extends StackProps {
@@ -17,7 +17,7 @@ export class SagemakerStack extends Stack {
   public readonly prefix: string;
   public readonly s3Suffix: string;
   public readonly removalPolicy: RemovalPolicy;
-  public readonly domain: RDISagemakerDomain;
+  public readonly domain: RDISagemakerStudio;
   public readonly featureStore: RDIFeatureStore;
 
   constructor(scope: Construct, id: string, props: SagemakerStackProps) {
@@ -27,7 +27,7 @@ export class SagemakerStack extends Stack {
     this.s3Suffix = props.s3Suffix;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
-    this.domain = new RDISagemakerDomain(this, 'sagemakerDomain', {
+    this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
       dataBucketArn: props.dataBucketArn,
