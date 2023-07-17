@@ -36,7 +36,7 @@ export class CleanupSagemakerDomainTrigger extends Construct {
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
-    const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomainTrigger'
+    const lambdaPurpose = 'CustomResourceToTriggerCleanupOfSageMakerDomain'
 
     const stateMachinePolicy = new PolicyStatement({
       effect: Effect.ALLOW,
@@ -69,14 +69,6 @@ export class CleanupSagemakerDomainTrigger extends Construct {
       uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
       code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_trigger'),
       handler: 'main.lambda_handler',
-      environment: {
-        PHYSICAL_ID: lambdaPurpose,
-        STEP_FUNCTION_ARN: props.stepFunctionArn,
-        SAGEMAKER_DOMAIN_ID: props.sagemakerStudioDomainId,
-        SAGEMAKER_USER_PROFILE: props.sagemakerStudioUserProfile,
-        SAGEMAKER_APP_NAME: props.sagemakerStudioAppName,
-        CF_CALLBACK_URL: props.cfCallbackUrl,
-      },
       timeout: Duration.seconds(30),
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
@@ -87,6 +79,14 @@ export class CleanupSagemakerDomainTrigger extends Construct {
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
+      properties: {
+        PhysicalResourceId: lambdaPurpose,
+        StepFunctionArn: props.stepFunctionArn,
+        DomainId: props.sagemakerStudioDomainId,
+        StudioUserProfile: props.sagemakerStudioUserProfile,
+        StudioAppName: props.sagemakerStudioAppName,
+        CfCallbackUrl: props.cfCallbackUrl,
+      },
     });
   }
 }
@@ -135,7 +135,7 @@ export class RDICleanupSagemakerDomain extends Construct {
     // deleted before we can delete the NSG
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
       // Lambda function to check for the status of the deletion
-      const lambdaCleanupStatus = new RDILambda(this, 'CleanupStatus', {
+      const lambdaCleanupStatus = new RDILambda(this, 'Status', {
         prefix: this.prefix,
         name: 'cleanup-sagemaker-user-status',
         codePath: 'resources/lambdas/cleanup_sagemaker_status',
@@ -152,7 +152,7 @@ export class RDICleanupSagemakerDomain extends Construct {
         ]
       });
       // Lambda function to send a response to CloudFormation stack
-      const lambdaCleanupResponse = new RDILambda(this, 'CleanupResponse', {
+      const lambdaCleanupResponse = new RDILambda(this, 'Response', {
         prefix: this.prefix,
         name: 'cleanup-sagemaker-user-response',
         codePath: 'resources/lambdas/cleanup_sagemaker_response',
@@ -189,7 +189,7 @@ export class RDICleanupSagemakerDomain extends Construct {
         .when(Condition.stringEquals('$.status', 'DELETING'), wait.next(checkStatus))
         .otherwise(sendResponse.next(success)));
       // Create the State Machine based on the definition
-      const stateMachine = new StateMachine(this, 'CleanupProcess', {
+      const stateMachine = new StateMachine(this, 'Process', {
         definition: smDefinition,
         stateMachineName: `${this.prefix}-sagemaker-domain-user-app-cleanup`,
         timeout: Duration.minutes(30),
@@ -207,7 +207,7 @@ export class RDICleanupSagemakerDomain extends Construct {
       // CloudFormation Wait Condition to wait to receive a signal that all the 
       // apps have been deleted
       const waitDeletionHandle = new CfnWaitConditionHandle(this, 'WaitAppDeletionHandle'.concat(dataHash));
-      const cleanupDomain = new CleanupSagemakerDomainTrigger(this, 'CleanupDomain', {
+      const cleanupDomain = new CleanupSagemakerDomainTrigger(this, 'Trigger', {
         prefix: this.prefix,
         stepFunctionArn: stateMachine.stateMachineArn,
         sagemakerStudioDomainId: this.domainId,
@@ -221,7 +221,6 @@ export class RDICleanupSagemakerDomain extends Construct {
         handle: waitDeletionHandle.ref,
       });
       waitDeletion.node.addDependency(cleanupDomain.customResource);
-
     }
   } 
 }
