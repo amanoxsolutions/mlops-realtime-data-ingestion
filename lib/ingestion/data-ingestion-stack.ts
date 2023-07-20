@@ -8,6 +8,7 @@ import { EventbridgeToKinesisFirehoseToS3 } from '@aws-solutions-constructs/aws-
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { RDICleanupSagemakerDomain } from '../sagemaker-cleanup/sagemaker-cleanup';
 
 
 export interface RealtimeDataIngestionStackProps extends StackProps {
@@ -156,6 +157,5 @@ export class RealtimeDataIngestionStack extends Stack {
     });
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     this.vpc = ingestionWorker.vpc;
-    
   }
 }

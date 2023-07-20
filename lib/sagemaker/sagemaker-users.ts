@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Stack, RemovalPolicy } from 'aws-cdk-lib';
+import { RemovalPolicy } from 'aws-cdk-lib';
 import {
   IRole,
   ManagedPolicy,
@@ -19,6 +19,7 @@ interface RDISagemakerUserProps {
   readonly dataBucketArn: string;
   readonly domainName: string;
   readonly domainId: string;
+  readonly name:string;
 }
 
 export class RDISagemakerUser extends Construct {
@@ -27,7 +28,7 @@ export class RDISagemakerUser extends Construct {
   public readonly role: IRole;
   public readonly domainName: string;
   public readonly domainId: string;
-  public readonly userName: string;
+  public readonly name: string;
   public readonly appName: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerUserProps) {
@@ -36,12 +37,9 @@ export class RDISagemakerUser extends Construct {
     this.prefix = props.prefix;
     this.domainName = props.domainName;
     this.domainId = props.domainId;
-    this.userName = `${this.prefix}-sagemaker-user`;
+    this.name = props.name;
     this.appName = `${this.prefix}-sagemaker-user-app`
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
-
-    const region = Stack.of(this).region;
-    const account = Stack.of(this).account;
 
     // 
     // Create a SageMaker Studio user Role
@@ -77,7 +75,7 @@ export class RDISagemakerUser extends Construct {
     // Create the user profile
     const studioUser = new CfnUserProfile(this, 'Profile', {
       domainId: this.domainId,
-      userProfileName: this.userName,
+      userProfileName: this.name,
       userSettings: {
         executionRole: userRole.roleArn,
       },

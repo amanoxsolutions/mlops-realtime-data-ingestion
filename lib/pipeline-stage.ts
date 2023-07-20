@@ -1,6 +1,7 @@
 import { Construct } from "constructs";
 import { Stage, StageProps } from 'aws-cdk-lib';
 import { RealtimeDataIngestionStack } from './ingestion/data-ingestion-stack';
+import { SagemakerCleanupStack } from './sagemaker-cleanup/cleanup-stack';
 import { SagemakerStack } from './sagemaker/sagemaker-stack';
 
 export interface RealtimeDataIngestionStageProps extends StageProps {
@@ -18,14 +19,20 @@ export class RealtimeDataIngestionStage extends Stage {
       prefix: props.prefix,
       s3Suffix: props.uniqueSuffix,
     });   
-      
-      // Stack to deploy SageMaker
+    
+    // Stack to Provision a StepFunction to Wait and delete the SageMaker Studio Domain
+    const sagemakerCleanupStack = new SagemakerCleanupStack(this, "SagemakerCleanupStack", {
+      prefix: props.prefix,
+    });
+
+    // Stack to deploy SageMaker
     new SagemakerStack(this, "SagemakerStack", {
       prefix: props.prefix,
       s3Suffix: props.uniqueSuffix,
       dataBucketArn: ingestionStack.dataBucketArn,
       vpc: ingestionStack.vpc,
       ingestionFirehoseStreamArn: ingestionStack.firehoseStreamArn,
+      sagemakerCleanupStateMachineArn: sagemakerCleanupStack.stateMachineArn,
     });    
   }
 }

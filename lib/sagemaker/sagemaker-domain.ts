@@ -1,3 +1,4 @@
+import hash = require('object-hash');
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy  } from 'aws-cdk-lib';
 import {
@@ -13,7 +14,6 @@ import {
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { RDISagemakerUser } from './sagemaker-users';
-import { RDICleanupSagemakerDomain } from './sagemaker-cleanup';
 
 interface RDISagemakerDomainCustomResourceProps {
   readonly prefix: string;
@@ -93,12 +93,89 @@ export class RDISagemakerDomainCustomResource extends Construct {
     this.domainId = this.customResource.getAttString('DomainId');
   }
 }
+
+import { CfnWaitCondition, CfnWaitConditionHandle } from 'aws-cdk-lib/aws-cloudformation';
+
+
+interface CleanupSagemakerDomainTriggerProps {
+  readonly prefix: string;
+  readonly stepFunctionArn: string;
+  readonly sagemakerStudioDomainId: string;
+  readonly sagemakerStudioUserProfile: string;
+  readonly sagemakerStudioAppName: string;
+  readonly cfCallbackUrl: string;
+}
+
+export class CleanupSagemakerDomainTrigger extends Construct {
+  public readonly customResource: CustomResource;
+
+  constructor(scope: Construct, id: string, props: CleanupSagemakerDomainTriggerProps) {
+    super(scope, id);
+
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
+    const lambdaPurpose = 'CustomResourceToTriggerCleanupOfSageMakerDomain'
+
+    const stateMachinePolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'states:StartExecution'
+      ],
+      resources: [props.stepFunctionArn],
+    });
+
+    const sagemakerList = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sagemaker:List*'
+      ],
+      resources: ['*'],
+    });
+
+    const sagemakerDeleteApp = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sagemaker:DescribeApp',
+        'sagemaker:DeleteApp'
+      ],
+      resources: [`arn:aws:sagemaker:${region}:${account}:app/${props.sagemakerStudioDomainId}/${props.sagemakerStudioUserProfile}/*/*`],
+    });
+
+    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
+      functionName: `${props.prefix}-cleanup-sagemaker-domain-trigger`,
+      lambdaPurpose: lambdaPurpose,
+      uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
+      code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_trigger'),
+      handler: 'main.lambda_handler',
+      timeout: Duration.seconds(30),
+      runtime: Runtime.PYTHON_3_9,
+      logRetention: RetentionDays.ONE_WEEK,
+    });
+    customResourceLambda.addToRolePolicy(stateMachinePolicy);
+    customResourceLambda.addToRolePolicy(sagemakerList);
+    customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
+
+    this.customResource = new CustomResource(this, 'Resource', {
+      serviceToken: customResourceLambda.functionArn,
+      properties: {
+        PhysicalResourceId: lambdaPurpose,
+        StepFunctionArn: props.stepFunctionArn,
+        DomainId: props.sagemakerStudioDomainId,
+        StudioUserProfile: props.sagemakerStudioUserProfile,
+        StudioAppName: props.sagemakerStudioAppName,
+        CfCallbackUrl: props.cfCallbackUrl,
+      },
+    });
+  }
+}
+
 interface RDISagemakerStudioProps {
   readonly prefix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly dataBucketArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
+  readonly cleanupStateMachineArn: string;
 }
 
 export class RDISagemakerStudio extends Construct {
@@ -113,15 +190,13 @@ export class RDISagemakerStudio extends Construct {
     super(scope, id);
 
     this.prefix = props.prefix;
-    this.userName = `${this.prefix}-sagemaker-user`;
+    this.domainName =  `${this.prefix}-sagemaker-studio-domain`;
+    this.userName = `${this.prefix}-sagemaker-studio-user`;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
     //
     // Create SageMaker Studio Domain
     //
-    // Set the domain name
-    this.domainName =  `${this.prefix}-sagemaker-studio-domain`;
-
     // Create the IAM Role for SagMaker Studio Domain
     this.role = new Role(this, 'StudioRole', {
       roleName: `${this.prefix}-sagemaker-studio-role`,
@@ -169,20 +244,32 @@ export class RDISagemakerStudio extends Construct {
       dataBucketArn: props.dataBucketArn,
       domainName: this.domainName, 
       domainId: this.domainId,
+      name: this.userName,
     });
     sagemakerUser.node.addDependency(domain);
 
-    // Custom Resource to clean upp the SageMaker Studio Domain 
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
-      const cleanupSagemakerDomain = new RDICleanupSagemakerDomain(this, 'CleanupDomain', {
+      const dataHash = hash({
         prefix: this.prefix,
-        domainName: this.domainName,
-        domainId: this.domainId,
-        studioUserName: sagemakerUser.userName,
-        studioAppName: sagemakerUser.appName,
-        vpcId: props.vpcId,
+        ts: Date.now().toString()
       });
-      cleanupSagemakerDomain.node.addDependency(sagemakerUser);
+      // CloudFormation Wait Condition to wait to receive a signal that all the 
+      // apps have been deleted
+      const waitDeletionHandle = new CfnWaitConditionHandle(this, 'WaitAppDeletionHandle'.concat(dataHash));
+      const cleanupDomain = new CleanupSagemakerDomainTrigger(this, 'Trigger', {
+        prefix: this.prefix,
+        stepFunctionArn: props.cleanupStateMachineArn,
+        sagemakerStudioDomainId: this.domainId,
+        sagemakerStudioUserProfile: this.userName,
+        sagemakerStudioAppName: sagemakerUser.appName,
+        cfCallbackUrl: waitDeletionHandle.ref,
+      });
+      const waitDeletion = new CfnWaitCondition(this, 'WaitAppDeletion'.concat(dataHash), {
+        count: 1,
+        timeout: '1800',
+        handle: waitDeletionHandle.ref,
+      });
+      waitDeletion.node.addDependency(cleanupDomain.customResource);
     }
   } 
 }

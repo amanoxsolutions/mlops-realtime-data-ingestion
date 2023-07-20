@@ -11,6 +11,7 @@ export interface SagemakerStackProps extends StackProps {
   readonly dataBucketArn: string;
   readonly vpc: IVpc;
   readonly ingestionFirehoseStreamArn: string;
+  readonly sagemakerCleanupStateMachineArn: string;
 }
   
 export class SagemakerStack extends Stack {
@@ -30,6 +31,7 @@ export class SagemakerStack extends Stack {
     this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
+      cleanupStateMachineArn: props.sagemakerCleanupStateMachineArn,
       dataBucketArn: props.dataBucketArn,
       vpcId: props.vpc.vpcId,
       subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
