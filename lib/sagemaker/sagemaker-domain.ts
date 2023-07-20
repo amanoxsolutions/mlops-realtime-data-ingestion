@@ -260,7 +260,7 @@ export class RDISagemakerStudio extends Construct {
         prefix: this.prefix,
         stepFunctionArn: props.cleanupStateMachineArn,
         sagemakerStudioDomainId: this.domainId,
-        sagemakerStudioUserProfile: this.userName,
+        sagemakerStudioUserProfile: sagemakerUser.name,
         sagemakerStudioAppName: sagemakerUser.appName,
         cfCallbackUrl: waitDeletionHandle.ref,
       });
@@ -270,6 +270,7 @@ export class RDISagemakerStudio extends Construct {
         handle: waitDeletionHandle.ref,
       });
       waitDeletion.node.addDependency(cleanupDomain.customResource);
+      waitDeletion.node.addDependency(sagemakerUser);
     }
   } 
 }
