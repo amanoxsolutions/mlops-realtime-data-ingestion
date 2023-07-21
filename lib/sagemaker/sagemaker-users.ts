@@ -30,7 +30,7 @@ export class RDISagemakerUser extends Construct {
   public readonly domainId: string;
   public readonly name: string;
   public readonly appName: string;
-  public readonly studioApp: CfnApp;
+  public readonly userProfile: CfnUserProfile;
 
   constructor(scope: Construct, id: string, props: RDISagemakerUserProps) {
     super(scope, id);
@@ -74,7 +74,7 @@ export class RDISagemakerUser extends Construct {
     }));
 
     // Create the user profile
-    const studioUser = new CfnUserProfile(this, 'Profile', {
+    this.userProfile = new CfnUserProfile(this, 'Profile', {
       domainId: this.domainId,
       userProfileName: this.name,
       userSettings: {
@@ -82,17 +82,17 @@ export class RDISagemakerUser extends Construct {
       },
     });
     // Add removal policy to the user profile
-    studioUser.applyRemovalPolicy(this.removalPolicy);
+    this.userProfile.applyRemovalPolicy(this.removalPolicy);
 
     // Create an app for the SageMaker studio user
     const studioApp = new CfnApp(this, 'App', {
       appName: this.appName,
       appType: 'JupyterServer',
       domainId: this.domainId,
-      userProfileName: studioUser.userProfileName,
+      userProfileName: this.userProfile.userProfileName,
     });
     // Force dependency on the user profile
-    studioApp.node.addDependency(studioUser);
+    studioApp.node.addDependency(this.userProfile);
     // add removal policy to the app
     studioApp.applyRemovalPolicy(this.removalPolicy);
   } 

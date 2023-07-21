@@ -270,7 +270,7 @@ export class RDISagemakerStudio extends Construct {
         handle: waitDeletionHandle.ref,
       });
       waitDeletion.node.addDependency(cleanupDomain.customResource);
-      waitDeletion.node.addDependency(sagemakerUser.studioApp);
+      waitDeletion.node.addDependency(sagemakerUser.userProfile);
     }
   } 
 }
