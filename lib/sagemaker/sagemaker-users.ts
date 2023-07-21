@@ -30,6 +30,7 @@ export class RDISagemakerUser extends Construct {
   public readonly domainId: string;
   public readonly name: string;
   public readonly appName: string;
+  public readonly studioApp: CfnApp;
 
   constructor(scope: Construct, id: string, props: RDISagemakerUserProps) {
     super(scope, id);
