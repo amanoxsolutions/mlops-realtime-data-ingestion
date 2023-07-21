@@ -1,14 +1,12 @@
-import os
 import boto3
 import logging
-import json
+import time
 import lib.cfnresponse as cfnresponse
 
 from typing import List, Dict
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-stepfunctions = boto3.client('stepfunctions')
 sagemaker = boto3.client("sagemaker")
 
 def lambda_handler(event, context):
@@ -17,37 +15,22 @@ def lambda_handler(event, context):
         request = event.get("RequestType").lower()
         logger.info(f"Type of request: {request}")
         physical_id = event.get("ResourceProperties").get("PhysicalResourceId")
-        step_function_arn = event.get("ResourceProperties").get("StepFunctionArn")
         domain_id = event.get("ResourceProperties").get("DomainId")
         user_profile = event.get("ResourceProperties").get("StudioUserProfile")
         default_user_app_name = event.get("ResourceProperties").get("StudioAppName")
-        cf_callback_url = event.get("ResourceProperties").get("CfCallbackUrl")
         if request == "delete":
             # Launch the deletion of the SageMaker Studio apps
             apps = delete_sagemaker_studio_apps(domain_id, user_profile, default_user_app_name)
-            # Launch the Step Function to wait for the deletion of the SageMaker Studio apps
-            stepfunctions.start_execution(
-                stateMachineArn=step_function_arn,
-                input=json.dumps({
-                    "sagemaker_domain_id": domain_id,
-                    "sagemaker_user_profile": user_profile,
-                    "sagemaker_user_apps": apps,
-                    "status": "DELETING",
-                    "cf_callback_url": cf_callback_url})
-            )
+            # Check if the apps are deleted
+            status = "DELETING"
+            while status == "DELETING":
+                status = check_studio_app_deletion(domain_id, user_profile, apps)
+                logger.info(f"Status of the SageMaker Studio apps deletion: {status}")
+                time.sleep(30)
         else:
-            # Id we are not deleting the stack, we don't need to do anything,
+            # If we are not deleting the stack, we don't need to do anything,
             # so we just send a SUCCESS response to CloudFormation
             logger.info("No action required")
-            stepfunctions.start_execution(
-                stateMachineArn=step_function_arn,
-                input=json.dumps({
-                    "sagemaker_domain_id": domain_id,
-                    "sagemaker_user_profile": user_profile,
-                    "sagemaker_user_apps": "",
-                    "status": "SUCCESS",
-                    "cf_callback_url": cf_callback_url})
-            )
     except Exception as e:
         logger.exception(e)
         cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=physical_id)
@@ -121,4 +104,41 @@ def delete_sagemaker_studio_apps(domain_id: str, user_profile: str, default_user
                 AppType=type
             )
     return apps_list
+
+
+def check_studio_app_deletion(domain_id: str, user_profile: str, apps: List[Dict]) -> str:
+    """Check the status of the SageMaker Studio apps deletion.
+
+    Args:
+        domain_id (str): the SageMaker domain ID
+        user_profile (str): the SageMaker user profile name
+        apps (List[str]): the list of SageMaker Studio app names
+
+    Returns:
+        str: the status of the deletion
+    """
+    all_apps_deleted = True
+    # For each app in the SageMaker domain, check if it is deleted
+    for app in apps:
+        app_name = app.get("name")
+        app_type = app.get("type")
+        response = sagemaker.describe_app(
+            DomainId=domain_id,
+            UserProfileName=user_profile,
+            AppName=app_name,
+            AppType=app_type
+        )
+        status = response.get("Status")
+        if status == "Deleting":
+            logger.info(f"SageMaker Studio app {app_name} is still being deleted")
+            all_apps_deleted = False
+        elif status == "Deleted":
+            logger.info(f"SageMaker Studio app {app_name} is deleted")
+        else:
+            all_apps_deleted = False
+            logger.error(f"SageMaker Studio app {app_name} is in status {status}. It should be either in a 'Deleting' or 'Deleted' state.")
+    if all_apps_deleted:
+        return "DELETED"
+    else:
+        return "DELETING"
     

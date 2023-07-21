@@ -97,32 +97,22 @@ export class RDISagemakerDomainCustomResource extends Construct {
 import { CfnWaitCondition, CfnWaitConditionHandle } from 'aws-cdk-lib/aws-cloudformation';
 
 
-interface CleanupSagemakerDomainTriggerProps {
+interface CleanupSagemakerDomainUserProps {
   readonly prefix: string;
-  readonly stepFunctionArn: string;
   readonly sagemakerStudioDomainId: string;
   readonly sagemakerStudioUserProfile: string;
   readonly sagemakerStudioAppName: string;
-  readonly cfCallbackUrl: string;
 }
 
-export class CleanupSagemakerDomainTrigger extends Construct {
+export class CleanupSagemakerDomainUser extends Construct {
   public readonly customResource: CustomResource;
 
-  constructor(scope: Construct, id: string, props: CleanupSagemakerDomainTriggerProps) {
+  constructor(scope: Construct, id: string, props: CleanupSagemakerDomainUserProps) {
     super(scope, id);
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
-    const lambdaPurpose = 'CustomResourceToTriggerCleanupOfSageMakerDomain'
-
-    const stateMachinePolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'states:StartExecution'
-      ],
-      resources: [props.stepFunctionArn],
-    });
+    const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomainUser'
 
     const sagemakerList = new PolicyStatement({
       effect: Effect.ALLOW,
@@ -142,16 +132,15 @@ export class CleanupSagemakerDomainTrigger extends Construct {
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${props.prefix}-cleanup-sagemaker-domain-trigger`,
+      functionName: `${props.prefix}-cleanup-sagemaker-domain-user`,
       lambdaPurpose: lambdaPurpose,
       uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
-      code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_trigger'),
+      code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_user'),
       handler: 'main.lambda_handler',
-      timeout: Duration.seconds(30),
+      timeout: Duration.minutes(15),
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
     });
-    customResourceLambda.addToRolePolicy(stateMachinePolicy);
     customResourceLambda.addToRolePolicy(sagemakerList);
     customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
 
@@ -159,11 +148,9 @@ export class CleanupSagemakerDomainTrigger extends Construct {
       serviceToken: customResourceLambda.functionArn,
       properties: {
         PhysicalResourceId: lambdaPurpose,
-        StepFunctionArn: props.stepFunctionArn,
         DomainId: props.sagemakerStudioDomainId,
         StudioUserProfile: props.sagemakerStudioUserProfile,
         StudioAppName: props.sagemakerStudioAppName,
-        CfCallbackUrl: props.cfCallbackUrl,
       },
     });
   }
@@ -175,7 +162,6 @@ interface RDISagemakerStudioProps {
   readonly dataBucketArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
-  readonly cleanupStateMachineArn: string;
 }
 
 export class RDISagemakerStudio extends Construct {
@@ -249,28 +235,23 @@ export class RDISagemakerStudio extends Construct {
     sagemakerUser.node.addDependency(domain);
 
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
-      const dataHash = hash({
+      // IMPORTANT
+      // In order to delete the SageMaker Domain User, we need to delete all the apps first
+      // However, deleting an app can take more than 15 minutes, the maximum timeout for a 
+      // Lambda Function custom resource. The problem is that WaitConditions do not support
+      // delete operations, i.e. they do not wait to receive a signal when the resource is
+      // deleted. So there is currently no mechanism available to wait for the apps to be
+      // deleted before deleting the user. So currently the deletion of the apps and 
+      // waiting for the user to be deleted is inside the custom resource. The only thing
+      // we can do is hope to get lucky and that the apps are deleted before the 15 minutes
+      // timeout. If not, CloudFormation stack deletion with result in an error.
+      const cleanupDomain = new CleanupSagemakerDomainUser(this, 'UserCleanup', {
         prefix: this.prefix,
-        ts: Date.now().toString()
-      });
-      // CloudFormation Wait Condition to wait to receive a signal that all the 
-      // apps have been deleted
-      const waitDeletionHandle = new CfnWaitConditionHandle(this, 'WaitAppDeletionHandle'.concat(dataHash));
-      const cleanupDomain = new CleanupSagemakerDomainTrigger(this, 'Trigger', {
-        prefix: this.prefix,
-        stepFunctionArn: props.cleanupStateMachineArn,
         sagemakerStudioDomainId: this.domainId,
         sagemakerStudioUserProfile: sagemakerUser.name,
         sagemakerStudioAppName: sagemakerUser.appName,
-        cfCallbackUrl: waitDeletionHandle.ref,
       });
-      const waitDeletion = new CfnWaitCondition(this, 'WaitAppDeletion'.concat(dataHash), {
-        count: 1,
-        timeout: '1800',
-        handle: waitDeletionHandle.ref,
-      });
-      waitDeletion.node.addDependency(cleanupDomain.customResource);
-      waitDeletion.node.addDependency(sagemakerUser.userProfile);
+      cleanupDomain.node.addDependency(sagemakerUser.userProfile);
     }
   } 
 }
