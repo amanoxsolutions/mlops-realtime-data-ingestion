@@ -5,6 +5,7 @@
     "lib": [
       "es2018"
     ],
+    "moduleResolution": "node",
     "declaration": true,
     "strict": true,
     "noImplicitAny": true,
@@ -19,6 +20,7 @@
     "inlineSources": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
+    "resolveJsonModule": true,
     "typeRoots": [
       "./node_modules/@types"
     ]

@@ -3,7 +3,7 @@ import murmurhash = require('murmurhash');
  const fs = require('fs');
  const path = require('path');
 
- function nthIndexOf(s: string, c: string, n: number): number {
+ export function nthIndexOf(s: string, c: string, n: number): number {
     // Get the index of the nth occurence of a charachter in a string
     let count= 0, i=0;
     while(count<n && (i=s.indexOf(c[0],i)+1)){
@@ -23,9 +23,7 @@ export function getCurrentBranchName(p = process.cwd()): string | undefined {
     if (fs.existsSync(p)) {
         if (fs.existsSync(gitHeadPath)){
             const head = fs.readFileSync(gitHeadPath, 'utf8').trim();
-            // Get the last string after the last "/" in the branch reference name
-            const nb_delimiters = (head.match(/\//g) || []).length;
-            const start = nthIndexOf(head, '/', nb_delimiters);
+            const start = nthIndexOf(head, '/', 2);
             branchName = head.substring(start+1);
         } else {
             branchName = getCurrentBranchName(path.resolve(p, '..'));

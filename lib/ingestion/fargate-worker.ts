@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { Role, PolicyStatement, Effect, ServicePrincipal, Policy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, ILogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { Vpc, IVpc, SubnetType, SecurityGroup } from 'aws-cdk-lib/aws-ec2';
+import { Vpc, IVpc, SubnetType, SecurityGroup, IpAddresses } from 'aws-cdk-lib/aws-ec2';
 import { 
   Cluster, 
   ICluster, 
@@ -23,7 +23,7 @@ interface RDIIngestionWorkerProps {
   readonly ecrRepo: IRepository;
   readonly workerCpu?: number;
   readonly workerMemoryMiB?: number;
-  readonly vpcCider?: string;
+  readonly vpcCidr?: string;
   readonly eventBusArn: string;
   readonly eventBusName: string;
   readonly eventDetailType: string;
@@ -50,11 +50,11 @@ export class RDIIngestionWorker extends Construct {
     // VPC
     //
     // Setup the VPC and subnets
-    const vpcCider = props.vpcCider || '10.0.0.0/16'
+    const vpcCidr = props.vpcCidr || '10.0.0.0/16'
     this.vpc = new Vpc(this, 'Vpc', {
       vpcName: `${this.prefix}-ingestion-worker-vpc`,
       maxAzs: 1,
-      cidr: vpcCider,
+      ipAddresses: IpAddresses.cidr(vpcCidr),
       subnetConfiguration: [
         {
           cidrMask: 24,
@@ -64,6 +64,7 @@ export class RDIIngestionWorker extends Construct {
       ],
       natGateways: 0,
     });
+    this.vpc.applyRemovalPolicy(props.removalPolicy);
 
     const sg = new SecurityGroup(this, 'FargateSG', {
       securityGroupName: `${this.prefix}-ingestion-worker-sg`,
@@ -148,7 +149,7 @@ export class RDIIngestionWorker extends Construct {
       assignPublicIp: true,
       securityGroups: [ sg ],
       taskDefinition: fargateTask,
-      desiredCount: 0,
+      desiredCount: 1,
       circuitBreaker: { rollback: true },
     });
   }

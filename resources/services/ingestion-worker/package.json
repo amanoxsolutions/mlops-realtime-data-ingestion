@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/amanoxsolutions/mlops-realtime-data-ingestion#readme",
   "dependencies": {
-    "@aws-sdk/client-eventbridge": "^3.145.0",
-    "axios": "^0.27.2"
+    "@aws-sdk/client-eventbridge": "^3.370.0",
+    "axios": "^1.4.0"
   }
 }

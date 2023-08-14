@@ -26,15 +26,14 @@ export class cleanupEcrRepo extends Construct {
       resources: [props.ecrRepositoryArn],
     });
 
+    const lambdaPurpose = 'CustomResourceToCleanupEcrImages'
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${props.prefix}-cleanup-ecr-images`,
-      lambdaPurpose: 'CustomResourceToCleanupEcrImages',
+      lambdaPurpose: lambdaPurpose,
       uuid: '54gf6lx0-r58g-88j5-d44t-l40cef953pqn',
       code: Code.fromAsset('resources/lambdas/cleanup_ecr'),
       handler: 'main.lambda_handler',
-      environment: {
-        ECR_REPOSITORY_NAME: props.ecrRepositoryName,
-      },
       timeout: Duration.seconds(60),
       runtime: Runtime.PYTHON_3_9,
       logRetention: RetentionDays.ONE_WEEK,
@@ -43,6 +42,10 @@ export class cleanupEcrRepo extends Construct {
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
+      properties: {
+        PhysicalResourceId: lambdaPurpose,
+        EcrRepositoryName: props.ecrRepositoryName,
+      },
     });
   }
 }
@@ -72,7 +75,7 @@ export class RDIIngestionWorkerImage extends Construct {
       removalPolicy: props.removalPolicy,
     });
     const ecrAsset = new DockerImageAsset(this, 'IngestionWorkerImage', {
-      directory: path.join(__dirname, '../resources/services/ingestion-worker'),
+      directory: path.join(__dirname, '../../resources/services/ingestion-worker'),
       platform: Platform.LINUX_ARM64,
     });
     new ecrdeploy.ECRDeployment(this, 'DeployDockerImage', {
