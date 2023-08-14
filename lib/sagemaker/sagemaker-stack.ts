@@ -35,7 +35,7 @@ export class SagemakerStack extends Stack {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
       enforceSSL: true,
-      versioned: true,
+      versioned: false,
       removalPolicy: this.removalPolicy,
     });
 
