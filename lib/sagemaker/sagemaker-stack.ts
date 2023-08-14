@@ -45,7 +45,7 @@ export class SagemakerStack extends Stack {
     });
 
     // S3 bucket to store the Model artifacts
-    this.modelBucket = new Bucket(scope, 'ModelBucket', {
+    this.modelBucket = new Bucket(this, 'ModelBucket', {
       bucketName: `${this.prefix}-sagemaker-model-artifacts-${this.s3Suffix}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
