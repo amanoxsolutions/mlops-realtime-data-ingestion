@@ -43,19 +43,10 @@ export class DataIngestionPipelineStack extends Stack {
         commands: [`git checkout ${props.fullBranchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth']
       }),
       dockerEnabledForSynth: true,
-      // The Default ARM Amazon Linux 2 v2 Build image comes with Node.js 12.x which creates issues with CDK v2...
-      // see: https://github.com/aws/aws-cdk/issues/20739
       cliVersion: '2.92.0',
       assetPublishingCodeBuildDefaults: {
-        partialBuildSpec: BuildSpec.fromObject({
-          phases: {
-            install: {
-              commands: ["n 16.20.1"]
-            }
-          }
-        }),
         buildEnvironment: {
-          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_2_0,
+          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
           computeType: ComputeType.SMALL,
         }
       },
