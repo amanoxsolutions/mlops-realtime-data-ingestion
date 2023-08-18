@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RDISagemakerStudio } from './sagemaker-domain';
 import { RDIFeatureStore } from './feature-store';
+import { Bucket, IBucket, BlockPublicAccess, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 
 export interface SagemakerStackProps extends StackProps {
   readonly prefix: string;
@@ -19,6 +20,7 @@ export class SagemakerStack extends Stack {
   public readonly removalPolicy: RemovalPolicy;
   public readonly domain: RDISagemakerStudio;
   public readonly featureStore: RDIFeatureStore;
+  public readonly modelBucket: IBucket;
 
   constructor(scope: Construct, id: string, props: SagemakerStackProps) {
     super(scope, id, props);
@@ -27,10 +29,21 @@ export class SagemakerStack extends Stack {
     this.s3Suffix = props.s3Suffix;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
+    // S3 bucket to store the Model artifacts
+    this.modelBucket = new Bucket(this, 'ModelBucket', {
+      bucketName: `${this.prefix}-sagemaker-model-artifacts-${this.s3Suffix}`,
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      encryption: BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      versioned: false,
+      removalPolicy: this.removalPolicy,
+    });
+
     this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
       dataBucketArn: props.dataBucketArn,
+      modelBucetArn: this.modelBucket.bucketArn,
       vpcId: props.vpc.vpcId,
       subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
     });

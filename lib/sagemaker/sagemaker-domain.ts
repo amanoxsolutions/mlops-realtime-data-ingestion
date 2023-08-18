@@ -160,6 +160,7 @@ interface RDISagemakerStudioProps {
   readonly prefix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly dataBucketArn: string;
+  readonly modelBucetArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
 }
@@ -197,12 +198,18 @@ export class RDISagemakerStudio extends Construct {
         new PolicyStatement({
           actions: ['s3:ListBucket'],
           effect: Effect.ALLOW,
-          resources: [props.dataBucketArn],
+          resources: [
+            props.dataBucketArn,
+            props.modelBucetArn,
+          ],
         }),
         new PolicyStatement({
           actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
           effect: Effect.ALLOW,
-          resources: [`${props.dataBucketArn}/*`],
+          resources: [
+            `${props.dataBucketArn}/*`,
+            `${props.modelBucetArn}/*`,
+          ],
         }),
       ],
     });
