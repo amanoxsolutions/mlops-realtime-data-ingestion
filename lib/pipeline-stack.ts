@@ -44,7 +44,7 @@ export class DataIngestionPipelineStack extends Stack {
       }),
       dockerEnabledForSynth: true,
       cliVersion: '2.92.0',
-      codeBuildDefaults: {
+      assetPublishingCodeBuildDefaults: {
         buildEnvironment: {
           buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
           computeType: ComputeType.SMALL,
