@@ -8,6 +8,7 @@ import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisana
 import { RDILambda } from '../lambda';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
 import * as sourceSchema from '../../resources/sagemaker/source-schema.json';
+import { RDIStartKinesisAnalytics } from './custom-resource';
 
 const fs = require('fs');
 const path = require('path');
@@ -227,6 +228,12 @@ export class RDIFeatureStore extends Construct {
         }
       ],
     });
+
+    const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
+      prefix: this.prefix,
+      kinesis_analytics_name: analyticsAppName,
+    });
+    startKinesisAnalytics.node.addDependency(this.analyticsStream)
 
     const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
       applicationName: analyticsAppName,
