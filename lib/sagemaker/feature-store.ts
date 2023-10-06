@@ -8,7 +8,7 @@ import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisana
 import { RDILambda } from '../lambda';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
 import * as sourceSchema from '../../resources/sagemaker/source-schema.json';
-import { RDIStartKinesisAnalytics } from './custom-resource';
+import { RDIStartKinesisAnalytics } from './start-kinesis';
 
 const fs = require('fs');
 const path = require('path');
