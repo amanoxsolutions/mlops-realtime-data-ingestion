@@ -36,32 +36,32 @@ wrapt = "*"
 
 [[package]]
 name = "boto3"
-version = "1.28.29"
+version = "1.28.61"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.28.29-py3-none-any.whl", hash = "sha256:7b8e7deee9f665612b3cd7412989aaab0337d8006a0490a188c814af137bd32d"},
-    {file = "boto3-1.28.29.tar.gz", hash = "sha256:1ab375c231547db4c9ce760e29cbe90d0341fe44910571b1bc4967a72fd8276f"},
+    {file = "boto3-1.28.61-py3-none-any.whl", hash = "sha256:ec49986e6c9549177e351494de64886c3f9daffd1a7af9e40302208aa1ffff1c"},
+    {file = "boto3-1.28.61.tar.gz", hash = "sha256:7a539aaf00eb45aea1ae857ef5d05e67def24fc07af4cb36c202fa45f8f30590"},
 ]
 
 [package.dependencies]
-botocore = ">=1.31.29,<1.32.0"
+botocore = ">=1.31.61,<1.32.0"
 jmespath = ">=0.7.1,<2.0.0"
-s3transfer = ">=0.6.0,<0.7.0"
+s3transfer = ">=0.7.0,<0.8.0"
 
 [package.extras]
 crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.31.29"
+version = "1.31.61"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.31.29-py3-none-any.whl", hash = "sha256:d3dc422491b3a30667f188f3434541a1dd86d6f8ed7f98ca26e056ae7d912c85"},
-    {file = "botocore-1.31.29.tar.gz", hash = "sha256:71b335a47ee061994ac12f15ffe63c5c783cb055dc48079b7d755a46b9c1918c"},
+    {file = "botocore-1.31.61-py3-none-any.whl", hash = "sha256:433bf93af09ad205d6db4c2ffc1f0e3193ddad4e0aced0a68ad8b0fa9de903e2"},
+    {file = "botocore-1.31.61.tar.gz", hash = "sha256:39b059603f0e92a26599eecc7fe9b141f13eb412c964786ca3a7df5375928c87"},
 ]
 
 [package.dependencies]
@@ -74,13 +74,13 @@ crt = ["awscrt (==0.16.26)"]
 
 [[package]]
 name = "fastjsonschema"
-version = "2.18.0"
+version = "2.18.1"
 description = "Fastest Python implementation of JSON schema"
 optional = false
 python-versions = "*"
 files = [
-    {file = "fastjsonschema-2.18.0-py3-none-any.whl", hash = "sha256:128039912a11a807068a7c87d0da36660afbfd7202780db26c4aa7153cfdc799"},
-    {file = "fastjsonschema-2.18.0.tar.gz", hash = "sha256:e820349dd16f806e4bd1467a138dced9def4bc7d6213a34295272a6cac95b5bd"},
+    {file = "fastjsonschema-2.18.1-py3-none-any.whl", hash = "sha256:aec6a19e9f66e9810ab371cc913ad5f4e9e479b63a7072a2cd060a9369e329a8"},
+    {file = "fastjsonschema-2.18.1.tar.gz", hash = "sha256:06dc8680d937628e993fa0cd278f196d20449a1adc087640710846b324d422ea"},
 ]
 
 [package.extras]
@@ -113,13 +113,13 @@ six = ">=1.5"
 
 [[package]]
 name = "s3transfer"
-version = "0.6.2"
+version = "0.7.0"
 description = "An Amazon S3 Transfer Manager"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "s3transfer-0.6.2-py3-none-any.whl", hash = "sha256:b014be3a8a2aab98cfe1abc7229cc5a9a0cf05eb9c1f2b86b230fd8df3f78084"},
-    {file = "s3transfer-0.6.2.tar.gz", hash = "sha256:cab66d3380cca3e70939ef2255d01cd8aece6a4907a9528740f668c4b0611861"},
+    {file = "s3transfer-0.7.0-py3-none-any.whl", hash = "sha256:10d6923c6359175f264811ef4bf6161a3156ce8e350e705396a7557d6293c33a"},
+    {file = "s3transfer-0.7.0.tar.gz", hash = "sha256:fd3889a66f5fe17299fe75b82eae6cf722554edca744ca5d5fe308b104883d2e"},
 ]
 
 [package.dependencies]
@@ -141,17 +141,17 @@ files = [
 
 [[package]]
 name = "urllib3"
-version = "1.26.16"
+version = "1.26.17"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 files = [
-    {file = "urllib3-1.26.16-py2.py3-none-any.whl", hash = "sha256:8d36afa7616d8ab714608411b4a3b13e58f463aee519024578e062e141dce20f"},
-    {file = "urllib3-1.26.16.tar.gz", hash = "sha256:8f135f6502756bde6b2a9b28989df5fbe87c9970cecaa69041edcce7f0589b14"},
+    {file = "urllib3-1.26.17-py2.py3-none-any.whl", hash = "sha256:94a757d178c9be92ef5539b8840d48dc9cf1b2709c9d6b588232a055c524458b"},
+    {file = "urllib3-1.26.17.tar.gz", hash = "sha256:24d6a242c28d29af46c3fae832c36db3bbebcc533dd1bb549172cd739c82df21"},
 ]
 
 [package.extras]
-brotli = ["brotli (>=1.0.9)", "brotlicffi (>=0.8.0)", "brotlipy (>=0.6.0)"]
+brotli = ["brotli (==1.0.9)", "brotli (>=1.0.9)", "brotlicffi (>=0.8.0)", "brotlipy (>=0.6.0)"]
 secure = ["certifi", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "ipaddress", "pyOpenSSL (>=0.14)", "urllib3-secure-extra"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
