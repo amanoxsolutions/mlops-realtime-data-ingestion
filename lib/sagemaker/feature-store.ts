@@ -51,7 +51,7 @@ export class RDIFeatureStore extends Construct {
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,
-      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
+      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
     });
 
 

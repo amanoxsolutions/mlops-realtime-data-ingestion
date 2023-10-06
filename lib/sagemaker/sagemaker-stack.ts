@@ -37,6 +37,7 @@ export class SagemakerStack extends Stack {
       enforceSSL: true,
       versioned: false,
       removalPolicy: this.removalPolicy,
+      autoDeleteObjects: this.removalPolicy == RemovalPolicy.DESTROY,
     });
 
     this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
