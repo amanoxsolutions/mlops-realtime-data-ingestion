@@ -1,8 +1,10 @@
 import { Construct } from 'constructs';
-import { RDILambda } from '../lambda';
+import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { CustomResource, Duration, Stack } from 'aws-cdk-lib';
 import { Provider } from 'aws-cdk-lib/custom-resources';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 
 interface RDIStartKinesisAnalyticsProps {
     readonly prefix: string;
@@ -21,17 +23,30 @@ export class RDIStartKinesisAnalytics extends Construct {
 
         const region = Stack.of(this).region;
         const account = Stack.of(this).account;
+        const lambdaPurpose = 'CustomResourceToStartKinesisApp'
 
-        const customResourceHandler = new RDILambda(this, 'customResourceHandler', {
-            prefix: this.prefix,
-            name: 'start-kinesis-app',
-            codePath: 'resources/lambdas/start_kinesis_app',
-            timeout: Duration.seconds(30),
-            hasLayer: true,
+        const layers = [
+            new PythonLayerVersion(this, 'Layer', {
+                entry: `resources/lambdas/start_kinesis_app/layer`,
+                description: `${this.prefix}-start-kinesis-app Lambda Layer`,
+                compatibleRuntimes: [Runtime.PYTHON_3_9],
+            }),
+        ];
+
+        const customResourceHandler = new SingletonFunction(this, 'Singleton', {
+            functionName: `${props.prefix}-start-kinesis-app`,
+            lambdaPurpose: lambdaPurpose,
+            uuid: 'TODO',
+            code: Code.fromAsset('resources/lambdas/start_kinesis_app'),
+            handler: 'main.lambda_handler',
+            timeout: Duration.minutes(30),
+            runtime: Runtime.PYTHON_3_9,
+            logRetention: RetentionDays.ONE_WEEK,
             environment: {
                 KINESIS_ANALYTICS_NAME: this.kinesis_analytics_name,
                 INPUT_STARTING_POSITION: "NOW",
-            }
+            },
+            layers: layers,
         });
 
         const lambdaPolicyStatement = new PolicyStatement({
@@ -39,10 +54,10 @@ export class RDIStartKinesisAnalytics extends Construct {
             actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication', 'kinesisanalytics:StopApplication'],
             resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.kinesis_analytics_name}`],
         });
-        customResourceHandler.function.addToRolePolicy(lambdaPolicyStatement);
+        customResourceHandler.addToRolePolicy(lambdaPolicyStatement);
 
         const provider = new Provider(this, "provider", {
-            onEventHandler: customResourceHandler.function,
+            onEventHandler: customResourceHandler,
         });
 
         const startKinesisAnalytics = new CustomResource(this, 'StartKinesisAnalytics', {

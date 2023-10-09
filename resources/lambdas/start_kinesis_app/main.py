@@ -30,23 +30,8 @@ def create(_, __):
     )
     
 @helper.update
-def update(event, _):
-    try:
-        return {
-            'Status': 'SUCCESS',
-            'Reason': '',
-            'LogicalResourceId': event.LogicalResourceId,
-            'RequestId': event.RequestId,
-            'StackId': event.StackId
-        }
-    except Exception as error:
-        return {
-            'Status': 'FAILED',
-            'Reason': json.dumps(error),
-            'LogicalResourceId': event.LogicalResourceId,
-            'RequestId': event.RequestId,
-            'StackId': event.StackId
-        }
+def update(_, __):
+    pass
         
 @helper.delete
 def delete(_, __):
