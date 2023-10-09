@@ -39,7 +39,7 @@ export class RDIStartKinesisAnalytics extends Construct {
             uuid: '384bbf76-66b8-11ee-8c99-0242ac120002',
             code: Code.fromAsset('resources/lambdas/start_kinesis_app'),
             handler: 'main.lambda_handler',
-            timeout: Duration.minutes(30),
+            timeout: Duration.minutes(5),
             runtime: Runtime.PYTHON_3_9,
             logRetention: RetentionDays.ONE_WEEK,
             environment: {
