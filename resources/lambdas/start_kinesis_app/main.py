@@ -12,7 +12,7 @@ def lambda_handler(event, context):
     helper(event, context)
     
 @helper.create
-def create(event, context):
+def create(_, __):
     kinesis_analytics = client.describe_application(
         ApplicationName=application_name
     )
@@ -30,7 +30,7 @@ def create(event, context):
     )
     
 @helper.update
-def update(event, context):
+def update(event, _):
     try:
         return {
             'Status': 'SUCCESS',
@@ -49,7 +49,5 @@ def update(event, context):
         }
         
 @helper.delete
-def delete(event, context):
-    response = client.stop_application(
-        ApplicationName=application_name
-    )
+def delete(_, __):
+    pass
