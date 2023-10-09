@@ -2,22 +2,26 @@
 
 [[package]]
 name = "aws-lambda-powertools"
-version = "1.31.1"
-description = "A suite of utilities for AWS Lambda functions to ease adopting best practices such as tracing, structured logging, custom metrics, batching, idempotency, feature flags, and more."
+version = "2.25.1"
+description = "Powertools for AWS Lambda (Python) is a developer toolkit to implement Serverless best practices and increase developer velocity."
 optional = false
-python-versions = ">=3.6.2,<4.0.0"
+python-versions = ">=3.7.4,<4.0.0"
 files = [
-    {file = "aws_lambda_powertools-1.31.1-py3-none-any.whl", hash = "sha256:17228143e87161ee77bf334d16ef63beb77b2495b94b738ccb8583c4deb62cff"},
-    {file = "aws_lambda_powertools-1.31.1.tar.gz", hash = "sha256:ee03973e4866a333da703cbead9a7f31173be372db9efb9e0d89be2c7dad6247"},
+    {file = "aws_lambda_powertools-2.25.1-py3-none-any.whl", hash = "sha256:e241eb74163cd4b066762359fcdf9cd5e709641669655afaa6c99e970509c07c"},
+    {file = "aws_lambda_powertools-2.25.1.tar.gz", hash = "sha256:35f117005c4853829b905b57507200c08df998f1ad35f9e7d01d9361b239cca4"},
 ]
 
 [package.dependencies]
-aws-xray-sdk = ">=2.8.0,<3.0.0"
-boto3 = ">=1.18,<2.0"
-fastjsonschema = ">=2.14.5,<3.0.0"
+aws-xray-sdk = {version = ">=2.8.0,<3.0.0", optional = true, markers = "extra == \"tracer\" or extra == \"all\""}
+typing-extensions = ">=4.6.2,<5.0.0"
 
 [package.extras]
-pydantic = ["email-validator", "pydantic (>=1.8.2,<2.0.0)"]
+all = ["aws-xray-sdk (>=2.8.0,<3.0.0)", "fastjsonschema (>=2.14.5,<3.0.0)", "pydantic (>=1.8.2,<2.0.0)"]
+aws-sdk = ["boto3 (>=1.20.32,<2.0.0)"]
+datadog = ["datadog-lambda (>=4.77.0,<5.0.0)"]
+parser = ["pydantic (>=1.8.2,<2.0.0)"]
+tracer = ["aws-xray-sdk (>=2.8.0,<3.0.0)"]
+validation = ["fastjsonschema (>=2.14.5,<3.0.0)"]
 
 [[package]]
 name = "aws-xray-sdk"
@@ -35,56 +39,26 @@ botocore = ">=1.11.3"
 wrapt = "*"
 
 [[package]]
-name = "boto3"
-version = "1.28.61"
-description = "The AWS SDK for Python"
-optional = false
-python-versions = ">= 3.7"
-files = [
-    {file = "boto3-1.28.61-py3-none-any.whl", hash = "sha256:ec49986e6c9549177e351494de64886c3f9daffd1a7af9e40302208aa1ffff1c"},
-    {file = "boto3-1.28.61.tar.gz", hash = "sha256:7a539aaf00eb45aea1ae857ef5d05e67def24fc07af4cb36c202fa45f8f30590"},
-]
-
-[package.dependencies]
-botocore = ">=1.31.61,<1.32.0"
-jmespath = ">=0.7.1,<2.0.0"
-s3transfer = ">=0.7.0,<0.8.0"
-
-[package.extras]
-crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
-
-[[package]]
 name = "botocore"
-version = "1.31.61"
+version = "1.31.62"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.31.61-py3-none-any.whl", hash = "sha256:433bf93af09ad205d6db4c2ffc1f0e3193ddad4e0aced0a68ad8b0fa9de903e2"},
-    {file = "botocore-1.31.61.tar.gz", hash = "sha256:39b059603f0e92a26599eecc7fe9b141f13eb412c964786ca3a7df5375928c87"},
+    {file = "botocore-1.31.62-py3-none-any.whl", hash = "sha256:be792d806afc064694a2d0b9b25779f3ca0c1584b29a35ac32e67f0064ddb8b7"},
+    {file = "botocore-1.31.62.tar.gz", hash = "sha256:272b78ac65256b6294cb9cdb0ac484d447ad3a85642e33cb6a3b1b8afee15a4c"},
 ]
 
 [package.dependencies]
 jmespath = ">=0.7.1,<2.0.0"
 python-dateutil = ">=2.1,<3.0.0"
-urllib3 = ">=1.25.4,<1.27"
-
-[package.extras]
-crt = ["awscrt (==0.16.26)"]
-
-[[package]]
-name = "fastjsonschema"
-version = "2.18.1"
-description = "Fastest Python implementation of JSON schema"
-optional = false
-python-versions = "*"
-files = [
-    {file = "fastjsonschema-2.18.1-py3-none-any.whl", hash = "sha256:aec6a19e9f66e9810ab371cc913ad5f4e9e479b63a7072a2cd060a9369e329a8"},
-    {file = "fastjsonschema-2.18.1.tar.gz", hash = "sha256:06dc8680d937628e993fa0cd278f196d20449a1adc087640710846b324d422ea"},
+urllib3 = [
+    {version = ">=1.25.4,<1.27", markers = "python_version < \"3.10\""},
+    {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""},
 ]
 
 [package.extras]
-devel = ["colorama", "json-spec", "jsonschema", "pylint", "pytest", "pytest-benchmark", "pytest-cache", "validictory"]
+crt = ["awscrt (==0.16.26)"]
 
 [[package]]
 name = "jmespath"
@@ -112,23 +86,6 @@ files = [
 six = ">=1.5"
 
 [[package]]
-name = "s3transfer"
-version = "0.7.0"
-description = "An Amazon S3 Transfer Manager"
-optional = false
-python-versions = ">= 3.7"
-files = [
-    {file = "s3transfer-0.7.0-py3-none-any.whl", hash = "sha256:10d6923c6359175f264811ef4bf6161a3156ce8e350e705396a7557d6293c33a"},
-    {file = "s3transfer-0.7.0.tar.gz", hash = "sha256:fd3889a66f5fe17299fe75b82eae6cf722554edca744ca5d5fe308b104883d2e"},
-]
-
-[package.dependencies]
-botocore = ">=1.12.36,<2.0a.0"
-
-[package.extras]
-crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
-
-[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -137,6 +94,17 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
+]
+
+[[package]]
+name = "typing-extensions"
+version = "4.8.0"
+description = "Backported and Experimental Type Hints for Python 3.8+"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "typing_extensions-4.8.0-py3-none-any.whl", hash = "sha256:8f92fc8806f9a6b641eaa5318da32b44d401efaac0f6678c9bc448ba3605faa0"},
+    {file = "typing_extensions-4.8.0.tar.gz", hash = "sha256:df8e4339e9cb77357558cbdbceca33c303714cf861d1eef15e1070055ae8b7ef"},
 ]
 
 [[package]]
@@ -154,6 +122,23 @@ files = [
 brotli = ["brotli (==1.0.9)", "brotli (>=1.0.9)", "brotlicffi (>=0.8.0)", "brotlipy (>=0.6.0)"]
 secure = ["certifi", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "ipaddress", "pyOpenSSL (>=0.14)", "urllib3-secure-extra"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
+
+[[package]]
+name = "urllib3"
+version = "2.0.6"
+description = "HTTP library with thread-safe connection pooling, file post, and more."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "urllib3-2.0.6-py3-none-any.whl", hash = "sha256:7a7c7003b000adf9e7ca2a377c9688bbc54ed41b985789ed576570342a375cd2"},
+    {file = "urllib3-2.0.6.tar.gz", hash = "sha256:b19e1a85d206b56d7df1d5e683df4a7725252a964e3993648dd0fb5a1c157564"},
+]
+
+[package.extras]
+brotli = ["brotli (>=1.0.9)", "brotlicffi (>=0.8.0)"]
+secure = ["certifi", "cryptography (>=1.9)", "idna (>=2.0.0)", "pyopenssl (>=17.1.0)", "urllib3-secure-extra"]
+socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
+zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "wrapt"
@@ -242,4 +227,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "e1eebad7a6a5a26dcf20bce2ac1989fd50d152396d2df891449b45cd4206149c"
+content-hash = "bf9fc5a489aa07e5a7b5d04fef5adc10f354371e8ef050cf6c08cb1a3ba2aac6"
