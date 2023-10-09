@@ -36,7 +36,7 @@ export class RDIStartKinesisAnalytics extends Construct {
         const customResourceHandler = new SingletonFunction(this, 'Singleton', {
             functionName: `${props.prefix}-start-kinesis-app`,
             lambdaPurpose: lambdaPurpose,
-            uuid: 'TODO',
+            uuid: '384bbf76-66b8-11ee-8c99-0242ac120002',
             code: Code.fromAsset('resources/lambdas/start_kinesis_app'),
             handler: 'main.lambda_handler',
             timeout: Duration.minutes(30),
