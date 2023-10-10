@@ -75,6 +75,7 @@ export class SagemakerStack extends Stack {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
+      customResourceLayerArn: customResourceLayerArn,
       firehoseStreamArn: ingestionFirehoseStreamArn,
       s3Suffix: this.s3Suffix,
     });

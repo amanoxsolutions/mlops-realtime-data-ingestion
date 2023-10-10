@@ -26,6 +26,7 @@ interface RDIFeatureStoreProps {
   readonly removalPolicy?: RemovalPolicy;
   readonly firehoseStreamArn: string;
   readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
 }
 
 export class RDIFeatureStore extends Construct {
@@ -238,6 +239,7 @@ export class RDIFeatureStore extends Construct {
       prefix: this.prefix,
       runtime: this.runtime,
       kinesis_analytics_name: analyticsAppName,
+      customResourceLayerArn: props.customResourceLayerArn,
     });
     startKinesisAnalytics.node.addDependency(this.analyticsStream)
 
