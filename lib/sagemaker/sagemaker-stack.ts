@@ -33,20 +33,20 @@ export class SagemakerStack extends Stack {
 
     // Get the necessary information of the ingestion stack from SSM parameters
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
-      parameterName: `${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+      parameterName: `/${props.prefix}/stack-parameters/custom-resource-layer-arn`,
     }).stringValue
 
     const vpcId = StringParameter.fromStringParameterAttributes(this, 'VpcIdSSMParameter', {
-      parameterName: `${props.prefix}/stack-parameters/vpc-id`,
+      parameterName: `/${props.prefix}/stack-parameters/vpc-id`,
     }).stringValue
     const vpc = Vpc.fromLookup(this, 'Vpc', { vpcId: vpcId })
 
     const ingestionFirehoseStreamArn = StringParameter.fromStringParameterAttributes(this, 'FirehoseStreamSSMParameter', {
-      parameterName: `${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
+      parameterName: `/${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
     }).stringValue
 
     const dataBucketArn = StringParameter.fromStringParameterAttributes(this, 'DataBucketSSMParameter', {
-      parameterName: `${props.prefix}/stack-parameters/ingestion-data-bucket-arn`,
+      parameterName: `/${props.prefix}/stack-parameters/ingestion-data-bucket-arn`,
     }).stringValue
 
     // S3 bucket to store the Model artifacts
