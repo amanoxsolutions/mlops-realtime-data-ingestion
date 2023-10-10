@@ -37,6 +37,7 @@ def create(event, _):
         logger.info(f"SageMaker domain status: {domain_status}")
         if domain_status == "InService":
             created = True
+    helper.Data.update({"DomainId": domain_id})
     logger.info(f"SageMaker domain created successfully: {domain_id}")
     return domain_id
 
@@ -83,3 +84,4 @@ def update(event, _):
         if domain_status == "InService":
             updated = True
         time.sleep(5)
+    helper.Data.update({"DomainId": domain_id})

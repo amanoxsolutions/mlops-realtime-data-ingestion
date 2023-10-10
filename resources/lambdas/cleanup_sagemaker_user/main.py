@@ -13,33 +13,6 @@ sagemaker = boto3.client("sagemaker")
 def lambda_handler(event, context):
     helper(event, context)
 
-    logger.info({"event": event})
-    try:
-        request = event.get("RequestType").lower()
-        logger.info(f"Type of request: {request}")
-        physical_id = event.get("ResourceProperties").get("PhysicalResourceId")
-        domain_id = event.get("ResourceProperties").get("DomainId")
-        user_profile = event.get("ResourceProperties").get("StudioUserProfile")
-        default_user_app_name = event.get("ResourceProperties").get("StudioAppName")
-        if request == "delete":
-            # Launch the deletion of the SageMaker Studio apps
-            apps = delete_sagemaker_studio_apps(domain_id, user_profile, default_user_app_name)
-            # Check if the apps are deleted
-            status = "DELETING"
-            while status == "DELETING":
-                status = check_studio_app_deletion(domain_id, user_profile, apps)
-                logger.info(f"Status of the SageMaker Studio apps deletion: {status}")
-                time.sleep(30)
-        else:
-            # If we are not deleting the stack, we don't need to do anything,
-            # so we just send a SUCCESS response to CloudFormation
-            logger.info("No action required")
-    except Exception as e:
-        logger.exception(e)
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=physical_id)
-    else:
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=physical_id)
-
 @helper.create
 @helper.update
 def do_nothing(_, __):
