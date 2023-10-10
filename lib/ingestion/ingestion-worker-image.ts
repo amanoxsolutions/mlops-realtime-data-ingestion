@@ -11,6 +11,7 @@ import * as ecrdeploy from 'cdk-ecr-deployment';
 // Custom Resource to clean up the ECR Repository when destroying the stack
 interface cleanupEcrRepoProps {
   readonly prefix: string;
+  readonly runtime: Runtime;
   readonly ecrRepositoryName: string;
   readonly ecrRepositoryArn: string;
 }
@@ -35,7 +36,7 @@ export class cleanupEcrRepo extends Construct {
       code: Code.fromAsset('resources/lambdas/cleanup_ecr'),
       handler: 'main.lambda_handler',
       timeout: Duration.seconds(60),
-      runtime: Runtime.PYTHON_3_9,
+      runtime: props.runtime,
       logRetention: RetentionDays.ONE_WEEK,
     });
     customResourceLambda.addToRolePolicy(connectionPolicy);
@@ -53,16 +54,21 @@ export class cleanupEcrRepo extends Construct {
 interface RDIIngestionWorkerImageProps {
   readonly prefix: string;
   readonly removalPolicy: RemovalPolicy;
+  readonly runtime: Runtime;
 }
 
 export class RDIIngestionWorkerImage extends Construct {
   public readonly prefix: string;
+  public readonly removalPolicy: RemovalPolicy;
+  public readonly runtime: Runtime;
   public readonly ecrRepo: IRepository;
 
   constructor(scope: Construct, id: string, props: RDIIngestionWorkerImageProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
+    this.removalPolicy = props.removalPolicy;
+    this.runtime = props.runtime;
 
     //
     // ECR
@@ -72,7 +78,7 @@ export class RDIIngestionWorkerImage extends Construct {
       repositoryName: `${this.prefix}-ingestion-worker`,
       imageTagMutability: TagMutability.MUTABLE,
       imageScanOnPush: true,
-      removalPolicy: props.removalPolicy,
+      removalPolicy: this.removalPolicy,
     });
     const ecrAsset = new DockerImageAsset(this, 'IngestionWorkerImage', {
       directory: path.join(__dirname, '../../resources/services/ingestion-worker'),
@@ -89,6 +95,7 @@ export class RDIIngestionWorkerImage extends Construct {
         prefix: this.prefix,
         ecrRepositoryName: this.ecrRepo.repositoryName,
         ecrRepositoryArn: this.ecrRepo.repositoryArn,
+        runtime: this.runtime,
       });
     }
   }

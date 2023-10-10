@@ -3,7 +3,6 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { DataIngestionPipelineStack } from '../lib/pipeline-stack';
 import { nthIndexOf, getCurrentBranchName, getShortHashFromString } from '../lib/git-branch';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
 
 const app = new cdk.App();
 
@@ -37,7 +36,6 @@ new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
   codestarConnectionName: 'mlops-realtime-data-ingestion',
   fullBranchName: fullBranchName,
   shortBranchName: shortBranchName,
-  customResourceLayerRuntime: Runtime.PYTHON_3_9,
 });
 
 app.synth();

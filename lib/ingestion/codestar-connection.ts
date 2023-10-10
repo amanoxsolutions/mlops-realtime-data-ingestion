@@ -7,6 +7,7 @@ import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 interface CodestarConnectionProps {
     readonly prefix: string;
     readonly name: string;
+    readonly runtime: Runtime;
   }
   
   export class CodestarConnection extends Construct {
@@ -30,7 +31,7 @@ interface CodestarConnectionProps {
         code: Code.fromAsset('resources/lambdas/get_connection'),
         handler: 'main.lambda_handler',
         timeout: Duration.seconds(60),
-        runtime: Runtime.PYTHON_3_9,
+        runtime: props.runtime,
         logRetention: RetentionDays.ONE_WEEK,
       });
       customResourceLambda.addToRolePolicy(connectionPolicy);
