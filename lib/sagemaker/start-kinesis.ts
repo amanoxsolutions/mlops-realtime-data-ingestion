@@ -1,7 +1,6 @@
 import { Construct } from 'constructs';
-import { Runtime, Code, SingletonFunction, LayerVersion } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { CustomResource, Duration, Stack } from 'aws-cdk-lib';
-import { Provider } from 'aws-cdk-lib/custom-resources';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
@@ -23,11 +22,27 @@ export class RDIStartKinesisAnalytics extends Construct {
         this.kinesis_analytics_name = props.kinesis_analytics_name;
         const region = Stack.of(this).region;
         const account = Stack.of(this).account;
+
+        const kinesisAnalyticsPolicy = new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication'],
+            resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.kinesis_analytics_name}`],
+        });
         
+        const cloudWatchLogsPolicy = new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'logs:CreateLogGroup',
+              'logs:CreateLogStream',
+              'logs:PutLogEvents',
+            ],
+            resources: [`arn:aws:logs:${region}:${account}:*`	],
+        });
+
         const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
             parameterName: `${props.prefix}-custom-resource-ARN`,
           }).stringValue
-        const layer = LayerVersion.fromLayerVersionArn(this, 'layerversion', customResourceLayerArn)
+        const layer = PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', customResourceLayerArn)
 
         const customResourceHandler = new SingletonFunction(this, 'Singleton', {
             functionName: `${this.prefix}-start-kinesis-app`,
@@ -44,20 +59,11 @@ export class RDIStartKinesisAnalytics extends Construct {
             },
             layers: [layer],
         });
-
-        const lambdaPolicyStatement = new PolicyStatement({
-            effect: Effect.ALLOW,
-            actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication'],
-            resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.kinesis_analytics_name}`],
-        });
-        customResourceHandler.addToRolePolicy(lambdaPolicyStatement);
-
-        const provider = new Provider(this, "provider", {
-            onEventHandler: customResourceHandler,
-        });
+        customResourceHandler.addToRolePolicy(kinesisAnalyticsPolicy);
+        //customResourceHandler.addToRolePolicy(cloudWatchLogsPolicy);
 
         const startKinesisAnalytics = new CustomResource(this, 'StartKinesisAnalytics', {
-            serviceToken: provider.serviceToken,
+            serviceToken: customResourceHandler.functionArn,
         });
     }
 
