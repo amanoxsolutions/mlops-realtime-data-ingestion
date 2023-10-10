@@ -31,7 +31,7 @@ export class CommonResourcesStack extends Stack {
       description: `${props.prefix}-custom-resource Lambda Layer`,
       compatibleRuntimes: [props.runtime],
       layerVersionName: `${props.prefix}-custom-resource-layer`,
-    })
+    });
 
     new StringParameter(this, 'CustomResourceLayerSSMParameter', {
       parameterName: `${props.prefix}/stack-parameters/custom-resource-layer-arn`,

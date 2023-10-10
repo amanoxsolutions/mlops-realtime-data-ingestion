@@ -32,6 +32,10 @@ export class SagemakerStack extends Stack {
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
     // Get the necessary information of the ingestion stack from SSM parameters
+    const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
+      parameterName: `${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+    }).stringValue
+
     const vpcId = StringParameter.fromStringParameterAttributes(this, 'VpcIdSSMParameter', {
       parameterName: `${props.prefix}/stack-parameters/vpc-id`,
     }).stringValue
@@ -64,6 +68,7 @@ export class SagemakerStack extends Stack {
       modelBucetArn: this.modelBucket.bucketArn,
       vpcId: vpcId,
       subnetIds: vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
+      customResourceLayerArn: customResourceLayerArn,
     });
 
     this.featureStore = new RDIFeatureStore(this, 'featureStore', {

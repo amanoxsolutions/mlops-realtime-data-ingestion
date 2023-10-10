@@ -7,7 +7,7 @@ authors = ["Raphael Eymann <raphael.eymann@amanox.ch>"]
 [tool.poetry.dependencies]
 python = "^3.9"
 crhelper = "^2.0.11"
-aws-lambda-powertools = {extras = ["tracer"], version = "^2.25.1"}
+aws-lambda-powertools = "^2.25.1"
 
 [tool.poetry.dev-dependencies]
 

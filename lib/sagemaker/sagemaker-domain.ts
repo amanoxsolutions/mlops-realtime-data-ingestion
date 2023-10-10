@@ -12,6 +12,7 @@ import {
   Effect,
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
+import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { RDISagemakerUser } from './sagemaker-users';
 
@@ -23,6 +24,7 @@ interface RDISagemakerDomainCustomResourceProps {
   readonly subnetIds: string[];
   readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
 }
 
 export class RDISagemakerDomainCustomResource extends Construct {
@@ -31,6 +33,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
   public readonly runtime: Runtime;
   public readonly customResource: CustomResource;
   public readonly domainId: string;
+  public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerDomainCustomResourceProps) {
     super(scope, id);
@@ -42,6 +45,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
     this.prefix = props.prefix;
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy;
+    this.customResourceLayerArn = props.customResourceLayerArn;
 
     const sagemakerManage = new PolicyStatement({
       effect: Effect.ALLOW,
@@ -81,6 +85,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
       timeout: Duration.minutes(10),
       runtime: this.runtime,
       logRetention: RetentionDays.ONE_WEEK,
+      layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
     customResourceLambda.addToRolePolicy(sagemakerManage);
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
@@ -108,6 +113,7 @@ import { CfnWaitCondition, CfnWaitConditionHandle } from 'aws-cdk-lib/aws-cloudf
 interface CleanupSagemakerDomainUserProps {
   readonly prefix: string;
   readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
   readonly sagemakerStudioDomainId: string;
   readonly sagemakerStudioUserProfile: string;
   readonly sagemakerStudioAppName: string;
@@ -117,6 +123,7 @@ export class CleanupSagemakerDomainUser extends Construct {
   public readonly prefix: string;
   public readonly runtime: Runtime;
   public readonly customResource: CustomResource;
+  public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: CleanupSagemakerDomainUserProps) {
     super(scope, id);
@@ -127,6 +134,7 @@ export class CleanupSagemakerDomainUser extends Construct {
 
     this.prefix = props.prefix;
     this.runtime = props.runtime;
+    this.customResourceLayerArn = props.customResourceLayerArn;
 
     const sagemakerList = new PolicyStatement({
       effect: Effect.ALLOW,
@@ -154,6 +162,7 @@ export class CleanupSagemakerDomainUser extends Construct {
       timeout: Duration.minutes(15),
       runtime: this.runtime,
       logRetention: RetentionDays.ONE_WEEK,
+      layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
     customResourceLambda.addToRolePolicy(sagemakerList);
     customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
@@ -178,6 +187,7 @@ interface RDISagemakerStudioProps {
   readonly modelBucetArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
+  readonly customResourceLayerArn: string;
 }
 
 export class RDISagemakerStudio extends Construct {
@@ -245,6 +255,7 @@ export class RDISagemakerStudio extends Construct {
       subnetIds: props.subnetIds,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
+      customResourceLayerArn: props.customResourceLayerArn,
     });
     this.domainId = domain.domainId;
 
@@ -273,6 +284,7 @@ export class RDISagemakerStudio extends Construct {
       const cleanupDomain = new CleanupSagemakerDomainUser(this, 'UserCleanup', {
         prefix: this.prefix,
         runtime: this.runtime,
+        customResourceLayerArn: props.customResourceLayerArn,
         sagemakerStudioDomainId: this.domainId,
         sagemakerStudioUserProfile: sagemakerUser.name,
         sagemakerStudioAppName: sagemakerUser.appName,
