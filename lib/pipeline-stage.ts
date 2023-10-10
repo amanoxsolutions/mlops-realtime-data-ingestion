@@ -23,10 +23,11 @@ export class RealtimeDataIngestionStage extends Stage {
     };
 
     // Stack to deploy common resources
-    new CommonResourcesStack(this, "CommonResourcesStack", properties);
+    const customResourcesStack = new CommonResourcesStack(this, "CommonResourcesStack", properties);
 
     // Stack to deploy the Realtime Data Ingestion 
-    const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", properties);   
+    const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", properties);
+    ingestionStack.node.addDependency(customResourcesStack);
 
     // Stack to deploy SageMaker
     const sagemakerProperties = properties;
