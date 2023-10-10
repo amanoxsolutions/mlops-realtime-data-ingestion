@@ -26,9 +26,13 @@ export class RealtimeDataIngestionStage extends Stage {
     new CommonResourcesStack(this, "CommonResourcesStack", properties);
 
     // Stack to deploy the Realtime Data Ingestion 
-    new RealtimeDataIngestionStack(this, "IngestionStack", properties);   
+    const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", properties);   
 
     // Stack to deploy SageMaker
-    new SagemakerStack(this, "SagemakerStack", properties);    
+    const sagemakerProperties = properties;
+    new SagemakerStack(this, "SagemakerStack", {
+      ...sagemakerProperties,
+      vpc: ingestionStack.vpc,
+    });    
   }
 }

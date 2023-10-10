@@ -161,12 +161,6 @@ export class RealtimeDataIngestionStack extends Stack {
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     this.vpc = ingestionWorker.vpc;
 
-    new StringParameter(this, 'VpcIdSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/vpc-id`,
-      stringValue: this.vpc.vpcId,
-      description: 'VPC ID',
-    });
-
     new StringParameter(this, 'FirehoseStreamSSMParameter', {
       parameterName: `/${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
       stringValue: inputStream.kinesisFirehose.attrArn,

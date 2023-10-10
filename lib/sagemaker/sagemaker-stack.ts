@@ -1,6 +1,6 @@
 import { Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { Vpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
+import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RDISagemakerStudio } from './sagemaker-domain';
 import { RDIFeatureStore } from './feature-store';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
@@ -12,6 +12,7 @@ export interface SagemakerStackProps extends StackProps {
   readonly s3Suffix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly runtime: Runtime;
+  readonly vpc: IVpc;
 }
   
 export class SagemakerStack extends Stack {
@@ -35,11 +36,6 @@ export class SagemakerStack extends Stack {
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
       parameterName: `/${props.prefix}/stack-parameters/custom-resource-layer-arn`,
     }).stringValue
-
-    const vpcId = StringParameter.fromStringParameterAttributes(this, 'VpcIdSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/vpc-id`,
-    }).stringValue
-    const vpc = Vpc.fromLookup(this, 'Vpc', { vpcId: vpcId })
 
     const ingestionFirehoseStreamArn = StringParameter.fromStringParameterAttributes(this, 'FirehoseStreamSSMParameter', {
       parameterName: `/${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
@@ -66,8 +62,8 @@ export class SagemakerStack extends Stack {
       runtime: this.runtime,
       dataBucketArn: dataBucketArn,
       modelBucetArn: this.modelBucket.bucketArn,
-      vpcId: vpcId,
-      subnetIds: vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
+      vpcId: props.vpc.vpcId,
+      subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
       customResourceLayerArn: customResourceLayerArn,
     });
 
