@@ -5,9 +5,7 @@ import { RealtimeDataIngestionStage } from './pipeline-stage';
 import { CodestarConnection } from './ingestion/codestar-connection';
 import { ComputeType, LinuxArmBuildImage, BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 import { getShortHashFromString } from './git-branch';
-import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 
 export interface DataIngestionPipelineStackProps extends StackProps {
@@ -16,7 +14,7 @@ export interface DataIngestionPipelineStackProps extends StackProps {
   readonly codestarConnectionName: string;
   readonly fullBranchName: string;
   readonly shortBranchName: string;
-  readonly customResourceLayerRuntime: Runtime;
+  readonly runtime?: Runtime;
 }
 
 export class DataIngestionPipelineStack extends Stack {
@@ -29,22 +27,12 @@ export class DataIngestionPipelineStack extends Stack {
     console.log('unique resource Suffix source string: 👉 ', `${this.account}-${props.shortBranchName}`);
     console.log('unique resource Suffix hash: 👉 ', uniqueSuffix);
 
+    const runtime = props.runtime || Runtime.PYTHON_3_9;
+
     const codestarConnection = new CodestarConnection(this, 'CsConnection', {
       prefix: props.prefix,
-      name: props.codestarConnectionName
-    });
-
-    const customResourceLayer = new PythonLayerVersion(this, 'CustomResourceLayer', {
-      entry: `resources/lambdas/custom_resource_layer`,
-      description: `${props.prefix}-custom-resource Lambda Layer`,
-      compatibleRuntimes: [props.customResourceLayerRuntime],
-      layerVersionName: `${props.prefix}-custom-resource-layer`,
-    })
-
-    const customResourceLayerSSMParameter = new StringParameter(this, 'CustomResourceLayerSSMParameter', {
-      parameterName: `${props.prefix}-custom-resource-ARN`,
-      stringValue: customResourceLayer.layerVersionArn,
-      description: 'Custom Resource Lambda Layer ARN',
+      name: props.codestarConnectionName,
+      runtime: runtime,
     });
     
     const pipeline = new CodePipeline(this, 'Pipeline', {
@@ -73,6 +61,7 @@ export class DataIngestionPipelineStack extends Stack {
     pipeline.addStage(new RealtimeDataIngestionStage(this, `${props.prefix}-RealtimeDataIngestion`, {
       prefix: props.prefix,
       uniqueSuffix: uniqueSuffix,
+      runtime: runtime,
     }));
   }
 }

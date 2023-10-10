@@ -8,17 +8,20 @@ import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 interface RDIStartKinesisAnalyticsProps {
     readonly prefix: string;
+    readonly runtime: Runtime;
     readonly kinesis_analytics_name: string;
 }
 
 export class RDIStartKinesisAnalytics extends Construct {
     public readonly prefix: string;
+    public readonly runtime: Runtime;
     public readonly kinesis_analytics_name: string;
 
     constructor(scope: Construct, id: string, props: RDIStartKinesisAnalyticsProps) {
         super(scope, id);
 
         this.prefix = props.prefix;
+        this.runtime = props.runtime;
         this.kinesis_analytics_name = props.kinesis_analytics_name;
         const region = Stack.of(this).region;
         const account = Stack.of(this).account;
@@ -30,7 +33,7 @@ export class RDIStartKinesisAnalytics extends Construct {
         });
 
         const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
-            parameterName: `${props.prefix}-custom-resource-ARN`,
+            parameterName: `${props.prefix}/stack-parameters/custom-resource-layer-arn`,
           }).stringValue
         const layer = PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', customResourceLayerArn)
 
@@ -41,7 +44,7 @@ export class RDIStartKinesisAnalytics extends Construct {
             code: Code.fromAsset('resources/lambdas/start_kinesis_app'),
             handler: 'main.lambda_handler',
             timeout: Duration.minutes(5),
-            runtime: Runtime.PYTHON_3_9,
+            runtime: this.runtime,
             logRetention: RetentionDays.ONE_WEEK,
             environment: {
                 KINESIS_ANALYTICS_NAME: this.kinesis_analytics_name,
