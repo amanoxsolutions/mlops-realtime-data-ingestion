@@ -28,16 +28,6 @@ export class RDIStartKinesisAnalytics extends Construct {
             actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication'],
             resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.kinesis_analytics_name}`],
         });
-        
-        const cloudWatchLogsPolicy = new PolicyStatement({
-            effect: Effect.ALLOW,
-            actions: [
-              'logs:CreateLogGroup',
-              'logs:CreateLogStream',
-              'logs:PutLogEvents',
-            ],
-            resources: [`arn:aws:logs:${region}:${account}:*`	],
-        });
 
         const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
             parameterName: `${props.prefix}-custom-resource-ARN`,
@@ -60,7 +50,6 @@ export class RDIStartKinesisAnalytics extends Construct {
             layers: [layer],
         });
         customResourceHandler.addToRolePolicy(kinesisAnalyticsPolicy);
-        //customResourceHandler.addToRolePolicy(cloudWatchLogsPolicy);
 
         const startKinesisAnalytics = new CustomResource(this, 'StartKinesisAnalytics', {
             serviceToken: customResourceHandler.functionArn,
