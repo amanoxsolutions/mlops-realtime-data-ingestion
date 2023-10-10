@@ -9,12 +9,12 @@ client = boto3.client('kinesisanalytics')
 application_name = os.environ['KINESIS_ANALYTICS_NAME']
 input_starting_position = os.environ['INPUT_STARTING_POSITION']
 
+@logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     helper(event, context)
     
 @helper.create
 def create(_, __):
-    logger.info("Got create event - starting Kinesis analytics application")
     logger.info(f"Kinesis analytics application name: {application_name}")
     logger.info(f"Input starting position: {input_starting_position}")
     kinesis_analytics = client.describe_application(
@@ -34,9 +34,6 @@ def create(_, __):
     )
     
 @helper.update
-def update(_, __):
-    logger.info("Got update event - nothing todo")
-        
 @helper.delete
-def delete(_, __):
-    logger.info("Got delete event - nothing todo")
+def do_nothing(_, __):
+    logger.info("Nothing to do")

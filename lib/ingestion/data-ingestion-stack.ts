@@ -38,6 +38,11 @@ export class RealtimeDataIngestionStack extends Stack {
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     const dataBucketName = `${this.prefix}-input-bucket-${this.s3Suffix}`;
 
+    // Get the ARN of the custom resource Lambda Layer from SSM parameter
+    const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
+      parameterName: `${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+    }).stringValue
+
     const inputTable = new RDIDynamodbTable(this, 'inputHashTable', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
@@ -140,6 +145,7 @@ export class RealtimeDataIngestionStack extends Stack {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
+      customResourceLayerArn: customResourceLayerArn,
     });
 
     const ingestionWorker = new RDIIngestionWorker(this, 'Worker', {

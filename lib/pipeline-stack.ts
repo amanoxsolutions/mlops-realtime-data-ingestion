@@ -2,7 +2,7 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { RealtimeDataIngestionStage } from './pipeline-stage';
-import { CodestarConnection } from './ingestion/codestar-connection';
+import { CodestarConnection } from './codestar-connection';
 import { ComputeType, LinuxArmBuildImage, BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 import { getShortHashFromString } from './git-branch';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';

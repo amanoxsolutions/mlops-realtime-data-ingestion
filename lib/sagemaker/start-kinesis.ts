@@ -4,17 +4,19 @@ import { CustomResource, Duration, Stack } from 'aws-cdk-lib';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
-import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+
 
 interface RDIStartKinesisAnalyticsProps {
     readonly prefix: string;
     readonly runtime: Runtime;
+    readonly customResourceLayerArn: string;
     readonly kinesis_analytics_name: string;
 }
 
 export class RDIStartKinesisAnalytics extends Construct {
     public readonly prefix: string;
     public readonly runtime: Runtime;
+    public readonly customResourceLayerArn: string;
     public readonly kinesis_analytics_name: string;
 
     constructor(scope: Construct, id: string, props: RDIStartKinesisAnalyticsProps) {
@@ -22,6 +24,7 @@ export class RDIStartKinesisAnalytics extends Construct {
 
         this.prefix = props.prefix;
         this.runtime = props.runtime;
+        this.customResourceLayerArn = props.customResourceLayerArn;
         this.kinesis_analytics_name = props.kinesis_analytics_name;
         const region = Stack.of(this).region;
         const account = Stack.of(this).account;
@@ -31,11 +34,6 @@ export class RDIStartKinesisAnalytics extends Construct {
             actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication'],
             resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.kinesis_analytics_name}`],
         });
-
-        const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
-            parameterName: `${props.prefix}/stack-parameters/custom-resource-layer-arn`,
-          }).stringValue
-        const layer = PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', customResourceLayerArn)
 
         const customResourceHandler = new SingletonFunction(this, 'Singleton', {
             functionName: `${this.prefix}-start-kinesis-app`,
@@ -50,7 +48,7 @@ export class RDIStartKinesisAnalytics extends Construct {
                 KINESIS_ANALYTICS_NAME: this.kinesis_analytics_name,
                 INPUT_STARTING_POSITION: "NOW",
             },
-            layers: [layer],
+            layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
         });
         customResourceHandler.addToRolePolicy(kinesisAnalyticsPolicy);
 
