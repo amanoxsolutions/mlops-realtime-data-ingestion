@@ -5,6 +5,9 @@ import { RealtimeDataIngestionStage } from './pipeline-stage';
 import { CodestarConnection } from './ingestion/codestar-connection';
 import { ComputeType, LinuxArmBuildImage, BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 import { getShortHashFromString } from './git-branch';
+import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 
 export interface DataIngestionPipelineStackProps extends StackProps {
@@ -13,6 +16,7 @@ export interface DataIngestionPipelineStackProps extends StackProps {
   readonly codestarConnectionName: string;
   readonly fullBranchName: string;
   readonly shortBranchName: string;
+  readonly customResourceLayerRuntime: Runtime;
 }
 
 export class DataIngestionPipelineStack extends Stack {
@@ -30,6 +34,19 @@ export class DataIngestionPipelineStack extends Stack {
       name: props.codestarConnectionName
     });
 
+    const customResourceLayer = new PythonLayerVersion(this, 'CustomResourceLayer', {
+      entry: `resources/lambdas/custom_resource_layer`,
+      description: `${props.prefix}-custom-resource Lambda Layer`,
+      compatibleRuntimes: [props.customResourceLayerRuntime],
+      layerVersionName: `${props.prefix}-custom-resource-layer`,
+    })
+
+    const customResourceLayerSSMParameter = new StringParameter(this, 'CustomResourceLayerSSMParameter', {
+      parameterName: `${props.prefix}-custom-resource-ARN`,
+      stringValue: customResourceLayer.layerVersionArn,
+      description: 'Custom Resource Lambda Layer ARN',
+    });
+    
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: `${props.prefix}-pipeline`,
       synth: new ShellStep('Synth', {
