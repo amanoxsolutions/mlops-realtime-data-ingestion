@@ -309,7 +309,7 @@ export class RDIFeatureStore extends Construct {
       timeout: 60,
       defaultArguments: {
         "--s3_bucket_name": this.bucket.bucketName,
-        "--prefix": `${account}/sagemaker/${region}/offline-store`,
+        "--prefix": `${account}/sagemaker/${region}/offline-store/`,
         "--target_file_size_in_bytes": 536870912,
       }
     });
@@ -324,7 +324,7 @@ export class RDIFeatureStore extends Construct {
       type: 'SCHEDULED',
       schedule: 'cron(0 0/1 * * ? *)',
       description: 'Aggregate parquet files in SageMaker Feature Store',
-      startOnCreation: false,
+      startOnCreation: true,
     });
   }
 }
