@@ -1,74 +1,36 @@
 import boto3
-import logging
 import time
-import lib.cfnresponse as cfnresponse
-
+from aws_lambda_powertools import Logger
+from crhelper import CfnResource
 from typing import List, Dict
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+helper = CfnResource()
+logger = Logger()
 sagemaker = boto3.client("sagemaker")
 
+
+@logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
-    logger.info({"event": event})
-    try:
-        request = event.get("RequestType").lower()
-        logger.info(f"Type of request: {request}")
-        physical_id = event.get("ResourceProperties").get("PhysicalResourceId")
-        domain_id = event.get("ResourceProperties").get("DomainId")
-        user_profile = event.get("ResourceProperties").get("StudioUserProfile")
-        default_user_app_name = event.get("ResourceProperties").get("StudioAppName")
-        if request == "delete":
-            # Launch the deletion of the SageMaker Studio apps
-            apps = delete_sagemaker_studio_apps(domain_id, user_profile, default_user_app_name)
-            # Check if the apps are deleted
-            status = "DELETING"
-            while status == "DELETING":
-                status = check_studio_app_deletion(domain_id, user_profile, apps)
-                logger.info(f"Status of the SageMaker Studio apps deletion: {status}")
-                time.sleep(30)
-        else:
-            # If we are not deleting the stack, we don't need to do anything,
-            # so we just send a SUCCESS response to CloudFormation
-            logger.info("No action required")
-    except Exception as e:
-        logger.exception(e)
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=physical_id)
-    else:
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=physical_id)
+    helper(event, context)
 
+@helper.create
+@helper.update
+def do_nothing(_, __):
+    logger.info("Nothing to do")
 
-def get_sagemaker_studio_apps(domain_id: str, user_profile: str) -> List[Dict]:
-    """List all the SageMaker Studio apps for the domain and user profile.
-
-    Args:
-        domain_id (str): the SageMaker domain ID
-        user_profile (str): the SageMaker Studio user profile name
-
-    Returns:
-        List[Dict]: the list of SageMaker Studio apps
-    """
-    logger.info(f"Listing all the SageMaker Studio apps for the domain {domain_id}")
-    # List all the SageMaker apps for the domain and user profile
-    response = sagemaker.list_apps(
-        DomainIdEquals=domain_id,
-        UserProfileNameEquals=user_profile
-    )
-    apps = response.get("Apps")
-    next_token = response.get("NextToken")
-    while next_token:
-        response = sagemaker.list_apps(
-            DomainIdEquals=domain_id,
-            UserProfileNameEquals=user_profile,
-            NextToken=next_token
-        )
-        apps.extend(response.get("Apps"))
-        next_token = response.get("NextToken")
-    logger.info(f"Found {len(apps)} SageMaker Studio apps")
-    for app in apps:
-        logger.info(f"SageMaker Studio app: {app.get('AppName')}")
-    return apps
-
+@helper.delete
+def delete(event, _):
+    domain_id = event.get("ResourceProperties").get("DomainId")
+    user_profile = event.get("ResourceProperties").get("StudioUserProfile")
+    default_user_app_name = event.get("ResourceProperties").get("StudioAppName")
+    # Launch the deletion of the SageMaker Studio apps
+    apps = delete_sagemaker_studio_apps(domain_id, user_profile, default_user_app_name)
+    # Check if the apps are deleted
+    status = "DELETING"
+    while status == "DELETING":
+        status = check_studio_app_deletion(domain_id, user_profile, apps)
+        logger.info(f"Status of the SageMaker Studio apps deletion: {status}")
+        time.sleep(30)
 
 def delete_sagemaker_studio_apps(domain_id: str, user_profile: str, default_user_app_name: str) -> List[Dict]:
     """List and delete all the SageMaker Studio apps for the domain and user profile
@@ -105,7 +67,6 @@ def delete_sagemaker_studio_apps(domain_id: str, user_profile: str, default_user
             )
     return apps_list
 
-
 def check_studio_app_deletion(domain_id: str, user_profile: str, apps: List[Dict]) -> str:
     """Check the status of the SageMaker Studio apps deletion.
 
@@ -141,4 +102,34 @@ def check_studio_app_deletion(domain_id: str, user_profile: str, apps: List[Dict
         return "DELETED"
     else:
         return "DELETING"
-    
+
+def get_sagemaker_studio_apps(domain_id: str, user_profile: str) -> List[Dict]:
+    """List all the SageMaker Studio apps for the domain and user profile.
+
+    Args:
+        domain_id (str): the SageMaker domain ID
+        user_profile (str): the SageMaker Studio user profile name
+
+    Returns:
+        List[Dict]: the list of SageMaker Studio apps
+    """
+    logger.info(f"Listing all the SageMaker Studio apps for the domain {domain_id}")
+    # List all the SageMaker apps for the domain and user profile
+    response = sagemaker.list_apps(
+        DomainIdEquals=domain_id,
+        UserProfileNameEquals=user_profile
+    )
+    apps = response.get("Apps")
+    next_token = response.get("NextToken")
+    while next_token:
+        response = sagemaker.list_apps(
+            DomainIdEquals=domain_id,
+            UserProfileNameEquals=user_profile,
+            NextToken=next_token
+        )
+        apps.extend(response.get("Apps"))
+        next_token = response.get("NextToken")
+    logger.info(f"Found {len(apps)} SageMaker Studio apps")
+    for app in apps:
+        logger.info(f"SageMaker Studio app: {app.get('AppName')}")
+    return apps

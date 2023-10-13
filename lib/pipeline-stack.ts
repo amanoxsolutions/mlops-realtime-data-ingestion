@@ -2,9 +2,10 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { RealtimeDataIngestionStage } from './pipeline-stage';
-import { CodestarConnection } from './ingestion/codestar-connection';
+import { CodestarConnection } from './codestar-connection';
 import { ComputeType, LinuxArmBuildImage, BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 import { getShortHashFromString } from './git-branch';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
 
 
 export interface DataIngestionPipelineStackProps extends StackProps {
@@ -13,6 +14,7 @@ export interface DataIngestionPipelineStackProps extends StackProps {
   readonly codestarConnectionName: string;
   readonly fullBranchName: string;
   readonly shortBranchName: string;
+  readonly runtime?: Runtime;
 }
 
 export class DataIngestionPipelineStack extends Stack {
@@ -25,11 +27,14 @@ export class DataIngestionPipelineStack extends Stack {
     console.log('unique resource Suffix source string: 👉 ', `${this.account}-${props.shortBranchName}`);
     console.log('unique resource Suffix hash: 👉 ', uniqueSuffix);
 
+    const runtime = props.runtime || Runtime.PYTHON_3_9;
+
     const codestarConnection = new CodestarConnection(this, 'CsConnection', {
       prefix: props.prefix,
-      name: props.codestarConnectionName
+      name: props.codestarConnectionName,
+      runtime: runtime,
     });
-
+    
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: `${props.prefix}-pipeline`,
       synth: new ShellStep('Synth', {
@@ -56,6 +61,7 @@ export class DataIngestionPipelineStack extends Stack {
     pipeline.addStage(new RealtimeDataIngestionStage(this, `${props.prefix}-RealtimeDataIngestion`, {
       prefix: props.prefix,
       uniqueSuffix: uniqueSuffix,
+      runtime: runtime,
     }));
   }
 }

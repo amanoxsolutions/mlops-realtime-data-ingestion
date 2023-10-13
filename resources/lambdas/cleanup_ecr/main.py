@@ -1,28 +1,27 @@
-import os
 import boto3
-import logging
-import lib.cfnresponse as cfnresponse
+from aws_lambda_powertools import Logger
+from crhelper import CfnResource
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+helper = CfnResource()
+logger = Logger()
 ecr = boto3.client("ecr")
 
+
+@logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
-    logger.info({"event": event})
-    try:
-        request = event.get("RequestType").lower()
-        logger.info(f"Type of request: {request}")
-        physical_id = event.get("ResourceProperties").get("PhysicalResourceId")
-        ecr_repository_name = event.get("ResourceProperties").get("EcrRepositoryName")
-        if request == "delete":
-            next_token = delete_ecr_images(ecr_repository_name)
-            while next_token:
-                next_token = delete_ecr_images(ecr_repository_name, next_token)
-    except Exception as e:
-        logger.exception(e)
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=physical_id)
-    else:
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, physicalResourceId=physical_id)
+    helper(event, context)
+
+@helper.create
+@helper.update
+def do_nothing(_, __):
+    logger.info("Nothing to do")
+
+@helper.delete
+def delete(event, _):
+    ecr_repository_name = event.get("ResourceProperties").get("EcrRepositoryName")
+    next_token = delete_ecr_images(ecr_repository_name)
+    while next_token:
+        next_token = delete_ecr_images(ecr_repository_name, next_token)
 
 def delete_ecr_images(ecr_repository_name: str, next_token: str = None) -> str:
     """This function list images in ECR repository and delete them

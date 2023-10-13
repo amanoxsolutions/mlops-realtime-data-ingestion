@@ -12,6 +12,7 @@ import {
   Effect,
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
+import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { RDISagemakerUser } from './sagemaker-users';
 
@@ -22,11 +23,17 @@ interface RDISagemakerDomainCustomResourceProps {
   readonly vpcId: string;
   readonly subnetIds: string[];
   readonly removalPolicy: RemovalPolicy;
+  readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
 }
 
 export class RDISagemakerDomainCustomResource extends Construct {
+  public readonly prefix: string;
+  public readonly removalPolicy: RemovalPolicy;
+  public readonly runtime: Runtime;
   public readonly customResource: CustomResource;
   public readonly domainId: string;
+  public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerDomainCustomResourceProps) {
     super(scope, id);
@@ -34,6 +41,11 @@ export class RDISagemakerDomainCustomResource extends Construct {
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
     const lambdaPurpose = 'CustomResourceToCreateUpdateDeleteSagemakerDomain'
+
+    this.prefix = props.prefix;
+    this.runtime = props.runtime;
+    this.removalPolicy = props.removalPolicy;
+    this.customResourceLayerArn = props.customResourceLayerArn;
 
     const sagemakerManage = new PolicyStatement({
       effect: Effect.ALLOW,
@@ -65,14 +77,15 @@ export class RDISagemakerDomainCustomResource extends Construct {
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${props.prefix}-manage-sagemaker-domain`,
+      functionName: `${this.prefix}-manage-sagemaker-domain`,
       lambdaPurpose: lambdaPurpose,
       uuid: '61e6b537-fe77-4e73-8304-1eb3480b0867',
       code: Code.fromAsset('resources/lambdas/sagemaker_domain'),
       handler: 'main.lambda_handler',
       timeout: Duration.minutes(10),
-      runtime: Runtime.PYTHON_3_9,
+      runtime: this.runtime,
       logRetention: RetentionDays.ONE_WEEK,
+      layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
     customResourceLambda.addToRolePolicy(sagemakerManage);
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
@@ -87,7 +100,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
         },
         VpcId: props.vpcId,
         SubnetIds: props.subnetIds,
-        RemovalPolicy: props.removalPolicy,
+        RemovalPolicy: this.removalPolicy,
       }
     });
     this.domainId = this.customResource.getAttString('DomainId');
@@ -99,13 +112,18 @@ import { CfnWaitCondition, CfnWaitConditionHandle } from 'aws-cdk-lib/aws-cloudf
 
 interface CleanupSagemakerDomainUserProps {
   readonly prefix: string;
+  readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
   readonly sagemakerStudioDomainId: string;
   readonly sagemakerStudioUserProfile: string;
   readonly sagemakerStudioAppName: string;
 }
 
 export class CleanupSagemakerDomainUser extends Construct {
+  public readonly prefix: string;
+  public readonly runtime: Runtime;
   public readonly customResource: CustomResource;
+  public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: CleanupSagemakerDomainUserProps) {
     super(scope, id);
@@ -113,6 +131,10 @@ export class CleanupSagemakerDomainUser extends Construct {
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
     const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomainUser'
+
+    this.prefix = props.prefix;
+    this.runtime = props.runtime;
+    this.customResourceLayerArn = props.customResourceLayerArn;
 
     const sagemakerList = new PolicyStatement({
       effect: Effect.ALLOW,
@@ -132,14 +154,15 @@ export class CleanupSagemakerDomainUser extends Construct {
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${props.prefix}-cleanup-sagemaker-domain-user`,
+      functionName: `${this.prefix}-cleanup-sagemaker-domain-user`,
       lambdaPurpose: lambdaPurpose,
       uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
       code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_user'),
       handler: 'main.lambda_handler',
       timeout: Duration.minutes(15),
-      runtime: Runtime.PYTHON_3_9,
+      runtime: this.runtime,
       logRetention: RetentionDays.ONE_WEEK,
+      layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
     customResourceLambda.addToRolePolicy(sagemakerList);
     customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
@@ -159,15 +182,18 @@ export class CleanupSagemakerDomainUser extends Construct {
 interface RDISagemakerStudioProps {
   readonly prefix: string;
   readonly removalPolicy?: RemovalPolicy;
+  readonly runtime: Runtime;
   readonly dataBucketArn: string;
   readonly modelBucetArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
+  readonly customResourceLayerArn: string;
 }
 
 export class RDISagemakerStudio extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
+  public readonly runtime: Runtime;
   public readonly role: IRole;
   public readonly domainName: string;
   public readonly domainId: string;
@@ -180,6 +206,7 @@ export class RDISagemakerStudio extends Construct {
     this.domainName =  `${this.prefix}-sagemaker-studio-domain`;
     this.userName = `${this.prefix}-sagemaker-studio-user`;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
+    this.runtime = props.runtime;
 
     //
     // Create SageMaker Studio Domain
@@ -227,6 +254,8 @@ export class RDISagemakerStudio extends Construct {
       vpcId: props.vpcId,
       subnetIds: props.subnetIds,
       removalPolicy: this.removalPolicy,
+      runtime: this.runtime,
+      customResourceLayerArn: props.customResourceLayerArn,
     });
     this.domainId = domain.domainId;
 
@@ -254,6 +283,8 @@ export class RDISagemakerStudio extends Construct {
       // timeout. If not, CloudFormation stack deletion with result in an error.
       const cleanupDomain = new CleanupSagemakerDomainUser(this, 'UserCleanup', {
         prefix: this.prefix,
+        runtime: this.runtime,
+        customResourceLayerArn: props.customResourceLayerArn,
         sagemakerStudioDomainId: this.domainId,
         sagemakerStudioUserProfile: sagemakerUser.name,
         sagemakerStudioAppName: sagemakerUser.appName,
