@@ -35,7 +35,7 @@ new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
   repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
   codestarConnectionName: 'mlops-realtime-data-ingestion',
   fullBranchName: fullBranchName,
-  shortBranchName: shortBranchName
+  shortBranchName: shortBranchName,
 });
 
 app.synth();

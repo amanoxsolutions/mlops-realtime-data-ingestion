@@ -1,38 +1,41 @@
-import os
 import boto3
-import logging
-import lib.cfnresponse as cfnresponse
+from aws_lambda_powertools import Logger
+from crhelper import CfnResource
 from typing import Tuple
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+helper = CfnResource()
+logger = Logger()
 csc = boto3.client("codestar-connections")
 
 
+@logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
-    logger.info({"event": event})
-    response_data = {"ConnectionArn": ""}
-    try:
-        request = event.get("RequestType").lower()
-        logger.info(f"Type of request: {request}")
-        physical_id = event.get("ResourceProperties").get("PhysicalResourceId")
-        connection_name = event.get("ResourceProperties").get("ConnectionName")
-        if request == "create" or request == "update":
-            connection_arn, next_token = search_for_connection(connection_name)
-            while (connection_arn is None) and next_token:
-                connection_arn, next_token = search_for_connection(connection_name, next_token)
-            if connection_arn:
-                response_data = { "ConnectionArn": connection_arn }
-                logger.info(f"CodeStar Connection ARN for '{connection_name}' found")
-            else:
-                logger.error(f"CodeStar Connection ARN for '{connection_name}' not found")
-                cfnresponse.send(event, context, cfnresponse.FAILED, response_data, physicalResourceId=physical_id)
-                return
-    except Exception as e:
-        logger.exception(e)
-        cfnresponse.send(event, context, cfnresponse.FAILED, response_data, physicalResourceId=physical_id)
+    helper(event, context)
+
+@helper.create
+@helper.update
+def get_connection_arn(event, _):
+    connection_name = event.get("ResourceProperties").get("ConnectionName")
+    connection_arn, next_token = search_for_connection(connection_name)
+    while (connection_arn is None) and next_token:
+        connection_arn, next_token = search_for_connection(connection_name, next_token)
+    if connection_arn:
+        helper.Data.update({"ConnectionArn": connection_arn})
+        logger.info(f"CodeStar Connection ARN for '{connection_name}' found")
     else:
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physicalResourceId=physical_id)
+        error_reason = f"CodeStar Connection ARN for '{connection_name}' not found"
+        logger.error(error_reason)
+        return {
+            'Status': 'FAILED',
+            'Reason': error_reason,
+            'LogicalResourceId': event.LogicalResourceId,
+            'RequestId': event.RequestId,
+            'StackId': event.StackId
+        }
+
+@helper.delete
+def do_nothing(_, __):
+    logger.info("Nothing to do")
 
 def search_for_connection(connection_name: str, next_token: str = None) -> Tuple[str, str]:
     """This function list CodeStar connections and search for the connection ARN

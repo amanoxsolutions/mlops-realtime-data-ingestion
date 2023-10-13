@@ -6,6 +6,7 @@ import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
 import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
 import { RDILambda } from '../lambda';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
 import * as sourceSchema from '../../resources/sagemaker/source-schema.json';
 import { RDIStartKinesisAnalytics } from './start-kinesis';
@@ -27,11 +28,14 @@ interface RDIFeatureStoreProps {
   readonly s3Suffix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly firehoseStreamArn: string;
+  readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
 }
 
 export class RDIFeatureStore extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
+  public readonly runtime: Runtime;
   public readonly aggFeatureGroup: CfnFeatureGroup;
   public readonly bucket: IBucket;
   public readonly analyticsStream: CfnApplication;
@@ -41,6 +45,7 @@ export class RDIFeatureStore extends Construct {
 
     this.prefix = props.prefix;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
+    this.runtime = props.runtime;
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
@@ -119,6 +124,7 @@ export class RDIFeatureStore extends Construct {
       prefix: this.prefix,
       name: 'analytics-to-featurestore',
       codePath: 'resources/lambdas/analytics_to_featurestore',
+      runtime: this.runtime,
       memorySize: 512,
       timeout: Duration.seconds(60),
       hasLayer: true,
@@ -234,7 +240,9 @@ export class RDIFeatureStore extends Construct {
 
     const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
       prefix: this.prefix,
+      runtime: this.runtime,
       kinesis_analytics_name: analyticsAppName,
+      customResourceLayerArn: props.customResourceLayerArn,
     });
     startKinesisAnalytics.node.addDependency(this.analyticsStream)
 

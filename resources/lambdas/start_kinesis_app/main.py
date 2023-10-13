@@ -1,18 +1,22 @@
+from aws_lambda_powertools import Logger
 from crhelper import CfnResource
-import json
 import boto3
 import os
 
 helper = CfnResource()
+logger = Logger()
 client = boto3.client('kinesisanalytics')
 application_name = os.environ['KINESIS_ANALYTICS_NAME']
 input_starting_position = os.environ['INPUT_STARTING_POSITION']
 
+@logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     helper(event, context)
     
 @helper.create
 def create(_, __):
+    logger.info(f"Kinesis analytics application name: {application_name}")
+    logger.info(f"Input starting position: {input_starting_position}")
     kinesis_analytics = client.describe_application(
         ApplicationName=application_name
     )
@@ -30,24 +34,6 @@ def create(_, __):
     )
     
 @helper.update
-def update(event, _):
-    try:
-        return {
-            'Status': 'SUCCESS',
-            'Reason': '',
-            'LogicalResourceId': event.LogicalResourceId,
-            'RequestId': event.RequestId,
-            'StackId': event.StackId
-        }
-    except Exception as error:
-        return {
-            'Status': 'FAILED',
-            'Reason': json.dumps(error),
-            'LogicalResourceId': event.LogicalResourceId,
-            'RequestId': event.RequestId,
-            'StackId': event.StackId
-        }
-        
 @helper.delete
-def delete(_, __):
-    pass
+def do_nothing(_, __):
+    logger.info("Nothing to do")

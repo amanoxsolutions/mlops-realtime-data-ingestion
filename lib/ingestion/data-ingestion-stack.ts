@@ -4,10 +4,12 @@ import { RDIDynamodbTable } from './dynamodb';
 import { RDIIngestionWorker } from './fargate-worker';
 import { RDIIngestionWorkerImage } from './ingestion-worker-image';
 import { RDILambda } from '../lambda';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { EventbridgeToKinesisFirehoseToS3 } from '@aws-solutions-constructs/aws-eventbridge-kinesisfirehose-s3';
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 
 export interface RealtimeDataIngestionStackProps extends StackProps {
@@ -15,8 +17,7 @@ export interface RealtimeDataIngestionStackProps extends StackProps {
   readonly s3Suffix: string;
   readonly s3Versioning?: boolean;
   readonly removalPolicy?: RemovalPolicy;
-  readonly firehoseBufferInterval?: Duration;
-  readonly firehoseBufferSize?: Size;
+  readonly runtime: Runtime;
 }
 
 export class RealtimeDataIngestionStack extends Stack {
@@ -24,11 +25,7 @@ export class RealtimeDataIngestionStack extends Stack {
   public readonly s3Suffix: string;
   public readonly s3Versioning: boolean;
   public readonly removalPolicy: RemovalPolicy;
-  public readonly firehoseStreamArn: string;
-  public readonly firehoseBufferInterval: Duration;
-  public readonly firehoseBufferSize : Size;
-  public readonly dataBucketName : string;
-  public readonly dataBucketArn : string;
+  public readonly runtime: Runtime;
   public readonly vpc: IVpc;
 
   constructor(scope: Construct, id: string, props: RealtimeDataIngestionStackProps) {
@@ -37,10 +34,14 @@ export class RealtimeDataIngestionStack extends Stack {
     this.prefix = props.prefix;
     this.s3Suffix = props.s3Suffix;
     this.s3Versioning = props.s3Versioning || false;
+    this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
-    this.firehoseBufferInterval = props.firehoseBufferInterval || Duration.seconds(60);
-    this.firehoseBufferSize = props.firehoseBufferSize || Size.mebibytes(1);
-    this.dataBucketName = `${this.prefix}-input-bucket-${this.s3Suffix}`;
+    const dataBucketName = `${this.prefix}-input-bucket-${this.s3Suffix}`;
+
+    // Get the ARN of the custom resource Lambda Layer from SSM parameter
+    const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
+      parameterName: `/${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+    }).stringValue
 
     const inputTable = new RDIDynamodbTable(this, 'inputHashTable', {
       prefix: this.prefix,
@@ -52,6 +53,7 @@ export class RealtimeDataIngestionStack extends Stack {
       prefix: this.prefix,
       name: 'stream-processing',
       codePath: 'resources/lambdas/stream_processing',
+      runtime: this.runtime,
       memorySize: 256,
       timeout: Duration.seconds(60),
       hasLayer: true,
@@ -99,19 +101,19 @@ export class RealtimeDataIngestionStack extends Stack {
         }
       },
       bucketProps: { 
-        bucketName: this.dataBucketName,
+        bucketName: dataBucketName,
         autoDeleteObjects: this.removalPolicy == RemovalPolicy.DESTROY,
         removalPolicy: this.removalPolicy,
         versioned: this.s3Versioning,
       },
       logS3AccessLogs: false,
     });
-    this.firehoseStreamArn = inputStream.kinesisFirehose.attrArn;
     
+    let dataBucketArn;
     if (inputStream.s3Bucket) {
-      this.dataBucketArn = inputStream.s3Bucket.bucketArn;
+      dataBucketArn = inputStream.s3Bucket.bucketArn;
     } else {
-      this.dataBucketArn = `arn:aws:s3:::${this.dataBucketName}`;
+      dataBucketArn = `arn:aws:s3:::${dataBucketName}`;
     }
 
     // Edit Kinesis Firehose Stream Role to allow invocation of Lambda
@@ -142,6 +144,8 @@ export class RealtimeDataIngestionStack extends Stack {
     const ingestionWorkerImage = new RDIIngestionWorkerImage(this, 'WorkerImage', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
+      runtime: this.runtime,
+      customResourceLayerArn: customResourceLayerArn,
     });
 
     const ingestionWorker = new RDIIngestionWorker(this, 'Worker', {
@@ -156,5 +160,17 @@ export class RealtimeDataIngestionStack extends Stack {
     });
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     this.vpc = ingestionWorker.vpc;
+
+    new StringParameter(this, 'FirehoseStreamSSMParameter', {
+      parameterName: `/${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
+      stringValue: inputStream.kinesisFirehose.attrArn,
+      description: 'ARN of the ingestion Kinesis Firehose Stream',
+    });
+
+    new StringParameter(this, 'DataBucketSSMParameter', {
+      parameterName: `/${props.prefix}/stack-parameters/ingestion-data-bucket-arn`,
+      stringValue: dataBucketArn,
+      description: 'ARN of the ingestion data S3 Bucket',
+    });
   }
 }

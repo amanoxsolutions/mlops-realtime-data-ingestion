@@ -6,37 +6,52 @@ import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Repository, TagMutability, IRepository } from 'aws-cdk-lib/aws-ecr';
 import { DockerImageAsset, Platform } from 'aws-cdk-lib/aws-ecr-assets';
+import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import * as ecrdeploy from 'cdk-ecr-deployment';
 
 // Custom Resource to clean up the ECR Repository when destroying the stack
 interface cleanupEcrRepoProps {
   readonly prefix: string;
+  readonly runtime: Runtime;
   readonly ecrRepositoryName: string;
   readonly ecrRepositoryArn: string;
+  readonly customResourceLayerArn: string;
 }
 
 export class cleanupEcrRepo extends Construct {
+  public readonly prefix: string;
+  public readonly runtime: Runtime;
+  public readonly ecrRepositoryName: string;
+  public readonly ecrRepositoryArn: string;
+  public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: cleanupEcrRepoProps) {
     super(scope, id);
 
+    this.prefix = props.prefix;
+    this.runtime = props.runtime;
+    this.ecrRepositoryName = props.ecrRepositoryName;
+    this.ecrRepositoryArn = props.ecrRepositoryArn;
+    this.customResourceLayerArn = props.customResourceLayerArn;
+
     const connectionPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: ['ecr:ListImages', 'ecr:BatchDeleteImage'],
-      resources: [props.ecrRepositoryArn],
+      resources: [this.ecrRepositoryArn],
     });
 
     const lambdaPurpose = 'CustomResourceToCleanupEcrImages'
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${props.prefix}-cleanup-ecr-images`,
+      functionName: `${this.prefix}-cleanup-ecr-images`,
       lambdaPurpose: lambdaPurpose,
       uuid: '54gf6lx0-r58g-88j5-d44t-l40cef953pqn',
       code: Code.fromAsset('resources/lambdas/cleanup_ecr'),
       handler: 'main.lambda_handler',
       timeout: Duration.seconds(60),
-      runtime: Runtime.PYTHON_3_9,
+      runtime: this.runtime,
       logRetention: RetentionDays.ONE_WEEK,
+      layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
     customResourceLambda.addToRolePolicy(connectionPolicy);
 
@@ -44,7 +59,7 @@ export class cleanupEcrRepo extends Construct {
       serviceToken: customResourceLambda.functionArn,
       properties: {
         PhysicalResourceId: lambdaPurpose,
-        EcrRepositoryName: props.ecrRepositoryName,
+        EcrRepositoryName: this.ecrRepositoryName,
       },
     });
   }
@@ -53,16 +68,22 @@ export class cleanupEcrRepo extends Construct {
 interface RDIIngestionWorkerImageProps {
   readonly prefix: string;
   readonly removalPolicy: RemovalPolicy;
+  readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
 }
 
 export class RDIIngestionWorkerImage extends Construct {
   public readonly prefix: string;
+  public readonly removalPolicy: RemovalPolicy;
+  public readonly runtime: Runtime;
   public readonly ecrRepo: IRepository;
 
   constructor(scope: Construct, id: string, props: RDIIngestionWorkerImageProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
+    this.removalPolicy = props.removalPolicy;
+    this.runtime = props.runtime;
 
     //
     // ECR
@@ -72,7 +93,7 @@ export class RDIIngestionWorkerImage extends Construct {
       repositoryName: `${this.prefix}-ingestion-worker`,
       imageTagMutability: TagMutability.MUTABLE,
       imageScanOnPush: true,
-      removalPolicy: props.removalPolicy,
+      removalPolicy: this.removalPolicy,
     });
     const ecrAsset = new DockerImageAsset(this, 'IngestionWorkerImage', {
       directory: path.join(__dirname, '../../resources/services/ingestion-worker'),
@@ -87,8 +108,10 @@ export class RDIIngestionWorkerImage extends Construct {
     if (props.removalPolicy === RemovalPolicy.DESTROY) {
       new cleanupEcrRepo(this, 'CleanupEcrRepo', {
         prefix: this.prefix,
+        runtime: this.runtime,
         ecrRepositoryName: this.ecrRepo.repositoryName,
         ecrRepositoryArn: this.ecrRepo.repositoryArn,
+        customResourceLayerArn: props.customResourceLayerArn,
       });
     }
   }

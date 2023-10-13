@@ -1,45 +1,22 @@
 import time
 import boto3
-import logging
-import lib.cfnresponse as cfnresponse
-
+from aws_lambda_powertools import Logger
+from crhelper import CfnResource
 from botocore.exceptions import ClientError
 from typing import Dict
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
+helper = CfnResource()
+logger = Logger()
 sagemaker = boto3.client("sagemaker")
 
+
+@logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
-    logger.info({"event": event})
-    domain_id = event.get("PhysicalResourceId")
+    helper(event, context)
+
+@helper.create
+def create(event, _):
     domain_properties = event.get("ResourceProperties")
-    request_type = event.get("RequestType").lower()
-    try:
-        if request_type == "create":
-            domain_id = handle_create(domain_properties)
-        elif request_type == "update":
-            handle_update(domain_id, domain_properties)
-        elif request_type == "delete":
-            handle_delete(domain_id, domain_properties)
-    except ClientError as exception:
-        logger.exception(exception)
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, physicalResourceId=domain_id)
-    else:
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, {"DomainId": domain_id}, 
-                         physicalResourceId=domain_id)
-
-def handle_create(domain_properties: Dict) -> str:
-    """Creates the SageMaker Studio domain and returns the domain ID.
-
-    Args:
-        domain_properties (Dict): The configuration settings for the SageMaker Domain
-
-    Returns:
-        str: the domain ID
-    """
-    logger.info("Creating studio domain")
     vpc_id = domain_properties["VpcId"]
     subnet_ids = domain_properties["SubnetIds"]
     default_user_settings = domain_properties["DefaultUserSettings"]
@@ -60,21 +37,14 @@ def handle_create(domain_properties: Dict) -> str:
         logger.info(f"SageMaker domain status: {domain_status}")
         if domain_status == "InService":
             created = True
+    helper.Data.update({"DomainId": domain_id})
     logger.info(f"SageMaker domain created successfully: {domain_id}")
     return domain_id
 
-
-def handle_delete(domain_id: str, domain_properties: Dict):
-    """Delete the SageMaker Domain
-
-    Args:
-        domain_id (str): SageMaker Domain Id
-        domain_properties (Dict): The configuration settings for the SageMaker Domain
-
-    Returns:
-        None
-    """
-    logger.info("Received delete event")
+@helper.delete
+def delete(event, _):
+    domain_id = event.get("PhysicalResourceId")
+    domain_properties = event.get("ResourceProperties")
     removal_policy = domain_properties.get("RemovalPolicy", "destroy").lower()
     if removal_policy == "destroy":
         logger.info(f"Deleting domain {domain_id} and its EFS file system")
@@ -97,18 +67,10 @@ def handle_delete(domain_id: str, domain_properties: Dict):
     else:
         logger.info(f"Skipping deletion of domain {domain_id} because removal policy is set to {removal_policy}")
 
-
-def handle_update(domain_id: str, domain_properties: Dict):
-    """Update the SageMaker Domain
-    
-    Args:
-        domain_id (str): SageMaker Domain Id
-        domain_properties (Dict): The configuration settings for the SageMaker Domain
-        
-    Returns:
-        None
-    """
-    logger.info("Received Update event")
+@helper.update
+def update(event, _):
+    domain_id = event.get("PhysicalResourceId")
+    domain_properties = event.get("ResourceProperties")
     default_user_settings = domain_properties["DefaultUserSettings"]
     response = sagemaker.update_domain(
         DomainId=domain_id,
@@ -122,3 +84,4 @@ def handle_update(domain_id: str, domain_properties: Dict):
         if domain_status == "InService":
             updated = True
         time.sleep(5)
+    helper.Data.update({"DomainId": domain_id})
