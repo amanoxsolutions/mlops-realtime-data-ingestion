@@ -217,7 +217,6 @@ export class RDISagemakerStudio extends Construct {
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
     });
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
-    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerCanvasFullAccess'));
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'));
 
     const policyDocument = new PolicyDocument({
