@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RDISagemakerStudio } from './sagemaker-domain';
 import { RDIFeatureStore } from './feature-store';
+import { RDISagemakerProject } from './sagemaker-project';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Bucket, IBucket, BlockPublicAccess, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
@@ -22,6 +23,7 @@ export class SagemakerStack extends Stack {
   public readonly runtime: Runtime;
   public readonly domain: RDISagemakerStudio;
   public readonly featureStore: RDIFeatureStore;
+  public readonly project: RDISagemakerProject;
   public readonly modelBucket: IBucket;
 
   constructor(scope: Construct, id: string, props: SagemakerStackProps) {
@@ -74,6 +76,14 @@ export class SagemakerStack extends Stack {
       customResourceLayerArn: customResourceLayerArn,
       firehoseStreamArn: ingestionFirehoseStreamArn,
       s3Suffix: this.s3Suffix,
+    });
+
+    this.project = new RDISagemakerProject(this, 'sagemakerProject', {
+      prefix: this.prefix,
+      removalPolicy: this.removalPolicy,
+      runtime: this.runtime,
+      customResourceLayerArn: customResourceLayerArn,
+      domainId: this.domain.domainId,
     });
   }
 }

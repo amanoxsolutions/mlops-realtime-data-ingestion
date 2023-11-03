@@ -107,8 +107,6 @@ export class RDISagemakerDomainCustomResource extends Construct {
   }
 }
 
-import { CfnWaitCondition, CfnWaitConditionHandle } from 'aws-cdk-lib/aws-cloudformation';
-
 
 interface CleanupSagemakerDomainUserProps {
   readonly prefix: string;
