@@ -52,7 +52,7 @@ def create(event, _):
         PrincipalType="IAM"
     )
     logger.info(f"Associated SageMaker domain role {domain_role_arn} with portfolio {portfolio_id}")
-    helper.Data.update({"DomainId": domain_id, "PortfolioId": portfolio_id})
+    helper.Data.update({"DomainId": domain_id})
     return domain_id
 
 def enable_sagemaker_servicecatalog():
@@ -72,9 +72,6 @@ def enable_sagemaker_servicecatalog():
         if status == "Enabled":
             enabled = True
         time.sleep(5)
-    portfolio_id = response["PortfolioId"]
-    logger.info("SageMaker Service Catalog portfolio '{portfolio_id}' enabled successfully")
-    return portfolio_id
 
 @helper.delete
 def delete(event, _):
