@@ -8,7 +8,6 @@ import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 interface RDISagemakerMlopsProjectCustomResourceProps {
   readonly prefix: string;
   readonly sagemakerProjectName : string;
-  readonly sagemakerStudioDomainId: string;
   readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
@@ -85,7 +84,6 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       serviceToken: customResourceLambda.functionArn,
       properties: {
         ProjectName: props.sagemakerProjectName,
-        DomainId: props.sagemakerStudioDomainId,
       }
     });
     this.projectId = this.customResource.getAttString('ProjectId');
@@ -97,14 +95,12 @@ interface RDISagemakerProjectProps {
   readonly removalPolicy?: RemovalPolicy;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
-  readonly domainId: string;
 }
   
 export class RDISagemakerProject extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
-  public readonly domainId: string;
   public readonly projectName: string;
   public readonly projectId: string;
 
@@ -113,7 +109,6 @@ export class RDISagemakerProject extends Construct {
 
     this.prefix = props.prefix;
     this.projectName =  `${this.prefix}-mlops`;
-    this.domainId = props.domainId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime;
 
@@ -124,7 +119,6 @@ export class RDISagemakerProject extends Construct {
     const sagemakerProjectCustomResource = new RDISagemakerMlopsProjectCustomResource(this, 'Mlops', {
       prefix: this.prefix,
       sagemakerProjectName: this.projectName,
-      sagemakerStudioDomainId: this.domainId,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
       customResourceLayerArn: props.customResourceLayerArn,

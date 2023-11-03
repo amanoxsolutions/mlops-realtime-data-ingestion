@@ -18,7 +18,6 @@ def lambda_handler(event, context):
 @helper.create
 def create(event, _):
     project_properties = event.get("ResourceProperties")
-    domain_id = project_properties["DomainId"]
     project_name = project_properties["ProjectName"]
     # List the portfolios in the AWS Service Catalog
     # There should be an imported portfolio called "Amazon SageMaker Solutions and ML Ops products"
@@ -26,7 +25,7 @@ def create(event, _):
     response = catalog.list_accepted_portfolio_shares(
         PortfolioShareType = "IMPORTED"
     )
-    logger.info("Imported Portfolios:", response["PortfolioDetails"])
+    logger.info("Imported Portfolios:", response)
     portfolio_id = None
     for portfolio in response["PortfolioDetails"]:
         if portfolio["DisplayName"] == "Amazon SageMaker Solutions and ML Ops products":
@@ -61,11 +60,11 @@ def create(event, _):
     product_artifacts = response["ProvisioningArtifactSummaries"]
     product_artifacts.sort(key=lambda x: x["CreatedTime"], reverse=True)
     latest_product_artifact_id = product_artifacts[0]["Id"]
-    logger.info("Latest product artifact:", product_artifacts[0])
+    logger.info("Found latest product artifact", product_artifacts[0])
     # Create the SageMaker Project for the SageMaker domain
     response = sagemaker.create_project(
         ProjectName=project_name,
-        DomainId=domain_id,
+        ProjectDescription="MLOps project for the Realtime Data Ingestion and Analytics solution",
         ServiceCatalogProvisioningDetails={
             "ProductId": product_id,
             "ProvisioningArtifactId": latest_product_artifact_id
