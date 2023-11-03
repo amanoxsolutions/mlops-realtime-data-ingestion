@@ -112,7 +112,7 @@ export class RDISagemakerProject extends Construct {
     super(scope, id);
 
     this.prefix = props.prefix;
-    this.projectName =  `${this.prefix}-sagemaker-mlops-project`;
+    this.projectName =  `${this.prefix}-mlops`;
     this.domainId = props.domainId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime;
