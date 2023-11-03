@@ -21,9 +21,12 @@ def create(event, _):
     domain_id = project_properties["DomainId"]
     project_name = project_properties["ProjectName"]
     # List the portfolios in the AWS Service Catalog
-    # There should be a portfolio called "Amazon SageMaker Solutions and ML Ops products"
+    # There should be an imported portfolio called "Amazon SageMaker Solutions and ML Ops products"
     # This portfolio contains the SageMaker project template we want to use
-    response = catalog.list_portfolios()
+    response = catalog.list_accepted_portfolio_shares(
+        PortfolioShareType = "IMPORTED"
+    )
+    logger.info("Imported Portfolios:", response["PortfolioDetails"])
     portfolio_id = None
     for portfolio in response["PortfolioDetails"]:
         if portfolio["DisplayName"] == "Amazon SageMaker Solutions and ML Ops products":
