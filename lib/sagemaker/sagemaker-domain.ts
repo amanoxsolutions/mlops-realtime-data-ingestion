@@ -73,6 +73,8 @@ export class RDISagemakerDomainCustomResource extends Construct {
     const serviceCatalogPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
+        'servicecatalog:ListAcceptedPortfolioShares',
+        'servicecatalog:AcceptPortfolioShare',
         'servicecatalog:AssociatePrincipalWithPortfolio',
       ],
       resources: ['*'],
