@@ -8,6 +8,7 @@ from typing import Dict
 helper = CfnResource()
 logger = Logger()
 sagemaker = boto3.client("sagemaker")
+catalog = boto3.client("servicecatalog")
 
 
 @logger.inject_lambda_context(log_event=True)
@@ -37,9 +38,43 @@ def create(event, _):
         logger.info(f"SageMaker domain status: {domain_status}")
         if domain_status == "InService":
             created = True
-    helper.Data.update({"DomainId": domain_id})
     logger.info(f"SageMaker domain created successfully: {domain_id}")
+    # Enable the use of Service Catalog in SageMaker. This is mandatory to be able to use SageMaker projects
+    portfolio_id = enable_sagemaker_servicecatalog()
+    # Enable the use of SageMaker projects in the SageMaker domain.
+    # This can only be done if no app is running so let's do that before we create any user in the domain.
+    # To enable SageMaker projects in the domain we must associate the domain role
+    # with the SageMaker Service Catalog portfolio.
+    domain_role_arn = default_user_settings["ExecutionRole"]
+    response = catalog.associate_principal_with_portfolio(
+        PortfolioId=portfolio_id,
+        PrincipalARN=domain_role_arn,
+        PrincipalType="IAM"
+    )
+    logger.info(f"Associated SageMaker domain role {domain_role_arn} with portfolio {portfolio_id}")
+    helper.Data.update({"DomainId": domain_id, "PortfolioId": portfolio_id})
     return domain_id
+
+def enable_sagemaker_servicecatalog():
+    """This function enables the use of the Service Catalog in SageMaker and waits for it to be enabled.
+
+    Returns:
+        str: The ID of the SageMaker Service Catalog portfolio
+    """
+    response = sagemaker.enable_sagemaker_servicecatalog_portfolio()
+    logger.info("Enabling the SageMaker Service Catalog portfolio")
+    # Wait for the SageMaker Service Catalog portfolio to be enabled
+    enabled = False
+    while not enabled:
+        response = sagemaker.get_sagemaker_servicecatalog_portfolio_status()
+        status = response["Status"]
+        logger.info(f"SageMaker Service Catalog portfolio status: {status}")
+        if status == "Enabled":
+            enabled = True
+        time.sleep(5)
+    portfolio_id = response["PortfolioId"]
+    logger.info("SageMaker Service Catalog portfolio '{portfolio_id}' enabled successfully")
+    return portfolio_id
 
 @helper.delete
 def delete(event, _):

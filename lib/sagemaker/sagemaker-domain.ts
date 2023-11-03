@@ -33,6 +33,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
   public readonly runtime: Runtime;
   public readonly customResource: CustomResource;
   public readonly domainId: string;
+  public readonly portfolioId: string;
   public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerDomainCustomResourceProps) {
@@ -47,17 +48,37 @@ export class RDISagemakerDomainCustomResource extends Construct {
     this.removalPolicy = props.removalPolicy;
     this.customResourceLayerArn = props.customResourceLayerArn;
 
-    const sagemakerManage = new PolicyStatement({
+    // IAM Policy for SageMaker Domain
+    const sagemakerDomainPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
         'sagemaker:CreateDomain',
         'sagemaker:DescribeDomain',
         'sagemaker:DeleteDomain',
-        'sagemaker:UpdateDomain'
+        'sagemaker:UpdateDomain',
       ],
-      resources: [`arn:aws:sagemaker:${region}:${account}:domain/*`],
+      resources: [`arn:aws:sagemaker:${region}:${account}:domain/${this.prefix}*`],
     });
 
+    const sagemakerServicecatalogPortfolioPolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sagemaker:EnableSagemakerServicecatalogPortfolio',
+        'sagemaker:GetSagemakerServicecatalogPortfolioStatus',
+      ],
+      resources: ['*'],
+    });
+
+    // IAM policy for Service Catalog
+    const serviceCatalogPolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'servicecatalog:AssociatePrincipalWithPortfolio',
+      ],
+      resources: ['*'],
+    });
+
+    // IAM policy for CloudWatch Logs
     const cloudWatchLogsPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
@@ -68,6 +89,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
       resources: [`arn:aws:logs:${region}:${account}:*`	],
     });
 
+    // IAM policy for IAM PassRole
     const sagemakerExecPassRole = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
@@ -87,7 +109,9 @@ export class RDISagemakerDomainCustomResource extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
-    customResourceLambda.addToRolePolicy(sagemakerManage);
+    customResourceLambda.addToRolePolicy(sagemakerDomainPolicy);
+    customResourceLambda.addToRolePolicy(sagemakerServicecatalogPortfolioPolicy);
+    customResourceLambda.addToRolePolicy(serviceCatalogPolicy);
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
     customResourceLambda.addToRolePolicy(sagemakerExecPassRole);
 
@@ -104,6 +128,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
       }
     });
     this.domainId = this.customResource.getAttString('DomainId');
+    this.portfolioId = this.customResource.getAttString('PortfolioId');
   }
 }
 
@@ -195,6 +220,7 @@ export class RDISagemakerStudio extends Construct {
   public readonly role: IRole;
   public readonly domainName: string;
   public readonly domainId: string;
+  public readonly portfolioId: string;
   public readonly userName: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerStudioProps) {
@@ -255,6 +281,7 @@ export class RDISagemakerStudio extends Construct {
       customResourceLayerArn: props.customResourceLayerArn,
     });
     this.domainId = domain.domainId;
+    this.portfolioId = domain.portfolioId;
 
     // Create SageMaker User
     const sagemakerUser = new RDISagemakerUser( this, 'User', {
