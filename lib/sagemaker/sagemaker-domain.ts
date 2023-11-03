@@ -91,10 +91,11 @@ export class RDISagemakerDomainCustomResource extends Construct {
       resources: [`arn:aws:logs:${region}:${account}:*`	],
     });
 
-    // IAM policy for IAM PassRole
-    const sagemakerExecPassRole = new PolicyStatement({
+    // IAM policy for IAM 
+    const iamPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
+        'iam:GetRole',
         'iam:PassRole',
       ],
       resources: [ props.defaultUserSettingsExecutionRoleArn	],
@@ -115,7 +116,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
     customResourceLambda.addToRolePolicy(sagemakerServicecatalogPortfolioPolicy);
     customResourceLambda.addToRolePolicy(serviceCatalogPolicy);
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
-    customResourceLambda.addToRolePolicy(sagemakerExecPassRole);
+    customResourceLambda.addToRolePolicy(iamPolicy);
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
