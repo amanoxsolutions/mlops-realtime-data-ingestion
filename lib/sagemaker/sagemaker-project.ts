@@ -11,6 +11,7 @@ interface RDISagemakerMlopsProjectCustomResourceProps {
   readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
+  readonly portfolioId : string;
 }
 
 export class RDISagemakerMlopsProjectCustomResource extends Construct {
@@ -86,6 +87,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       serviceToken: customResourceLambda.functionArn,
       properties: {
         ProjectName: props.sagemakerProjectName,
+        PortfolioId: props.portfolioId,
       }
     });
     this.projectId = this.customResource.getAttString('ProjectId');
@@ -97,12 +99,14 @@ interface RDISagemakerProjectProps {
   readonly removalPolicy?: RemovalPolicy;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
+  readonly portfolioId: string;
 }
   
 export class RDISagemakerProject extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
+  public readonly portfolioId: string;
   public readonly projectName: string;
   public readonly projectId: string;
 
@@ -111,6 +115,7 @@ export class RDISagemakerProject extends Construct {
 
     this.prefix = props.prefix;
     this.projectName =  `${this.prefix}-mlops`;
+    this.portfolioId = props.portfolioId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime;
 
@@ -124,6 +129,7 @@ export class RDISagemakerProject extends Construct {
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
       customResourceLayerArn: props.customResourceLayerArn,
+      portfolioId : this.portfolioId,
     });
     this.projectId = sagemakerProjectCustomResource.projectId;
   } 

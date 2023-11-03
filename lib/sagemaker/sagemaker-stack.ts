@@ -83,8 +83,7 @@ export class SagemakerStack extends Stack {
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
       customResourceLayerArn: customResourceLayerArn,
+      portfolioId: this.domain.portfolioId,
     });
-    // Add dependency of the SageMaker project on the Studio domain
-    this.project.node.addDependency(this.domain);
   }
 }

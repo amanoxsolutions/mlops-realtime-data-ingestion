@@ -33,6 +33,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
   public readonly runtime: Runtime;
   public readonly customResource: CustomResource;
   public readonly domainId: string;
+  public readonly portfolioId: string;
   public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerDomainCustomResourceProps) {
@@ -129,6 +130,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
       }
     });
     this.domainId = this.customResource.getAttString('DomainId');
+    this.portfolioId = this.customResource.getAttString('PortfolioId');
   }
 }
 
@@ -220,6 +222,7 @@ export class RDISagemakerStudio extends Construct {
   public readonly role: IRole;
   public readonly domainName: string;
   public readonly domainId: string;
+  public readonly portfolioId: string;
   public readonly userName: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerStudioProps) {
@@ -280,6 +283,7 @@ export class RDISagemakerStudio extends Construct {
       customResourceLayerArn: props.customResourceLayerArn,
     });
     this.domainId = domain.domainId;
+    this.portfolioId = domain.portfolioId;
 
     // Create SageMaker User
     const sagemakerUser = new RDISagemakerUser( this, 'User', {
