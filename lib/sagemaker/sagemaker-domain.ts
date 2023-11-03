@@ -57,7 +57,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
         'sagemaker:DeleteDomain',
         'sagemaker:UpdateDomain',
       ],
-      resources: [`arn:aws:sagemaker:${region}:${account}:domain/${this.prefix}*`],
+      resources: [`arn:aws:sagemaker:${region}:${account}:domain/*`],
     });
 
     const sagemakerServicecatalogPortfolioPolicy = new PolicyStatement({
