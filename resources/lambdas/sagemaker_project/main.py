@@ -87,9 +87,8 @@ def delete(event, _):
         # If it does not, just return as ther is nothing to delete
         try:
             response = sagemaker.describe_project(ProjectName=project_name)
-            logger.info(f"SageMaker project {project_name} exists: {response}")
         except ClientError as error:
-            if error.response["Error"]["Code"] == "ValidationException":
+            if error.response["Error"]["Code"] == "ResourceNotFound":
                 logger.info(f"SageMaker project {project_name} does not exist")
                 return
         # Delete the SageMaker project
