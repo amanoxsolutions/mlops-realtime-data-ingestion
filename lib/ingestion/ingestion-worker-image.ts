@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { Construct } from 'constructs';
 import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Effect, PolicyStatement, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Repository, TagMutability, IRepository } from 'aws-cdk-lib/aws-ecr';
@@ -36,10 +36,14 @@ export class cleanupEcrRepo extends Construct {
 
     const lambdaPurpose = 'CustomResourceToCleanupEcrImages'
 
-    const ecrPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: ['ecr:ListImages', 'ecr:BatchDeleteImage'],
-      resources: [this.ecrRepositoryArn],
+    const policyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['ecr:ListImages', 'ecr:BatchDeleteImage'],
+          resources: [this.ecrRepositoryArn],
+        }),
+      ],
     });
 
     // Create the role for the custom resource Lambda
@@ -48,7 +52,11 @@ export class cleanupEcrRepo extends Construct {
       roleName: `${this.prefix}-cr-cleanup-ecr-images-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
-    singeltonRole.addToPolicy(ecrPolicy);
+    new Policy(this, 'LambdaPolicy', {
+      policyName: `${this.prefix}-cr-cleanup-ecr-images-policy`,
+      document: policyDocument,
+      roles: [singeltonRole],
+    });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${this.prefix}-cr-cleanup-ecr-images`,

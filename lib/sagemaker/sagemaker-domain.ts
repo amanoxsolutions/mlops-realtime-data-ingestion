@@ -47,57 +47,58 @@ export class RDISagemakerDomainCustomResource extends Construct {
     this.removalPolicy = props.removalPolicy;
     this.customResourceLayerArn = props.customResourceLayerArn;
 
-    // IAM Policy for SageMaker Domain
-    const sagemakerDomainPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:CreateDomain',
-        'sagemaker:DescribeDomain',
-        'sagemaker:DeleteDomain',
-        'sagemaker:UpdateDomain',
+    const policyDocument = new PolicyDocument({
+      statements: [
+        // IAM Policy for SageMaker Domain
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateDomain',
+            'sagemaker:DescribeDomain',
+            'sagemaker:DeleteDomain',
+            'sagemaker:UpdateDomain',
+          ],
+          resources: [`arn:aws:sagemaker:${region}:${account}:domain/*`],
+        }),
+        // IAM Policy for SageMaker Service Catalog Portfolio
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:EnableSagemakerServicecatalogPortfolio',
+            'sagemaker:GetSagemakerServicecatalogPortfolioStatus',
+          ],
+          resources: ['*'],
+        }),
+        // IAM policy for Service Catalog
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'servicecatalog:ListAcceptedPortfolioShares',
+            'servicecatalog:AcceptPortfolioShare',
+            'servicecatalog:AssociatePrincipalWithPortfolio',
+          ],
+          resources: ['*'],
+        }),
+        // IAM policy for CloudWatch Logs
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
+        }),
+        // IAM policy for IAM 
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:GetRole',
+            'iam:PassRole',
+          ],
+          resources: [ props.defaultUserSettingsExecutionRoleArn	],
+        }),
       ],
-      resources: [`arn:aws:sagemaker:${region}:${account}:domain/*`],
-    });
-
-    const sagemakerServicecatalogPortfolioPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:EnableSagemakerServicecatalogPortfolio',
-        'sagemaker:GetSagemakerServicecatalogPortfolioStatus',
-      ],
-      resources: ['*'],
-    });
-
-    // IAM policy for Service Catalog
-    const serviceCatalogPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'servicecatalog:ListAcceptedPortfolioShares',
-        'servicecatalog:AcceptPortfolioShare',
-        'servicecatalog:AssociatePrincipalWithPortfolio',
-      ],
-      resources: ['*'],
-    });
-
-    // IAM policy for CloudWatch Logs
-    const cloudWatchLogsPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'logs:CreateLogGroup',
-        'logs:CreateLogStream',
-        'logs:PutLogEvents',
-      ],
-      resources: [`arn:aws:logs:${region}:${account}:*`	],
-    });
-
-    // IAM policy for IAM 
-    const iamPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'iam:GetRole',
-        'iam:PassRole',
-      ],
-      resources: [ props.defaultUserSettingsExecutionRoleArn	],
     });
 
     // Create the role for the custom resource Lambda
@@ -106,11 +107,11 @@ export class RDISagemakerDomainCustomResource extends Construct {
       roleName: `${this.prefix}-cr-manage-sagemaker-domain-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
-    singeltonRole.addToPolicy(sagemakerDomainPolicy);
-    singeltonRole.addToPolicy(sagemakerServicecatalogPortfolioPolicy);
-    singeltonRole.addToPolicy(serviceCatalogPolicy);
-    singeltonRole.addToPolicy(cloudWatchLogsPolicy);
-    singeltonRole.addToPolicy(iamPolicy);
+    new Policy(this, 'LambdaPolicy', {
+      policyName: `${this.prefix}-cr-manage-sagemaker-domain-policy`,
+      document: policyDocument,
+      roles: [singeltonRole],
+    });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${this.prefix}-cr-manage-sagemaker-domain`,
@@ -169,21 +170,24 @@ export class CleanupSagemakerDomainUser extends Construct {
     this.runtime = props.runtime;
     this.customResourceLayerArn = props.customResourceLayerArn;
 
-    const sagemakerList = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:List*'
+    const policyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:List*'
+          ],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeApp',
+            'sagemaker:DeleteApp'
+          ],
+          resources: [`arn:aws:sagemaker:${region}:${account}:app/${props.sagemakerStudioDomainId}/${props.sagemakerStudioUserProfile}/*/*`],
+        }),
       ],
-      resources: ['*'],
-    });
-
-    const sagemakerDeleteApp = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:DescribeApp',
-        'sagemaker:DeleteApp'
-      ],
-      resources: [`arn:aws:sagemaker:${region}:${account}:app/${props.sagemakerStudioDomainId}/${props.sagemakerStudioUserProfile}/*/*`],
     });
 
     // Create the role for the custom resource Lambda
@@ -192,8 +196,11 @@ export class CleanupSagemakerDomainUser extends Construct {
       roleName: `${this.prefix}-cr-cleanup-sagemaker-domain-user-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
-    singeltonRole.addToPolicy(sagemakerList);
-    singeltonRole.addToPolicy(sagemakerDeleteApp);
+    new Policy(this, 'LambdaPolicy', {
+      policyName: `${this.prefix}-cr-cleanup-sagemaker-domain-user-policy`,
+      document: policyDocument,
+      roles: [singeltonRole],
+    });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${this.prefix}-cr-cleanup-sagemaker-domain-user`,

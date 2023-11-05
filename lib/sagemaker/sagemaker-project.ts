@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { PolicyStatement, Effect, Role, ServicePrincipal, ArnPrincipal } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -35,47 +35,48 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     this.removalPolicy = props.removalPolicy;
     this.customResourceLayerArn = props.customResourceLayerArn;
 
-    // IAM policy for Service Catalog
-    const serviceCatalogPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'servicecatalog:List*',
-        'servicecatalog:Describe*',
-        'servicecatalog:SearchProducts*',
+    const policyDocument = new PolicyDocument({
+      statements: [
+        // IAM policy for Service Catalog
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'servicecatalog:List*',
+            'servicecatalog:Describe*',
+            'servicecatalog:SearchProducts*',
+          ],
+          resources: ['*'],
+        }),
+        // IAM Policy for SageMaker Project
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateProject',
+            'sagemaker:DescribeProject',
+            'sagemaker:DeleteProject',
+            'sagemaker:UpdateProject',
+          ],
+          resources: [`arn:aws:sagemaker:${region}:${account}:project/${this.prefix}*`],
+        }),
+        // IAM policy for CloudWatch Logs
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
+        }),
+        // IAM policy to assume the SageMaker Domain Execution Role in order ot create the SageMaker Project
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sts:AssumeRole',
+          ],
+          resources: [props.domainExecutionRole.roleArn],
+        }),
       ],
-      resources: ['*'],
-    });
-
-    // IAM Policy for SageMaker Project
-    const sagemakerProjectPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sagemaker:CreateProject',
-        'sagemaker:DescribeProject',
-        'sagemaker:DeleteProject',
-        'sagemaker:UpdateProject',
-      ],
-      resources: [`arn:aws:sagemaker:${region}:${account}:project/${this.prefix}*`],
-    });
-
-    // IAM policy for CloudWatch Logs
-    const cloudWatchLogsPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'logs:CreateLogGroup',
-        'logs:CreateLogStream',
-        'logs:PutLogEvents',
-      ],
-      resources: [`arn:aws:logs:${region}:${account}:*`	],
-    });
-
-    // IAM policy to assume the SageMaker Domain Execution Role in order ot create the SageMaker Project
-    const stsAssumeRolePolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: [
-        'sts:AssumeRole',
-      ],
-      resources: [props.domainExecutionRole.roleArn],
     });
 
     // Create the role for the custom resource Lambda
@@ -84,10 +85,11 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       roleName: `${this.prefix}-cr-manage-sagemaker-project-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
-    singeltonRole.addToPolicy(serviceCatalogPolicy);
-    singeltonRole.addToPolicy(sagemakerProjectPolicy);
-    singeltonRole.addToPolicy(cloudWatchLogsPolicy);
-    singeltonRole.addToPolicy(stsAssumeRolePolicy);
+    new Policy(this, 'LambdaPolicy', {
+      policyName: `${this.prefix}-cr-manage-sagemaker-project-policy`,
+      document: policyDocument,
+      roles: [singeltonRole],
+    });
 
     // We also need the SageMaker domain execution role to trust the custom resource role
     props.domainExecutionRole.assumeRolePolicy?.addStatements(

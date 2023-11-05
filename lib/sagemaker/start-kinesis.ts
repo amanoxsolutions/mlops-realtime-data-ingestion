@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { CustomResource, Duration, Stack } from 'aws-cdk-lib';
-import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Effect, PolicyStatement, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 
@@ -29,10 +29,14 @@ export class RDIStartKinesisAnalytics extends Construct {
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
 
-    const kinesisAnalyticsPolicy = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication'],
-        resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.kinesis_analytics_name}`],
+    const policyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication'],
+          resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.kinesis_analytics_name}`],
+        }),
+      ],
     });
 
     // Create the role for the custom resource Lambda
@@ -41,7 +45,11 @@ export class RDIStartKinesisAnalytics extends Construct {
       roleName: `${this.prefix}-cr-start-kinesis-app-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
-    singeltonRole.addToPolicy(kinesisAnalyticsPolicy);
+    new Policy(this, 'LambdaPolicy', {
+      policyName: `${this.prefix}-cr-start-kinesis-app-policy`,
+      document: policyDocument,
+      roles: [singeltonRole],
+    });
 
     const customResourceHandler = new SingletonFunction(this, 'Singleton', {
       functionName: `${this.prefix}-cr-start-kinesis-app`,

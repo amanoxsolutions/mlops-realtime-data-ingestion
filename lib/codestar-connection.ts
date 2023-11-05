@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Duration, CustomResource } from 'aws-cdk-lib';
-import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Effect, PolicyStatement, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -21,10 +21,14 @@ export class CodestarConnection extends Construct {
     this.prefix = props.prefix;
     const lambdaPurpose = 'CustomResourceToGetCodeStarConnectionArn';
 
-    const connectionPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: ['codestar-connections:ListConnections'],
-      resources: ['*'],
+    const policyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['codestar-connections:ListConnections'],
+          resources: ['*'],
+        }),
+      ],
     });
 
     // Create the role for the custom resource Lambda
@@ -33,7 +37,11 @@ export class CodestarConnection extends Construct {
       roleName: `${this.prefix}-cr-get-codestar-connection-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
-    singeltonRole.addToPolicy(connectionPolicy);
+    new Policy(this, 'LambdaPolicy', {
+      policyName: `${this.prefix}-cr-get-codestar-connection-policy`,
+      document: policyDocument,
+      roles: [singeltonRole],
+    });
 
     const layer = new PythonLayerVersion(this, 'Layer', {
       entry: `resources/lambdas/custom_resource_layer`,
