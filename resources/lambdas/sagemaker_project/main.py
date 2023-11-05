@@ -61,17 +61,9 @@ def create(event, _):
         }
     )
     project_id = response["ProjectId"]
-    logger.info(f"Created SageMaker project with ID: {project_id}")
-    # Wait for the SageMaker project to be created
-    created = False
-    while not created:
-        response = sagemaker.describe_project(ProjectName=project_name)
-        project_status = response.get("ProjectStatus")
-        time.sleep(5)
-        logger.info(f"SageMaker project status: {project_status}")
-        if project_status == "CreateCompleted":
-            created = True
-    logger.info(f"SageMaker project created successfully: {project_id}")
+    logger.info(f"Initiated the creation of the SageMaker project with ID: {project_id}")
+    # We do not wait for the SageMaker project to be created because 
+    # it is created by another CloudFormation Stack and it takes too long
     helper.Data.update({"ProjectId": project_id})
     return project_id
 

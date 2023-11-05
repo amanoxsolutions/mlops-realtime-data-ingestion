@@ -97,7 +97,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       role: singeltonRole,
       code: Code.fromAsset('resources/lambdas/sagemaker_project'),
       handler: 'main.lambda_handler',
-      timeout: Duration.minutes(10),
+      timeout: Duration.seconds(5),
       runtime: this.runtime,
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
@@ -115,7 +115,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     // The policy must be created and attached to the role before creating the custom resource
     // otherwise the custom resource will fail to create
     this.customResource.node.addDependency(singeltonPolicy);
-    // Get the ProjectId from the custom resource output
+    // Get the ProjectId from the custom resource
     this.projectId = this.customResource.getAttString('ProjectId');
   }
 }
