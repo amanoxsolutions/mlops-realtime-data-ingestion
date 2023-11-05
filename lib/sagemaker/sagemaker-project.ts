@@ -78,8 +78,10 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       resources: [props.domainExecutionRole.roleArn],
     });
 
+    // Create the role for the custom resource Lambda
+    // We do this manually to be able to give it a human readable name
     const singeltonRole = new Role(this, 'SingeltonRole', {
-      roleName: `${this.prefix}-manage-sagemaker-project-role`,
+      roleName: `${this.prefix}-cr-manage-sagemaker-project-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
     singeltonRole.addToPolicy(serviceCatalogPolicy);
@@ -87,8 +89,17 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     singeltonRole.addToPolicy(cloudWatchLogsPolicy);
     singeltonRole.addToPolicy(stsAssumeRolePolicy);
 
+    // We also need the SageMaker domain execution role to trust the custom resource role
+    props.domainExecutionRole.assumeRolePolicy?.addStatements(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['sts:AssumeRole'],
+        principals: [singeltonRole.grantPrincipal],
+      })
+    );
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${this.prefix}-manage-sagemaker-project`,
+      functionName: `${this.prefix}-cr-manage-sagemaker-project`,
       lambdaPurpose: lambdaPurpose,
       uuid: '529ab48d-3fe7-44a1-9abe-232b36c41763',
       role: singeltonRole,
@@ -99,15 +110,6 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
-
-    // We also need the SageMaker domain execution role to trust the custom resource role
-    props.domainExecutionRole.assumeRolePolicy?.addStatements(
-      new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: ['sts:AssumeRole'],
-        principals: [singeltonRole.grantPrincipal],
-      })
-    );
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
@@ -143,7 +145,7 @@ export class RDISagemakerProject extends Construct {
     super(scope, id);
 
     this.prefix = props.prefix;
-    this.projectName =  `${this.prefix}-mlops`;
+    this.projectName =  `${this.prefix}-smproject`;
     this.portfolioId = props.portfolioId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime;

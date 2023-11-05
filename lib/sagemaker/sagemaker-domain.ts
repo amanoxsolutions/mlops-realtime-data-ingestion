@@ -100,10 +100,23 @@ export class RDISagemakerDomainCustomResource extends Construct {
       resources: [ props.defaultUserSettingsExecutionRoleArn	],
     });
 
+    // Create the role for the custom resource Lambda
+    // We do this manually to be able to give it a human readable name
+    const singeltonRole = new Role(this, 'SingeltonRole', {
+      roleName: `${this.prefix}-cr-manage-sagemaker-domain-role`,
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+    });
+    singeltonRole.addToPolicy(sagemakerDomainPolicy);
+    singeltonRole.addToPolicy(sagemakerServicecatalogPortfolioPolicy);
+    singeltonRole.addToPolicy(serviceCatalogPolicy);
+    singeltonRole.addToPolicy(cloudWatchLogsPolicy);
+    singeltonRole.addToPolicy(iamPolicy);
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${this.prefix}-manage-sagemaker-domain`,
+      functionName: `${this.prefix}-cr-manage-sagemaker-domain`,
       lambdaPurpose: lambdaPurpose,
       uuid: '61e6b537-fe77-4e73-8304-1eb3480b0867',
+      role: singeltonRole,
       code: Code.fromAsset('resources/lambdas/sagemaker_domain'),
       handler: 'main.lambda_handler',
       timeout: Duration.minutes(10),
@@ -111,11 +124,6 @@ export class RDISagemakerDomainCustomResource extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
-    customResourceLambda.addToRolePolicy(sagemakerDomainPolicy);
-    customResourceLambda.addToRolePolicy(sagemakerServicecatalogPortfolioPolicy);
-    customResourceLambda.addToRolePolicy(serviceCatalogPolicy);
-    customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
-    customResourceLambda.addToRolePolicy(iamPolicy);
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
@@ -178,10 +186,20 @@ export class CleanupSagemakerDomainUser extends Construct {
       resources: [`arn:aws:sagemaker:${region}:${account}:app/${props.sagemakerStudioDomainId}/${props.sagemakerStudioUserProfile}/*/*`],
     });
 
+    // Create the role for the custom resource Lambda
+    // We do this manually to be able to give it a human readable name
+    const singeltonRole = new Role(this, 'SingeltonRole', {
+      roleName: `${this.prefix}-cr-cleanup-sagemaker-domain-user-role`,
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+    });
+    singeltonRole.addToPolicy(sagemakerList);
+    singeltonRole.addToPolicy(sagemakerDeleteApp);
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${this.prefix}-cleanup-sagemaker-domain-user`,
+      functionName: `${this.prefix}-cr-cleanup-sagemaker-domain-user`,
       lambdaPurpose: lambdaPurpose,
       uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
+      role: singeltonRole,
       code: Code.fromAsset('resources/lambdas/cleanup_sagemaker_user'),
       handler: 'main.lambda_handler',
       timeout: Duration.minutes(15),
@@ -189,8 +207,6 @@ export class CleanupSagemakerDomainUser extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
-    customResourceLambda.addToRolePolicy(sagemakerList);
-    customResourceLambda.addToRolePolicy(sagemakerDeleteApp);
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
