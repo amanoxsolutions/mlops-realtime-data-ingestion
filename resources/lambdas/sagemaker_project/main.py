@@ -84,9 +84,10 @@ def delete(event, _):
     if removal_policy == "destroy":
         sagemaker = get_sagemaker_client_with_domain_execution_role(domain_execution_role_arn)
         # Check if the SageMaker project exists.
-        # If it does not, just return as there is nothing to delete
+        # If it does not, just return as ther is nothing to delete
         try:
             response = sagemaker.describe_project(ProjectName=project_name)
+            logger.info(f"SageMaker project {project_name} exists: {response}")
         except ClientError as error:
             if error.response["Error"]["Code"] == "ValidationException":
                 logger.info(f"SageMaker project {project_name} does not exist")
@@ -95,18 +96,9 @@ def delete(event, _):
         response = sagemaker.delete_project(
             ProjectName=project_name
         )
-        logger.info(f"Deleted SageMaker project: {response}")
-        # Wait for the SageMaker project to be deleted
-        deleted = False
-        while not deleted:
-            try:
-                sagemaker.describe_project(ProjectName=project_name)
-            except ClientError as error:
-                if error.response["Error"]["Code"] == "ValidationException":
-                    logger.info(f"Deleted SageMaker project {project_name} successfully")
-                    deleted = True
-                    return
-            time.sleep(5)
+        logger.info(f"Initiated the SageMaker project deletion: {response}")
+        # We do not wait for the SageMaker project to be deleted because 
+        # it is deleted by another CloudFormation Stack and it takes too long
 
 @helper.update
 def do_nothing(_, __):
