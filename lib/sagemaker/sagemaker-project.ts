@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { PolicyStatement, Effect, IRole } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect, Role } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -12,7 +12,7 @@ interface RDISagemakerMlopsProjectCustomResourceProps {
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
   readonly portfolioId : string;
-  readonly domainExecutionRole: IRole;
+  readonly domainExecutionRole: Role;
 }
 
 export class RDISagemakerMlopsProjectCustomResource extends Construct {
@@ -95,7 +95,13 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     customResourceLambda.addToRolePolicy(stsAssumeRolePolicy);
 
     // We also need the SageMaker domain execution role to trust the custom resource role
-    props.domainExecutionRole.grantAssumeRole(customResourceLambda.role!);
+    props.domainExecutionRole.assumeRolePolicy?.addStatements(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['sts:AssumeRole'],
+        principals: [customResourceLambda.grantPrincipal],
+      })
+    );
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
@@ -116,7 +122,7 @@ interface RDISagemakerProjectProps {
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
   readonly portfolioId: string;
-  readonly domainExecutionRole: IRole;
+  readonly domainExecutionRole: Role;
 }
   
 export class RDISagemakerProject extends Construct {

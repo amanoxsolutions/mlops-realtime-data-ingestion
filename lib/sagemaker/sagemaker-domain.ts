@@ -2,7 +2,6 @@ import hash = require('object-hash');
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy  } from 'aws-cdk-lib';
 import {
-  IRole,
   ManagedPolicy,
   Policy,
   PolicyDocument,
@@ -220,7 +219,7 @@ export class RDISagemakerStudio extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
-  public readonly role: IRole;
+  public readonly role: Role;
   public readonly domainName: string;
   public readonly domainId: string;
   public readonly portfolioId: string;
