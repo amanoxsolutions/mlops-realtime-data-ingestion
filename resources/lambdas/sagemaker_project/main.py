@@ -99,6 +99,8 @@ def delete(event, _):
         logger.info(f"Initiated the SageMaker project deletion: {response}")
         # We do not wait for the SageMaker project to be deleted because 
         # it is deleted by another CloudFormation Stack and it takes too long
+    else:
+        logger.info(f"Skipping deletion of SageMaker project {project_name} because removal policy is set to {removal_policy}")
 
 @helper.update
 def do_nothing(_, __):
