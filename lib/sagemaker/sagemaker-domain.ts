@@ -8,7 +8,6 @@ import {
   PolicyDocument,
   PolicyStatement,
   Role,
-  CompositePrincipal,
   ServicePrincipal,
   Effect,
 } from 'aws-cdk-lib/aws-iam';
@@ -240,13 +239,9 @@ export class RDISagemakerStudio extends Construct {
     // Create SageMaker Studio Domain
     //
     // Create the IAM Role for SagMaker Studio Domain
-    // The role is also assumed by the Lambda function creating the SageMaker project for the domain
     this.role = new Role(this, 'StudioRole', {
       roleName: `${this.prefix}-sagemaker-studio-role`,
-      assumedBy: new CompositePrincipal(
-        new ServicePrincipal('sagemaker.amazonaws.com'),
-        new ServicePrincipal('lambda.amazonaws.com'),
-      ),
+      assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
     });
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'));

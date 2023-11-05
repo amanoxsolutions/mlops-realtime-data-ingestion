@@ -94,6 +94,9 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
     customResourceLambda.addToRolePolicy(stsAssumeRolePolicy);
 
+    // We also need the SageMaker domain execution role to trust the custom resource role
+    props.domainExecutionRole.grantAssumeRole(customResourceLambda.role!);
+
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
       properties: {
