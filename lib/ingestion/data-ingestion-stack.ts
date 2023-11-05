@@ -102,7 +102,7 @@ export class RealtimeDataIngestionStack extends Stack {
       },
       bucketProps: { 
         bucketName: dataBucketName,
-        autoDeleteObjects: this.removalPolicy == RemovalPolicy.DESTROY,
+        autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
         removalPolicy: this.removalPolicy,
         versioned: this.s3Versioning,
       },
