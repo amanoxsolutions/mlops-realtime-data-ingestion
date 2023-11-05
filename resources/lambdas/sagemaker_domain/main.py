@@ -95,6 +95,15 @@ def delete(event, _):
     domain_properties = event.get("ResourceProperties")
     removal_policy = domain_properties.get("RemovalPolicy", "destroy").lower()
     if removal_policy == "destroy":
+        # Check if the SageMaker domain exists.
+        # If it does not, just return as there is nothing to delete
+        try:
+            sagemaker.describe_domain(DomainId=domain_id)
+        except ClientError as error:
+            if error.response["Error"]["Code"] == "ValidationException":
+                logger.info(f"SageMaker domain {domain_id} does not exist")
+                return
+        # Delete the SageMaker domain
         logger.info(f"Deleting domain {domain_id} and its EFS file system")
         response = sagemaker.delete_domain(
             DomainId=domain_id,
@@ -102,12 +111,13 @@ def delete(event, _):
                 "HomeEfsFileSystem": "Delete"
             }
         )
+        # Wait for the SageMaker domain to be deleted
         deleted = False
         while not deleted:
             try:
                 sagemaker.describe_domain(DomainId=domain_id)
             except ClientError as error:
-                if error.response["Error"]["Code"] == "ResourceNotFound":
+                if error.response["Error"]["Code"] == "ValidationException":
                     logger.info(f"Deleted domain {domain_id} successfully")
                     deleted = True
                     return

@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect, IRole } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -12,6 +12,7 @@ interface RDISagemakerMlopsProjectCustomResourceProps {
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
   readonly portfolioId : string;
+  readonly domainExecutionRole: IRole;
 }
 
 export class RDISagemakerMlopsProjectCustomResource extends Construct {
@@ -68,6 +69,15 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       resources: [`arn:aws:logs:${region}:${account}:*`	],
     });
 
+    // IAM policy to assume the SageMaker Domain Execution Role in order ot create the SageMaker Project
+    const stsAssumeRolePolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        'sts:AssumeRole',
+      ],
+      resources: [props.domainExecutionRole.roleArn],
+    });
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${this.prefix}-manage-sagemaker-project`,
       lambdaPurpose: lambdaPurpose,
@@ -82,12 +92,15 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     customResourceLambda.addToRolePolicy(serviceCatalogPolicy);
     customResourceLambda.addToRolePolicy(sagemakerProjectPolicy);
     customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
+    customResourceLambda.addToRolePolicy(stsAssumeRolePolicy);
 
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
       properties: {
         ProjectName: props.sagemakerProjectName,
         PortfolioId: props.portfolioId,
+        DomainExecutionRoleArn: props.domainExecutionRole.roleArn,
+        RemovalPolicy: this.removalPolicy,
       }
     });
     this.projectId = this.customResource.getAttString('ProjectId');
@@ -100,6 +113,7 @@ interface RDISagemakerProjectProps {
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
   readonly portfolioId: string;
+  readonly domainExecutionRole: IRole;
 }
   
 export class RDISagemakerProject extends Construct {
@@ -130,6 +144,7 @@ export class RDISagemakerProject extends Construct {
       runtime: this.runtime,
       customResourceLayerArn: props.customResourceLayerArn,
       portfolioId : this.portfolioId,
+      domainExecutionRole: props.domainExecutionRole,
     });
     this.projectId = sagemakerProjectCustomResource.projectId;
   } 
