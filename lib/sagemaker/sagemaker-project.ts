@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { PolicyStatement, Effect, Role } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect, Role, ServicePrincipal, ArnPrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -78,10 +78,20 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       resources: [props.domainExecutionRole.roleArn],
     });
 
+    const singeltonRole = new Role(this, 'SingeltonRole', {
+      roleName: `${this.prefix}-manage-sagemaker-project-role`,
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+    });
+    singeltonRole.addToPolicy(serviceCatalogPolicy);
+    singeltonRole.addToPolicy(sagemakerProjectPolicy);
+    singeltonRole.addToPolicy(cloudWatchLogsPolicy);
+    singeltonRole.addToPolicy(stsAssumeRolePolicy);
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
       functionName: `${this.prefix}-manage-sagemaker-project`,
       lambdaPurpose: lambdaPurpose,
       uuid: '529ab48d-3fe7-44a1-9abe-232b36c41763',
+      role: singeltonRole,
       code: Code.fromAsset('resources/lambdas/sagemaker_project'),
       handler: 'main.lambda_handler',
       timeout: Duration.minutes(10),
@@ -89,17 +99,13 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
-    customResourceLambda.addToRolePolicy(serviceCatalogPolicy);
-    customResourceLambda.addToRolePolicy(sagemakerProjectPolicy);
-    customResourceLambda.addToRolePolicy(cloudWatchLogsPolicy);
-    customResourceLambda.addToRolePolicy(stsAssumeRolePolicy);
 
     // We also need the SageMaker domain execution role to trust the custom resource role
     props.domainExecutionRole.assumeRolePolicy?.addStatements(
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sts:AssumeRole'],
-        principals: [customResourceLambda.grantPrincipal],
+        principals: [singeltonRole.grantPrincipal],
       })
     );
 
