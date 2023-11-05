@@ -73,11 +73,9 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-manage-sagemaker-project-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    });
-    new Policy(this, 'LambdaPolicy', {
-      policyName: `${this.prefix}-cr-manage-sagemaker-project-policy`,
-      document: policyDocument,
-      roles: [singeltonRole],
+      inlinePolicies: {
+        'lambda-cr-manage-sagemaker-project-policy': policyDocument,
+      },
     });
 
     // We also need the SageMaker domain execution role to trust the custom resource role

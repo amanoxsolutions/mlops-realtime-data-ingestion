@@ -36,11 +36,9 @@ export class CodestarConnection extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-get-codestar-connection-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    });
-    new Policy(this, 'LambdaPolicy', {
-      policyName: `${this.prefix}-cr-get-codestar-connection-policy`,
-      document: policyDocument,
-      roles: [singeltonRole],
+      inlinePolicies: {
+        'lambda-cr-get-codestar-connection-policy': policyDocument,
+      },
     });
 
     const layer = new PythonLayerVersion(this, 'Layer', {

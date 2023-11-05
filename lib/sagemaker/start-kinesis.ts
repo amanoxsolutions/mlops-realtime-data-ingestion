@@ -44,11 +44,9 @@ export class RDIStartKinesisAnalytics extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-start-kinesis-app-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    });
-    new Policy(this, 'LambdaPolicy', {
-      policyName: `${this.prefix}-cr-start-kinesis-app-policy`,
-      document: policyDocument,
-      roles: [singeltonRole],
+      inlinePolicies: {
+        'lambda-cr-start-kinesis-app-policy': policyDocument,
+      },
     });
 
     const customResourceHandler = new SingletonFunction(this, 'Singleton', {

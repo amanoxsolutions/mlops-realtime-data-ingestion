@@ -106,11 +106,9 @@ export class RDISagemakerDomainCustomResource extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-manage-sagemaker-domain-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    });
-    new Policy(this, 'LambdaPolicy', {
-      policyName: `${this.prefix}-cr-manage-sagemaker-domain-policy`,
-      document: policyDocument,
-      roles: [singeltonRole],
+      inlinePolicies: {
+        'lambda-cr-manage-sagemaker-domain-policy': policyDocument
+      },
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
@@ -195,11 +193,9 @@ export class CleanupSagemakerDomainUser extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-cleanup-sagemaker-domain-user-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    });
-    new Policy(this, 'LambdaPolicy', {
-      policyName: `${this.prefix}-cr-cleanup-sagemaker-domain-user-policy`,
-      document: policyDocument,
-      roles: [singeltonRole],
+      inlinePolicies: {
+        'lambda-cr-cleanup-sagemaker-domain-user-policy': policyDocument
+      },
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {

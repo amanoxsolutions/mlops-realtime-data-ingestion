@@ -51,11 +51,9 @@ export class cleanupEcrRepo extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-cleanup-ecr-images-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-    });
-    new Policy(this, 'LambdaPolicy', {
-      policyName: `${this.prefix}-cr-cleanup-ecr-images-policy`,
-      document: policyDocument,
-      roles: [singeltonRole],
+      inlinePolicies: {
+        'lambda-cr-cleanup-ecr-images-policy': policyDocument,
+      },
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
