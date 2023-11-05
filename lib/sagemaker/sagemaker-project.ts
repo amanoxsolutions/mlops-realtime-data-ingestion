@@ -73,9 +73,12 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-manage-sagemaker-project-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-      inlinePolicies: {
-        'lambda-cr-manage-sagemaker-project-policy': policyDocument,
-      },
+    });
+    // Create the inline policy separatly to avoid circular dependencies
+    const singeltonPolicy = new Policy(this, 'SingeltonPolicy', {
+      policyName: 'lambda-cr-manage-sagemaker-project-policy',
+      document: policyDocument,
+      roles: [singeltonRole],
     });
 
     // We also need the SageMaker domain execution role to trust the custom resource role
@@ -109,6 +112,10 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
         RemovalPolicy: this.removalPolicy,
       }
     });
+    // The policy must be created and attached to the role before creating the custom resource
+    // otherwise the custom resource will fail to create
+    this.customResource.node.addDependency(singeltonPolicy);
+    // Get the ProjectId from the custom resource output
     this.projectId = this.customResource.getAttString('ProjectId');
   }
 }

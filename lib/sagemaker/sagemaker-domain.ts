@@ -106,9 +106,12 @@ export class RDISagemakerDomainCustomResource extends Construct {
     const singeltonRole = new Role(this, 'SingeltonRole', {
       roleName: `${this.prefix}-cr-manage-sagemaker-domain-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
-      inlinePolicies: {
-        'lambda-cr-manage-sagemaker-domain-policy': policyDocument
-      },
+    });
+    // Create the inline policy separatly to avoid circular dependencies
+    const singeltonPolicy = new Policy(this, 'SingeltonPolicy', {
+      policyName: 'lambda-cr-manage-sagemaker-domain-policy',
+      document: policyDocument,
+      roles: [singeltonRole],
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
@@ -136,6 +139,10 @@ export class RDISagemakerDomainCustomResource extends Construct {
         RemovalPolicy: this.removalPolicy,
       }
     });
+    // The policy must be created and attached to the role before creating the custom resource
+    // otherwise the custom resource will fail to create
+    this.customResource.node.addDependency(singeltonPolicy);
+    // Get the DomainId and PortfolioId from the custom resource output
     this.domainId = this.customResource.getAttString('DomainId');
     this.portfolioId = this.customResource.getAttString('PortfolioId');
   }
