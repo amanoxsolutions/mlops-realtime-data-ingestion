@@ -268,6 +268,7 @@ export class RDISagemakerStudio extends Construct {
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
     this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'));
 
+    // Policy to allow access to the S3 buckets
     const policyDocument = new PolicyDocument({
       statements: [
         new PolicyStatement({

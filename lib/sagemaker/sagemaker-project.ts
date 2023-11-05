@@ -47,17 +47,6 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
           ],
           resources: ['*'],
         }),
-        // IAM Policy for SageMaker Project
-        new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'sagemaker:CreateProject',
-            'sagemaker:DescribeProject',
-            'sagemaker:DeleteProject',
-            'sagemaker:UpdateProject',
-          ],
-          resources: [`arn:aws:sagemaker:${region}:${account}:project/${this.prefix}*`],
-        }),
         // IAM policy for CloudWatch Logs
         new PolicyStatement({
           effect: Effect.ALLOW,
