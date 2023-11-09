@@ -54,7 +54,7 @@ export class RDISagemakerUser extends Construct {
       ],
     });
     // Add access to raw data bucket
-    userRole.attachInlinePolicy(new Policy(this, 'Policy', {
+    userRole.attachInlinePolicy(new Policy(this, 'S3Policy', {
       policyName: `${this.prefix}-ingestion-bucket-access`,
       document: new PolicyDocument({
         statements: [
@@ -68,6 +68,27 @@ export class RDISagemakerUser extends Construct {
               's3:DeleteObjectVersion', 
             ],
             resources: [props.dataBucketArn, `${props.dataBucketArn}/*`],
+          }),
+        ],
+      })
+    }));
+    // Add access to data catalog partitions
+    // Note: This was not necessary before and should be included in the AmazonSageMakerFullAccess policy
+    // That policy gives GetDatabases, GetTables, GetTable on everything but not GetPartitions
+    userRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
+      policyName: `${this.prefix}-missing-glue-partitions`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'glue:GetPartitions', 
+            ],
+            resources: [
+              'arn:aws:glue:*:*:catalog',
+              'arn:aws:glue:*:*:database/sagemaker_featurestore',
+              'arn:aws:glue:*:*:table/sagemaker_featurestore/*'
+            ],
           }),
         ],
       })

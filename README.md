@@ -40,3 +40,6 @@ Most of the architecture is fully automated through the CDK.
 You do not have much to configure and can directly play with the application and watch it ingest and aggregate the data in near real time.
 * [Deploy the Data Ingestion Environment](./doc/DEPLOYMENT.md)
 * [The Data Ingestion](./doc/INGESTION.md)
+
+## Cost
+This demo deploys many services (e.g. Fargate, DynamoDB, Kinesis Firehose, Kinesys Analytics) and must be run for several days to collect enough data to be able to start training a model. This demo do generate costs which could be expensive, depending on your budget. The demo might cost about 15-20$ a day to run.

@@ -6,8 +6,13 @@ import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
 import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
 import { RDILambda } from '../lambda';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
 import * as sourceSchema from '../../resources/sagemaker/source-schema.json';
+import { RDIStartKinesisAnalytics } from './start-kinesis';
+import { CfnTrigger, CfnJob } from 'aws-cdk-lib/aws-glue';
+import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
+
 
 const fs = require('fs');
 const path = require('path');
@@ -23,11 +28,14 @@ interface RDIFeatureStoreProps {
   readonly s3Suffix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly firehoseStreamArn: string;
+  readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
 }
 
 export class RDIFeatureStore extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
+  public readonly runtime: Runtime;
   public readonly aggFeatureGroup: CfnFeatureGroup;
   public readonly bucket: IBucket;
   public readonly analyticsStream: CfnApplication;
@@ -37,6 +45,7 @@ export class RDIFeatureStore extends Construct {
 
     this.prefix = props.prefix;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
+    this.runtime = props.runtime;
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
@@ -50,7 +59,7 @@ export class RDIFeatureStore extends Construct {
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,
-      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
+      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
     });
 
 
@@ -115,6 +124,7 @@ export class RDIFeatureStore extends Construct {
       prefix: this.prefix,
       name: 'analytics-to-featurestore',
       codePath: 'resources/lambdas/analytics_to_featurestore',
+      runtime: this.runtime,
       memorySize: 512,
       timeout: Duration.seconds(60),
       hasLayer: true,
@@ -228,6 +238,14 @@ export class RDIFeatureStore extends Construct {
       ],
     });
 
+    const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
+      prefix: this.prefix,
+      runtime: this.runtime,
+      kinesis_analytics_name: analyticsAppName,
+      customResourceLayerArn: props.customResourceLayerArn,
+    });
+    startKinesisAnalytics.node.addDependency(this.analyticsStream)
+
     const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
       applicationName: analyticsAppName,
       output: {
@@ -242,5 +260,79 @@ export class RDIFeatureStore extends Construct {
       }
     });
     analyticsOutput.node.addDependency(this.analyticsStream);
+
+    const glueAssetsBucket = new Bucket(this, 'GlueAssetsBucket', {
+      bucketName: `${this.prefix}-glue-assets-${props.s3Suffix}`,
+      accessControl: BucketAccessControl.PRIVATE,
+      encryption: BucketEncryption.S3_MANAGED,
+      removalPolicy: this.removalPolicy,
+      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
+    });
+
+    const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
+      sources: [Source.asset('./resources/glue')], 
+      destinationBucket: glueAssetsBucket,
+      destinationKeyPrefix: 'scripts',
+    });
+
+    const glueRole = new Role(this, 'GlueRole', {
+      roleName: `${this.prefix}-glue-role`,
+      assumedBy:  new ServicePrincipal("glue.amazonaws.com"),
+    });
+    glueRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
+      policyName: `${this.prefix}-glue-job-s3-bucket-access`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
+            actions: [
+              "s3:PutObject",
+              "s3:GetObject",
+              "s3:ListBucket",
+              "s3:DeleteObject"
+            ] 
+          }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            resources: [glueAssetsBucket.bucketArn, `${glueAssetsBucket.bucketArn}/*`],
+            actions: [
+              "s3:GetObject",
+              "s3:ListBucket"
+            ] 
+          })
+        ]
+      })
+    }));
+
+    const glueJob = new CfnJob(this, 'GlueJob', {
+      name: `${this.prefix}-glue-job`,
+      command: {
+        name: 'glueetl',
+        pythonVersion: '3',
+        scriptLocation: `s3://${glueAssetsBucket.bucketName}/scripts/FeatureStoreAggregateParquet.py`, 
+      },
+      role: glueRole.roleName,
+      glueVersion: '4.0',
+      timeout: 60,
+      defaultArguments: {
+        "--s3_bucket_name": this.bucket.bucketName,
+        "--prefix": `${account}/sagemaker/${region}/offline-store/`,
+        "--target_file_size_in_bytes": 536870912,
+      }
+    });
+    glueJob.node.addDependency(glueDeployment)
+
+    const glueTrigger = new CfnTrigger(this, "GlueTrigger", {
+      name: `${this.prefix}-glue-trigger`,
+      actions: [{
+        jobName: glueJob.name,
+        timeout: 60,
+      }],
+      type: 'SCHEDULED',
+      schedule: 'cron(0 0/1 * * ? *)',
+      description: 'Aggregate parquet files in SageMaker Feature Store',
+      startOnCreation: true,
+    });
   }
 }
