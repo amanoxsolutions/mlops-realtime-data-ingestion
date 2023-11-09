@@ -7,7 +7,7 @@ import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 interface RDISagemakerMlopsProjectCustomResourceProps {
   readonly prefix: string;
-  readonly sagemakerProjectName : string;
+  readonly resourcePrefix : string;
   readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
@@ -21,6 +21,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
   public readonly runtime: Runtime;
   public readonly customResource: CustomResource;
   public readonly projectId: string;
+  public readonly projectName: string;
   public readonly customResourceLayerArn: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerMlopsProjectCustomResourceProps) {
@@ -106,7 +107,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     this.customResource = new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,
       properties: {
-        ProjectName: props.sagemakerProjectName,
+        ResourcePrefix: props.resourcePrefix,
         PortfolioId: props.portfolioId,
         DomainExecutionRoleArn: props.domainExecutionRole.roleArn,
         RemovalPolicy: this.removalPolicy,
@@ -115,14 +116,14 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     // The policy must be created and attached to the role before creating the custom resource
     // otherwise the custom resource will fail to create
     this.customResource.node.addDependency(singeltonPolicy);
-    // Get the ProjectId from the custom resource
+    // Get the ProjectId and ProjectName from the custom resource
     this.projectId = this.customResource.getAttString('ProjectId');
+    this.projectName = this.customResource.getAttString('ProjectName');
   }
 }
 
 interface RDISagemakerProjectProps {
   readonly prefix: string;
-  readonly suffix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
@@ -132,7 +133,6 @@ interface RDISagemakerProjectProps {
   
 export class RDISagemakerProject extends Construct {
   public readonly prefix: string;
-  public readonly suffix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
   public readonly portfolioId: string;
@@ -143,8 +143,6 @@ export class RDISagemakerProject extends Construct {
     super(scope, id);
 
     this.prefix = props.prefix;
-    this.suffix = props.suffix;
-    this.projectName =  `${this.prefix}-proj-${this.suffix}`;
     this.portfolioId = props.portfolioId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime; 
@@ -155,7 +153,7 @@ export class RDISagemakerProject extends Construct {
     // Create the SageMaker Studio Project using the custom resource
     const sagemakerProjectCustomResource = new RDISagemakerMlopsProjectCustomResource(this, 'Mlops', {
       prefix: this.prefix,
-      sagemakerProjectName: this.projectName,
+      resourcePrefix: this.prefix,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
       customResourceLayerArn: props.customResourceLayerArn,
@@ -163,5 +161,6 @@ export class RDISagemakerProject extends Construct {
       domainExecutionRole: props.domainExecutionRole,
     });
     this.projectId = sagemakerProjectCustomResource.projectId;
+    this.projectName = sagemakerProjectCustomResource.projectName;
   } 
 }

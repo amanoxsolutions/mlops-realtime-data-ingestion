@@ -20,7 +20,11 @@ def lambda_handler(event, context):
 @helper.create
 def create(event, _):
     project_properties = event.get("ResourceProperties")
-    project_name = project_properties.get("ProjectName")
+    resource_prefix = project_properties.get("ResourcePrefix")
+    # Add a 8 characters random suffix string to the project name to make it unique
+    # and make sure the project name is not longer than 32 characters
+    project_name = resource_prefix + "-proj-" + "".join(random.choices(string.digits + string.ascii_lowercase, k=8))
+    project_name = project_name[:32]
     portfolio_id = project_properties.get("PortfolioId")
     domain_execution_role_arn = project_properties.get("DomainExecutionRoleArn")
     # Search for the SageMaker project product in the portfolio
@@ -64,7 +68,7 @@ def create(event, _):
     logger.info(f"Initiated the creation of the SageMaker project with ID: {project_id}")
     # We do not wait for the SageMaker project to be created because 
     # it is created by another CloudFormation Stack and it takes too long
-    helper.Data.update({"ProjectId": project_id})
+    helper.Data.update({"ProjectId": project_id, "ProjectName": project_name})
     return project_id
 
 @helper.delete
