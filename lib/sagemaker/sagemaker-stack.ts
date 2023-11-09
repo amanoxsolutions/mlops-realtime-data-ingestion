@@ -80,6 +80,7 @@ export class SagemakerStack extends Stack {
 
     this.project = new RDISagemakerProject(this, 'sagemakerProject', {
       prefix: this.prefix,
+      suffix: this.s3Suffix,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
       customResourceLayerArn: customResourceLayerArn,

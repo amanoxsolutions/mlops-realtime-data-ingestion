@@ -122,6 +122,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
 
 interface RDISagemakerProjectProps {
   readonly prefix: string;
+  readonly suffix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
@@ -131,6 +132,7 @@ interface RDISagemakerProjectProps {
   
 export class RDISagemakerProject extends Construct {
   public readonly prefix: string;
+  public readonly suffix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
   public readonly portfolioId: string;
@@ -141,10 +143,11 @@ export class RDISagemakerProject extends Construct {
     super(scope, id);
 
     this.prefix = props.prefix;
-    this.projectName =  `${this.prefix}-smproject`;
+    this.suffix = props.suffix;
+    this.projectName =  `${this.prefix}-proj-${this.suffix}`;
     this.portfolioId = props.portfolioId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
-    this.runtime = props.runtime;
+    this.runtime = props.runtime; 
 
     //
     // Create SageMaker Project
