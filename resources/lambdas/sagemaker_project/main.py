@@ -22,9 +22,10 @@ def create(event, _):
     project_properties = event.get("ResourceProperties")
     resource_prefix = project_properties.get("ResourcePrefix")
     # Add a 8 characters random suffix string to the project name to make it unique
-    # and make sure the project name is not longer than 32 characters
-    project_name = resource_prefix + "-proj-" + "".join(random.choices(string.digits + string.ascii_lowercase, k=8))
-    project_name = project_name[:32]
+    # because an old project name can not be reused even if it is deleted.
+    # Also make sure the project name prefix is not longer than 32 - 8 characters
+    resource_prefix = resource_prefix + "-proj-"
+    project_name =  resource_prefix[:24] + "".join(random.choices(string.digits + string.ascii_lowercase, k=8))
     portfolio_id = project_properties.get("PortfolioId")
     domain_execution_role_arn = project_properties.get("DomainExecutionRoleArn")
     # Search for the SageMaker project product in the portfolio
