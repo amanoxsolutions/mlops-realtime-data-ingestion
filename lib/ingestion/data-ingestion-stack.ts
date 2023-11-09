@@ -1,4 +1,4 @@
-import { Stack, StackProps, RemovalPolicy, Duration, Size } from 'aws-cdk-lib';
+import { Stack, StackProps, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { RDIDynamodbTable } from './dynamodb';
 import { RDIIngestionWorker } from './fargate-worker';
@@ -16,7 +16,7 @@ export interface RealtimeDataIngestionStackProps extends StackProps {
   readonly prefix: string;
   readonly s3Suffix: string;
   readonly s3Versioning?: boolean;
-  readonly removalPolicy?: RemovalPolicy;
+  readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
 }
 

@@ -11,7 +11,7 @@ import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 export interface SagemakerStackProps extends StackProps {
   readonly prefix: string;
   readonly s3Suffix: string;
-  readonly removalPolicy?: RemovalPolicy;
+  readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
   readonly vpc: IVpc;
 }
