@@ -277,33 +277,51 @@ export class RDISagemakerStudio extends Construct {
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'),
       ],
     });
-
-    // Policy to allow access to the S3 buckets
-    const policyDocument = new PolicyDocument({
-      statements: [
-        new PolicyStatement({
-          actions: ['s3:ListBucket'],
-          effect: Effect.ALLOW,
-          resources: [
-            props.dataBucketArn,
-            props.modelBucetArn,
-          ],
-        }),
-        new PolicyStatement({
-          actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-          effect: Effect.ALLOW,
-          resources: [
-            `${props.dataBucketArn}/*`,
-            `${props.modelBucetArn}/*`,
-          ],
-        }),
-      ],
-    });
-    new Policy(this, 'lambdaPolicy', {
+    // Add access to raw data bucket
+    this.executionRole.attachInlinePolicy(new Policy(this, 'S3Policy', {
       policyName: `${this.prefix}-sagemaker-studio-s3-access-policy`,
-      document: policyDocument,
-      roles: [this.executionRole],
-    });
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            actions: [
+              's3:ListBucket',
+              's3:ListBucket',
+              's3:GetObject*', 
+              's3:PutObject*', 
+              's3:DeleteObject*', 
+            ],
+            effect: Effect.ALLOW,
+            resources: [
+              props.dataBucketArn,
+              `${props.dataBucketArn}/*`,
+              props.modelBucetArn,
+              `${props.modelBucetArn}/*`,
+            ],
+          }),
+        ],
+      })
+    }));
+    // Add access to data catalog partitions
+    // Note: This was not necessary before and should be included in the AmazonSageMakerFullAccess policy
+    // That policy gives GetDatabases, GetTables, GetTable on everything but not GetPartitions
+    this.executionRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
+      policyName: `${this.prefix}-missing-glue-partitions`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'glue:GetPartitions', 
+            ],
+            resources: [
+              'arn:aws:glue:*:*:catalog',
+              'arn:aws:glue:*:*:database/sagemaker_featurestore',
+              'arn:aws:glue:*:*:table/sagemaker_featurestore/*'
+            ],
+          }),
+        ],
+      })
+    }));
 
     //
     // Create SageMaker Studio Domain
