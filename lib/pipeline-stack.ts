@@ -45,8 +45,8 @@ export class DataIngestionPipelineStack extends Stack {
       bucketName: `${props.prefix}-pipeline-artifacts-bucket-${uniqueSuffix}`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
-      removalPolicy: props.removalPolicy,
-      autoDeleteObjects: props.removalPolicy === RemovalPolicy.DESTROY,
+      removalPolicy: removalPolicy,
+      autoDeleteObjects: removalPolicy === RemovalPolicy.DESTROY,
     });
     
     const pipeline = new CodePipeline(this, 'Pipeline', {
