@@ -7,8 +7,8 @@ import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
 import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
 import { RDILambda } from '../lambda';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
-import * as sourceSchema from '../../resources/sagemaker/source-schema.json';
+import * as fgConfig from '../../resources/sagemaker/featurestore/agg-fg-schema.json';
+import * as sourceSchema from '../../resources/sagemaker/featurestore/source-schema.json';
 import { RDIStartKinesisAnalytics } from './start-kinesis';
 
 const fs = require('fs');
