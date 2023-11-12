@@ -84,7 +84,7 @@ export class SagemakerStack extends Stack {
       runtime: this.runtime,
       customResourceLayerArn: customResourceLayerArn,
       portfolioId: this.domain.portfolioId,
-      domainExecutionRole: this.domain.role
+      domainExecutionRole: this.domain.executionRole,
     });
   }
 }

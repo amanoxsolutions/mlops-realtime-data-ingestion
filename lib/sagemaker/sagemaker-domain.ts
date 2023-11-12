@@ -19,6 +19,7 @@ interface RDISagemakerDomainCustomResourceProps {
   readonly prefix: string;
   readonly sagemakerStudioDomainName: string;
   readonly defaultUserSettingsExecutionRoleArn: string;
+  readonly defaultUserSettingsUserRoleArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
   readonly removalPolicy: RemovalPolicy;
@@ -133,6 +134,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
         DomainName: props.sagemakerStudioDomainName,
         DefaultUserSettings: {
           ExecutionRole: props.defaultUserSettingsExecutionRoleArn,
+          UserRole: props.defaultUserSettingsUserRoleArn,
         },
         VpcId: props.vpcId,
         SubnetIds: props.subnetIds,
@@ -251,11 +253,12 @@ export class RDISagemakerStudio extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
-  public readonly role: Role;
+  public readonly executionRole: Role;
   public readonly domainName: string;
   public readonly domainId: string;
   public readonly portfolioId: string;
   public readonly userName: string;
+  public readonly userRole: Role;
 
   constructor(scope: Construct, id: string, props: RDISagemakerStudioProps) {
     super(scope, id);
@@ -267,15 +270,16 @@ export class RDISagemakerStudio extends Construct {
     this.runtime = props.runtime;
 
     //
-    // Create SageMaker Studio Domain
+    // Create SageMaker Studio Domain Execution Role
     //
-    // Create the IAM Role for SagMaker Studio Domain
-    this.role = new Role(this, 'StudioRole', {
+    this.executionRole = new Role(this, 'StudioRole', {
       roleName: `${this.prefix}-sagemaker-studio-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'),
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'),
+      ],
     });
-    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'));
-    this.role.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'));
 
     // Policy to allow access to the S3 buckets
     const policyDocument = new PolicyDocument({
@@ -301,14 +305,70 @@ export class RDISagemakerStudio extends Construct {
     new Policy(this, 'lambdaPolicy', {
       policyName: `${this.prefix}-sagemaker-studio-s3-access-policy`,
       document: policyDocument,
-      roles: [this.role],
+      roles: [this.executionRole],
     });
 
+    // 
+    // Create a SageMaker Studio Domain user Role
+    //
+    this.userRole = new Role(this, 'Role', {
+      roleName: `${this.prefix}-sagemaker-user-role`,
+      assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'),
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'),
+      ],
+    });
+    // Add access to raw data bucket
+    this.userRole.attachInlinePolicy(new Policy(this, 'S3Policy', {
+      policyName: `${this.prefix}-ingestion-bucket-access`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              's3:ListBucket', 
+              's3:GetObject*', 
+              's3:PutObject*', 
+              's3:DeleteObject', 
+              's3:DeleteObjectVersion', 
+            ],
+            resources: [props.dataBucketArn, `${props.dataBucketArn}/*`],
+          }),
+        ],
+      })
+    }));
+    // Add access to data catalog partitions
+    // Note: This was not necessary before and should be included in the AmazonSageMakerFullAccess policy
+    // That policy gives GetDatabases, GetTables, GetTable on everything but not GetPartitions
+    this.userRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
+      policyName: `${this.prefix}-missing-glue-partitions`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'glue:GetPartitions', 
+            ],
+            resources: [
+              'arn:aws:glue:*:*:catalog',
+              'arn:aws:glue:*:*:database/sagemaker_featurestore',
+              'arn:aws:glue:*:*:table/sagemaker_featurestore/*'
+            ],
+          }),
+        ],
+      })
+    }));
+
+    //
+    // Create SageMaker Studio Domain
+    //
     // Create the SageMaker Studio Domain using the custom resource
     const domain = new RDISagemakerDomainCustomResource(this, 'Domain', {
       prefix: this.prefix,
       sagemakerStudioDomainName: this.domainName,
-      defaultUserSettingsExecutionRoleArn:  this.role.roleArn,
+      defaultUserSettingsExecutionRoleArn:  this.executionRole.roleArn,
+      defaultUserSettingsUserRoleArn: this.userRole.roleArn,
       vpcId: props.vpcId,
       subnetIds: props.subnetIds,
       removalPolicy: this.removalPolicy,
@@ -326,6 +386,7 @@ export class RDISagemakerStudio extends Construct {
       domainName: this.domainName, 
       domainId: this.domainId,
       name: this.userName,
+      role: this.userRole,
     });
     sagemakerUser.node.addDependency(domain);
 
