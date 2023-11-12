@@ -46,14 +46,13 @@ def create(event, _):
     # To enable SageMaker projects in the domain we must associate the domain role
     # with the SageMaker Service Catalog portfolio. We also need to associate the domain user role for
     # users to be able to use SageMaker projects.
-    for role_type in default_user_settings.keys():
-        role_arn = default_user_settings.get(role_type)
-        response = catalog.associate_principal_with_portfolio(
-            PortfolioId=portfolio_id,
-            PrincipalARN=role_arn,
-            PrincipalType="IAM"
-        )
-        logger.info(f"Associated SageMaker domain {role_type} role: {role_arn}")
+    domain_execution_role_arn = default_user_settings["ExecutionRole"]
+    response = catalog.associate_principal_with_portfolio(
+        PortfolioId=portfolio_id,
+        PrincipalARN=domain_execution_role_arn,
+        PrincipalType="IAM"
+    )
+    logger.info(f"Associated SageMaker domain role {domain_execution_role_arn}")
     helper.Data.update({"DomainId": domain_id, "PortfolioId": portfolio_id})
     return domain_id
 

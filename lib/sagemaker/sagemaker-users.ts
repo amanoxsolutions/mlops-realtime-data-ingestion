@@ -1,6 +1,5 @@
 import { Construct } from 'constructs';
 import { RemovalPolicy } from 'aws-cdk-lib';
-import { Role } from 'aws-cdk-lib/aws-iam';
 import { CfnUserProfile, CfnApp } from 'aws-cdk-lib/aws-sagemaker';
 
 
@@ -11,13 +10,11 @@ interface RDISagemakerUserProps {
   readonly domainName: string;
   readonly domainId: string;
   readonly name:string;
-  readonly role: Role;
 }
 
 export class RDISagemakerUser extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
-  public readonly role: Role;
   public readonly domainName: string;
   public readonly domainId: string;
   public readonly name: string;
@@ -33,15 +30,11 @@ export class RDISagemakerUser extends Construct {
     this.name = props.name;
     this.appName = `${this.prefix}-sagemaker-user-app`
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
-    this.role = props.role;
 
     // Create the user profile
     this.userProfile = new CfnUserProfile(this, 'Profile', {
       domainId: this.domainId,
       userProfileName: this.name,
-      userSettings: {
-        executionRole: this.role.roleArn,
-      },
     });
     // Add removal policy to the user profile
     this.userProfile.applyRemovalPolicy(this.removalPolicy);
