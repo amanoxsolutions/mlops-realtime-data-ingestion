@@ -13,7 +13,7 @@ import {
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { RDISagemakerUser } from './sagemaker-users';
+import { CfnUserProfile } from 'aws-cdk-lib/aws-sagemaker';
 
 interface RDISagemakerDomainCustomResourceProps {
   readonly prefix: string;
@@ -155,7 +155,6 @@ interface CleanupSagemakerDomainUserProps {
   readonly customResourceLayerArn: string;
   readonly sagemakerStudioDomainId: string;
   readonly sagemakerStudioUserProfile: string;
-  readonly sagemakerStudioAppName: string;
 }
 
 export class CleanupSagemakerDomainUser extends Construct {
@@ -227,7 +226,6 @@ export class CleanupSagemakerDomainUser extends Construct {
         PhysicalResourceId: lambdaPurpose,
         DomainId: props.sagemakerStudioDomainId,
         StudioUserProfile: props.sagemakerStudioUserProfile,
-        StudioAppName: props.sagemakerStudioAppName,
       },
     });
     // The policy must be created and attached to the role before creating the custom resource
@@ -341,15 +339,14 @@ export class RDISagemakerStudio extends Construct {
     this.portfolioId = domain.portfolioId;
 
     // Create SageMaker User
-    const sagemakerUser = new RDISagemakerUser( this, 'User', {
-      prefix: this.prefix,
-      removalPolicy: this.removalPolicy,
-      dataBucketArn: props.dataBucketArn,
-      domainName: this.domainName, 
+    // Create the user profile
+    const sagemakerUser = new CfnUserProfile(this, 'User', {
       domainId: this.domainId,
-      name: this.userName,
+      userProfileName: this.userName,
     });
     sagemakerUser.node.addDependency(domain);
+    // Add removal policy to the user profile
+    sagemakerUser.applyRemovalPolicy(this.removalPolicy);
 
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
       // IMPORTANT
@@ -367,10 +364,9 @@ export class RDISagemakerStudio extends Construct {
         runtime: this.runtime,
         customResourceLayerArn: props.customResourceLayerArn,
         sagemakerStudioDomainId: this.domainId,
-        sagemakerStudioUserProfile: sagemakerUser.name,
-        sagemakerStudioAppName: sagemakerUser.appName,
+        sagemakerStudioUserProfile: this.userName,
       });
-      cleanupDomain.node.addDependency(sagemakerUser.userProfile);
+      cleanupDomain.node.addDependency(sagemakerUser);
     }
   } 
 }
