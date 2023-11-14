@@ -49,7 +49,7 @@ export class SagemakerStack extends Stack {
     }).stringValue
 
     // S3 bucket to store the Model artifacts
-    this.experimentBucket = new Bucket(this, 'ModelBucket', {
+    this.experimentBucket = new Bucket(this, 'ExperimentBucket', {
       bucketName: `${this.prefix}-sagemaker-experiment-${this.s3Suffix}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
