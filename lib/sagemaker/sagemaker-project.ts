@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { PolicyStatement, Effect, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect, Role, Policy, PolicyDocument, ServicePrincipal, CompositePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -75,7 +75,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       roleName: `${this.prefix}-cr-manage-sagemaker-project-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
-    // Create the inline policy separatly to avoid circular dependencies
+    // Create the inline policy separately to avoid circular dependencies
     const singeltonPolicy = new Policy(this, 'SingeltonPolicy', {
       policyName: 'lambda-cr-manage-sagemaker-project-policy',
       document: policyDocument,
@@ -129,6 +129,7 @@ interface RDISagemakerProjectProps {
   readonly customResourceLayerArn: string;
   readonly portfolioId: string;
   readonly domainExecutionRole: Role;
+  readonly dataAccessPolicy: Policy;
 }
   
 export class RDISagemakerProject extends Construct {
@@ -141,6 +142,9 @@ export class RDISagemakerProject extends Construct {
 
   constructor(scope: Construct, id: string, props: RDISagemakerProjectProps) {
     super(scope, id);
+
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
 
     this.prefix = props.prefix;
     this.portfolioId = props.portfolioId;
@@ -162,5 +166,148 @@ export class RDISagemakerProject extends Construct {
     });
     this.projectId = sagemakerProjectCustomResource.projectId;
     this.projectName = sagemakerProjectCustomResource.projectName;
+
+    // Create an IAM Policy allowing access to the SageMaker Project S3 Bucket and attach it to the data access policy
+    const sagemakerProjectBucketPolicy = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        's3:ListBucket',
+        's3:ListAllMyBuckets',
+        's3:GetBucket*',
+        's3:GetObject*', 
+        's3:PutObject*', 
+        's3:DeleteObject*',
+      ],
+      resources: [
+        `arn:aws:s3:::sagemaker-project-${this.projectName}`,
+        `arn:aws:s3:::sagemaker-project-${this.projectName}/*`,
+      ],
+    });
+    props.dataAccessPolicy.addStatements(sagemakerProjectBucketPolicy);
+
+    //
+    // Custom Resources for the MLOps pipeline
+    //
+    // Create a custom SageMaker Processing Job role for the MLOps pipeline
+    // We need to create a custom role because our processing job will need access to SageMaker Fetaure Store
+    // This is a simplification of the policy of default IAM role AmazonSageMakerServiceCatalogProductsUseRole
+    const basePolicyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'cloudwatch:PutMetricData',
+          ],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'codebuild:BatchGetBuilds',
+            'codebuild:StartBuild'
+          ],
+          resources: [
+            'arn:aws:codebuild:*:*:project/sagemaker-*',
+            'arn:aws:codebuild:*:*:build/sagemaker-*',
+          ],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'events:DeleteRule',
+            'events:DescribeRule',
+            'events:PutRule',
+            'events:PutTargets',
+            'events:RemoveTargets',
+          ],
+          resources: [
+            'arn:aws:events:*:*:rule/sagemaker-*',
+          ],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'glue:BatchCreatePartition',
+            'glue:BatchDeletePartition',
+            'glue:BatchDeleteTable',
+            'glue:BatchDeleteTableVersion',
+            'glue:BatchGetPartition',
+            'glue:CreateDatabase',
+            'glue:CreatePartition',
+            'glue:CreateTable',
+            'glue:DeletePartition',
+            'glue:DeleteTable',
+            'glue:DeleteTableVersion',
+            'glue:GetDatabase*',
+            'glue:GetPartition*',
+            'glue:GetTable*',
+            'glue:SearchTables',
+            'glue:UpdatePartition',
+            'glue:UpdateTable',
+            'glue:GetUserDefinedFunctions',
+          ],
+          resources: [
+            'arn:aws:glue:*:*:catalog',
+            'arn:aws:glue:*:*:database/default',
+            'arn:aws:glue:*:*:database/global_temp',
+            'arn:aws:glue:*:*:database/sagemaker-*',
+            'arn:aws:glue:*:*:table/sagemaker-*',
+            'arn:aws:glue:*:*:tableVersion/sagemaker-*',
+          ],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'athena:ListDataCatalogs',
+            'athena:ListDatabases',
+            'athena:ListTableMetadata',
+            'athena:GetQueryExecution',
+            'athena:GetQueryResults',
+            'athena:StartQueryExecution',
+            'athena:StopQueryExecution',
+          ],
+          resources: ['*'],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogDelivery',
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:DeleteLogDelivery',
+            'logs:UpdateLogDelivery',
+            'logs:Describe*',
+            'logs:GetLog*',
+            'logs:ListLogDeliveries',
+            'logs:PutLogEvents',
+            'logs:PutResourcePolicy',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:*',
+          ],
+          resources: [
+            `arn:aws:sagemaker:${region}:${account}:domain/*`,
+            `arn:aws:sagemaker:${region}:${account}:user-profile/*`,
+            `arn:aws:sagemaker:${region}:${account}:app/*`,
+            `arn:aws:sagemaker:${region}:${account}:flow-definition/*`,
+          ],
+        }),
+      ],
+    });  
+
+    const sagemakerProcessingJobRole = new Role(this, 'SagemakerProcessingJobRole', {
+      roleName: `${this.prefix}-sagemaker-processing-job-role`,
+      assumedBy: new CompositePrincipal(
+        new ServicePrincipal('sagemaker.amazonaws.com'),
+        new ServicePrincipal('codebuild.amazonaws.com'),
+      ),
+    });
+    sagemakerProcessingJobRole.attachInlinePolicy(props.dataAccessPolicy);
+
+
   } 
 }

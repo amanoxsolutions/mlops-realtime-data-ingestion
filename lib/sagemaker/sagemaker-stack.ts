@@ -1,5 +1,6 @@
 import { Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { PolicyStatement, Effect, Policy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RDISagemakerStudio } from './sagemaker-domain';
 import { RDIFeatureStore } from './feature-store';
@@ -24,7 +25,7 @@ export class SagemakerStack extends Stack {
   public readonly domain: RDISagemakerStudio;
   public readonly featureStore: RDIFeatureStore;
   public readonly project: RDISagemakerProject;
-  public readonly modelBucket: IBucket;
+  public readonly experimentBucket: IBucket;
 
   constructor(scope: Construct, id: string, props: SagemakerStackProps) {
     super(scope, id, props);
@@ -48,7 +49,7 @@ export class SagemakerStack extends Stack {
     }).stringValue
 
     // S3 bucket to store the Model artifacts
-    this.modelBucket = new Bucket(this, 'ModelBucket', {
+    this.experimentBucket = new Bucket(this, 'ModelBucket', {
       bucketName: `${this.prefix}-sagemaker-experiment-${this.s3Suffix}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
@@ -58,12 +59,56 @@ export class SagemakerStack extends Stack {
       autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
     });
 
+    // Create IAM policy to access the buckets
+    const dataAccessDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          actions: [
+            's3:ListBucket',
+            's3:ListAllMyBuckets',
+            's3:GetBucket*',
+            's3:GetObject*', 
+            's3:PutObject*', 
+            's3:DeleteObject*', 
+          ],
+          effect: Effect.ALLOW,
+          resources: [
+            dataBucketArn,
+            `${dataBucketArn}/*`,
+            this.experimentBucket.bucketArn,
+            `${this.experimentBucket.bucketArn}/*`,
+          ],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'glue:GetDatabase*',
+            'glue:GetTable*',
+            'glue:GetPartition*', 
+            'glue:SearchTables',
+          ],
+          resources: [
+            'arn:aws:glue:*:*:catalog',
+            'arn:aws:glue:*:*:database/sagemaker_featurestore',
+            'arn:aws:glue:*:*:table/sagemaker_featurestore/*',
+            `arn:aws:glue:*:*:table/${this.prefix}*`,
+            `arn:aws:glue:*:*:tableVersion/${this.prefix}*`,
+          ],
+        })
+      ],
+    });
+    const dataAccessPolicy = new Policy(this, 'DataPolicy', {
+      policyName: `{this.prefix}-data-bucket-access-policy`,
+      document: dataAccessDocument,
+    });
+
     this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
       dataBucketArn: dataBucketArn,
-      experimentBucketArn: this.modelBucket.bucketArn,
+      experimentBucketArn: this.experimentBucket.bucketArn,
+      dataAccessPolicy: dataAccessPolicy,
       vpcId: props.vpc.vpcId,
       subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
       customResourceLayerArn: customResourceLayerArn,
@@ -85,6 +130,7 @@ export class SagemakerStack extends Stack {
       customResourceLayerArn: customResourceLayerArn,
       portfolioId: this.domain.portfolioId,
       domainExecutionRole: this.domain.executionRole,
+      dataAccessPolicy: dataAccessPolicy,
     });
   }
 }
