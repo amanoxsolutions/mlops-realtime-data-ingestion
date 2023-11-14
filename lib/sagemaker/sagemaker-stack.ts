@@ -98,7 +98,7 @@ export class SagemakerStack extends Stack {
       ],
     });
     const dataAccessPolicy = new Policy(this, 'DataPolicy', {
-      policyName: `{this.prefix}-data-bucket-access-policy`,
+      policyName: `${this.prefix}-data-bucket-access-policy`,
       document: dataAccessDocument,
     });
 
