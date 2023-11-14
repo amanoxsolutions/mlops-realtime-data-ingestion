@@ -239,7 +239,7 @@ interface RDISagemakerStudioProps {
   readonly removalPolicy?: RemovalPolicy;
   readonly runtime: Runtime;
   readonly dataBucketArn: string;
-  readonly modelBucetArn: string;
+  readonly experimentBucketArn: string;
   readonly vpcId: string;
   readonly subnetIds: string[];
   readonly customResourceLayerArn: string;
@@ -292,8 +292,8 @@ export class RDISagemakerStudio extends Construct {
             resources: [
               props.dataBucketArn,
               `${props.dataBucketArn}/*`,
-              props.modelBucetArn,
-              `${props.modelBucetArn}/*`,
+              props.experimentBucketArn,
+              `${props.experimentBucketArn}/*`,
             ],
           }),
         ],

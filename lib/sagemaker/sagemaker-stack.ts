@@ -49,7 +49,7 @@ export class SagemakerStack extends Stack {
 
     // S3 bucket to store the Model artifacts
     this.modelBucket = new Bucket(this, 'ModelBucket', {
-      bucketName: `${this.prefix}-sagemaker-model-artifacts-${this.s3Suffix}`,
+      bucketName: `${this.prefix}-sagemaker-experiment-${this.s3Suffix}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
       enforceSSL: true,
@@ -63,7 +63,7 @@ export class SagemakerStack extends Stack {
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
       dataBucketArn: dataBucketArn,
-      modelBucetArn: this.modelBucket.bucketArn,
+      experimentBucketArn: this.modelBucket.bucketArn,
       vpcId: props.vpc.vpcId,
       subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
       customResourceLayerArn: customResourceLayerArn,
