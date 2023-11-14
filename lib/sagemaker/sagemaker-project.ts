@@ -1,6 +1,15 @@
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { PolicyStatement, Effect, Role, Policy, PolicyDocument, ServicePrincipal, CompositePrincipal } from 'aws-cdk-lib/aws-iam';
+import { 
+  PolicyStatement, 
+  PolicyDocument,
+  Effect, 
+  Role, 
+  Policy, 
+  ManagedPolicy,
+  ServicePrincipal, 
+  CompositePrincipal 
+} from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -129,7 +138,7 @@ interface RDISagemakerProjectProps {
   readonly customResourceLayerArn: string;
   readonly portfolioId: string;
   readonly domainExecutionRole: Role;
-  readonly dataAccessPolicy: Policy;
+  readonly dataAccessPolicy: ManagedPolicy;
 }
   
 export class RDISagemakerProject extends Construct {
@@ -306,7 +315,7 @@ export class RDISagemakerProject extends Construct {
         new ServicePrincipal('codebuild.amazonaws.com'),
       ),
     });
-    sagemakerProcessingJobRole.attachInlinePolicy(props.dataAccessPolicy);
+    sagemakerProcessingJobRole.addManagedPolicy(props.dataAccessPolicy);
 
 
   } 
