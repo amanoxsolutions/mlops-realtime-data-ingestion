@@ -76,8 +76,8 @@ export class RDIFeatureStore extends Construct {
         's3:DeleteObject*',
       ],
       resources: [
-        this.bucket.bucketName,
-        `${this.bucket.bucketName}/*`,
+        this.bucket.bucketArn,
+        `${this.bucket.bucketArn}/*`,
       ],
     });
     props.dataAccessPolicy.addStatements(featurestoreBucketPolicy);
