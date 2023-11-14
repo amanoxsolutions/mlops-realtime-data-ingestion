@@ -200,6 +200,15 @@ export class RDISagemakerProject extends Construct {
     // Create a custom SageMaker Processing Job role for the MLOps pipeline
     // We need to create a custom role because our processing job will need access to SageMaker Fetaure Store
     // This is a simplification of the policy of default IAM role AmazonSageMakerServiceCatalogProductsUseRole
+    const sagemakerProcessingJobRole = new Role(this, 'SagemakerProcessingJobRole', {
+      roleName: `${this.prefix}-sagemaker-processing-job-role`,
+      assumedBy: new CompositePrincipal(
+        new ServicePrincipal('sagemaker.amazonaws.com'),
+        new ServicePrincipal('codebuild.amazonaws.com'),
+      ),
+    });
+    sagemakerProcessingJobRole.addManagedPolicy(props.dataAccessPolicy);
+
     const basePolicyDocument = new PolicyDocument({
       statements: [
         new PolicyStatement({
@@ -308,15 +317,10 @@ export class RDISagemakerProject extends Construct {
       ],
     });  
 
-    const sagemakerProcessingJobRole = new Role(this, 'SagemakerProcessingJobRole', {
-      roleName: `${this.prefix}-sagemaker-processing-job-role`,
-      assumedBy: new CompositePrincipal(
-        new ServicePrincipal('sagemaker.amazonaws.com'),
-        new ServicePrincipal('codebuild.amazonaws.com'),
-      ),
+    const processingJobBasePolicy = new Policy(this, 'DataPolicy', {
+      policyName: `${this.prefix}-sagemaker-processing-job-base-policy`,
+      document: basePolicyDocument,
+      roles: [sagemakerProcessingJobRole],
     });
-    sagemakerProcessingJobRole.addManagedPolicy(props.dataAccessPolicy);
-
-
   } 
 }
