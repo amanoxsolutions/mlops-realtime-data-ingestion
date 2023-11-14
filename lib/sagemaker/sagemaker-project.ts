@@ -187,8 +187,8 @@ export class RDISagemakerProject extends Construct {
         's3:DeleteObject*',
       ],
       resources: [
-        `arn:aws:s3:::sagemaker-project-${this.projectName}`,
-        `arn:aws:s3:::sagemaker-project-${this.projectName}/*`,
+        `arn:aws:s3:::sagemaker-project-${this.projectId}`,
+        `arn:aws:s3:::sagemaker-project-${this.projectId}/*`,
       ],
     });
     props.dataAccessPolicy.addStatements(sagemakerProjectBucketPolicy);
