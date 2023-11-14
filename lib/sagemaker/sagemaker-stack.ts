@@ -1,6 +1,6 @@
 import { Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { PolicyStatement, Effect, ManagedPolicy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect, Policy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import { IVpc, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { RDISagemakerStudio } from './sagemaker-domain';
 import { RDIFeatureStore } from './feature-store';
@@ -97,8 +97,8 @@ export class SagemakerStack extends Stack {
         })
       ],
     });
-    const dataAccessPolicy = new ManagedPolicy(this, 'DataPolicy', {
-      managedPolicyName: `${this.prefix}-data-access-policy`,
+    const dataAccessPolicy = new Policy(this, 'DataPolicy', {
+      policyName: `${this.prefix}-data-access-policy`,
       document: dataAccessDocument,
     });
 

@@ -6,7 +6,6 @@ import {
   Effect, 
   Role, 
   Policy, 
-  ManagedPolicy,
   ServicePrincipal, 
   CompositePrincipal 
 } from 'aws-cdk-lib/aws-iam';
@@ -138,7 +137,7 @@ interface RDISagemakerProjectProps {
   readonly customResourceLayerArn: string;
   readonly portfolioId: string;
   readonly domainExecutionRole: Role;
-  readonly dataAccessPolicy: ManagedPolicy;
+  readonly dataAccessPolicy: Policy;
 }
   
 export class RDISagemakerProject extends Construct {
@@ -206,10 +205,9 @@ export class RDISagemakerProject extends Construct {
         new ServicePrincipal('sagemaker.amazonaws.com'),
         new ServicePrincipal('codebuild.amazonaws.com'),
       ),
-      managedPolicies: [
-        props.dataAccessPolicy,
-      ],
     });
+    // Attach the data access policy to the execution role
+    sagemakerProcessingJobRole.attachInlinePolicy(props.dataAccessPolicy);
 
     const basePolicyDocument = new PolicyDocument({
       statements: [

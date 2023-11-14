@@ -240,7 +240,7 @@ interface RDISagemakerStudioProps {
   readonly runtime: Runtime;
   readonly dataBucketArn: string;
   readonly experimentBucketArn: string;
-  readonly dataAccessPolicy: ManagedPolicy;
+  readonly dataAccessPolicy: Policy;
   readonly vpcId: string;
   readonly subnetIds: string[];
   readonly customResourceLayerArn: string;
@@ -274,9 +274,10 @@ export class RDISagemakerStudio extends Construct {
       managedPolicies: [
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'),
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'),
-        props.dataAccessPolicy,
       ],
     });
+    // Attach the data access policy to the execution role
+    this.executionRole.attachInlinePolicy(props.dataAccessPolicy);
 
     //
     // Create SageMaker Studio Domain
