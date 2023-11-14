@@ -274,10 +274,9 @@ export class RDISagemakerStudio extends Construct {
       managedPolicies: [
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess'),
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'),
+        props.dataAccessPolicy,
       ],
     });
-    // Add access to data S3 buckets and Feature Store
-    this.executionRole.addManagedPolicy(props.dataAccessPolicy);
 
     //
     // Create SageMaker Studio Domain

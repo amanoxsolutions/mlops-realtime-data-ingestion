@@ -206,8 +206,10 @@ export class RDISagemakerProject extends Construct {
         new ServicePrincipal('sagemaker.amazonaws.com'),
         new ServicePrincipal('codebuild.amazonaws.com'),
       ),
+      managedPolicies: [
+        props.dataAccessPolicy,
+      ],
     });
-    sagemakerProcessingJobRole.addManagedPolicy(props.dataAccessPolicy);
 
     const basePolicyDocument = new PolicyDocument({
       statements: [
