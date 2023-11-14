@@ -30,6 +30,7 @@ interface RDIFeatureStoreProps {
   readonly firehoseStreamArn: string;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
+  readonly dataAccessPolicy: Policy;
 }
 
 export class RDIFeatureStore extends Construct {
@@ -61,6 +62,25 @@ export class RDIFeatureStore extends Construct {
       removalPolicy: this.removalPolicy,
       autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
     });
+
+    // Create an IAM Policy allowing access to the SageMaker Project S3 Bucket and attach it to the data access policy
+    const featurestoreBucketPolicy = new PolicyStatement({
+      sid: 'FeatureStoreBucketPolicy',
+      effect: Effect.ALLOW,
+      actions: [
+        's3:ListBucket',
+        's3:ListAllMyBuckets',
+        's3:GetBucket*',
+        's3:GetObject*', 
+        's3:PutObject*', 
+        's3:DeleteObject*',
+      ],
+      resources: [
+        this.bucket.bucketName,
+        `${this.bucket.bucketName}/*`,
+      ],
+    });
+    props.dataAccessPolicy.addStatements(featurestoreBucketPolicy);
 
 
     // Create the IAM Role for Feature Store

@@ -63,6 +63,7 @@ export class SagemakerStack extends Stack {
     const dataAccessDocument = new PolicyDocument({
       statements: [
         new PolicyStatement({
+          sid: 'InputAndExperimentBucketsAccess',
           actions: [
             's3:ListBucket',
             's3:ListAllMyBuckets',
@@ -80,6 +81,7 @@ export class SagemakerStack extends Stack {
           ],
         }),
         new PolicyStatement({
+          sid: 'GlueAccess',
           effect: Effect.ALLOW,
           actions: [
             'glue:GetDatabase*',
@@ -121,6 +123,7 @@ export class SagemakerStack extends Stack {
       customResourceLayerArn: customResourceLayerArn,
       firehoseStreamArn: ingestionFirehoseStreamArn,
       s3Suffix: this.s3Suffix,
+      dataAccessPolicy: dataAccessPolicy,
     });
 
     this.project = new RDISagemakerProject(this, 'sagemakerProject', {

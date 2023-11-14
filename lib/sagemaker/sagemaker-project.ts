@@ -177,6 +177,7 @@ export class RDISagemakerProject extends Construct {
 
     // Create an IAM Policy allowing access to the SageMaker Project S3 Bucket and attach it to the data access policy
     const sagemakerProjectBucketPolicy = new PolicyStatement({
+      sid: 'SagemakerProjectBucketAccess',
       effect: Effect.ALLOW,
       actions: [
         's3:ListBucket',
