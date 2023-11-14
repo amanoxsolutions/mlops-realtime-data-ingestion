@@ -261,7 +261,7 @@ export class RDISagemakerStudio extends Construct {
 
     this.prefix = props.prefix;
     this.domainName =  `${this.prefix}-sagemaker-studio-domain`;
-    this.userName = `${this.prefix}-sagemaker-studio-user2`;
+    this.userName = `${this.prefix}-sagemaker-studio-user`;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime;
 
