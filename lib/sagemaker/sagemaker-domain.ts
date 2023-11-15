@@ -265,6 +265,8 @@ export class RDISagemakerStudio extends Construct {
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime;
 
+    const account = Stack.of(this).account;
+
     //
     // Create SageMaker Studio Domain Execution Role
     //
@@ -326,5 +328,13 @@ export class RDISagemakerStudio extends Construct {
       });
       cleanupDomain.node.addDependency(sagemakerUser);
     }
+
+    // Attach the data access policy to the IAM service role AmazonSageMakerServiceCatalogProductsUseRole
+    // This is the role that will be automatically used by the SageMaker project for the MLOps pipeline
+    // actions and it needs to have access to the data buckets and Feature Store
+    const serviceCatalogProductsUseRole = Role.fromRoleArn(this, 'ServiceCatalogProductsUseRole', 
+      `arn:aws:iam::${account}:role/service-role/AmazonSageMakerServiceCatalogProductsUseRole`
+    );
+    serviceCatalogProductsUseRole.attachInlinePolicy(props.dataAccessPolicy);
   } 
 }
