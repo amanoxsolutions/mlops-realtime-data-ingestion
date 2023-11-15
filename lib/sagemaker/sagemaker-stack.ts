@@ -96,7 +96,21 @@ export class SagemakerStack extends Stack {
             `arn:aws:glue:*:*:table/${this.prefix}*`,
             `arn:aws:glue:*:*:tableVersion/${this.prefix}*`,
           ],
-        })
+        }),
+        new PolicyStatement({
+          sid: 'AthenaAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'athena:ListDataCatalogs',
+            'athena:ListDatabases',
+            'athena:ListTableMetadata',
+            'athena:GetQueryExecution',
+            'athena:GetQueryResults',
+            'athena:StartQueryExecution',
+            'athena:StopQueryExecution',
+          ],
+          resources: ['*'],
+        }),
       ],
     });
     const dataAccessPolicy = new Policy(this, 'DataPolicy', {
