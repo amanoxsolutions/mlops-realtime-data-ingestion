@@ -40,7 +40,8 @@ def create(event, _):
             created = True
     logger.info(f"SageMaker domain created successfully: {domain_id}")
     # Enable the use of Service Catalog in SageMaker. This is mandatory to be able to use SageMaker projects
-    portfolio_id = enable_sagemaker_servicecatalog()
+    enable_sagemaker_servicecatalog()
+    portfolio_id = get_portfolio_id()
     # Enable the use of SageMaker projects in the SageMaker domain.
     # This can only be done if no app is running so let's do that before we create any user in the domain.
     # To enable SageMaker projects in the domain we must associate the domain role
@@ -58,9 +59,6 @@ def create(event, _):
 
 def enable_sagemaker_servicecatalog():
     """This function enables the use of the Service Catalog in SageMaker and waits for it to be enabled.
-
-    Returns:
-        str: The ID of the SageMaker Service Catalog portfolio
     """
     response = sagemaker.enable_sagemaker_servicecatalog_portfolio()
     logger.info("Enabling the SageMaker Service Catalog portfolio")
@@ -73,6 +71,13 @@ def enable_sagemaker_servicecatalog():
         if status == "Enabled":
             enabled = True
         time.sleep(5)
+
+def get_portfolio_id():
+    """This function returns the ID of the Service Catalog 'Amazon SageMaker Solutions and ML Ops products' portfolio.
+    
+    Returns:
+        str: The ID of the SageMaker Service Catalog portfolio
+    """
     # List the portfolios in the AWS Service Catalog
     # There should be an imported portfolio called "Amazon SageMaker Solutions and ML Ops products"
     # This portfolio contains the SageMaker project template we want to use
@@ -143,4 +148,5 @@ def update(event, _):
         if domain_status == "InService":
             updated = True
         time.sleep(5)
-    helper.Data.update({"DomainId": domain_id})
+    portfolio_id = get_portfolio_id()
+    helper.Data.update({"DomainId": domain_id, "PortfolioId": portfolio_id})
