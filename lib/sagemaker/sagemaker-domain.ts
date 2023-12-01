@@ -133,6 +133,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
         DomainName: props.sagemakerStudioDomainName,
         DefaultUserSettings: {
           ExecutionRole: props.defaultUserSettingsExecutionRoleArn,
+          StudioWebPortal: 'ENABLED'
         },
         VpcId: props.vpcId,
         SubnetIds: props.subnetIds,
