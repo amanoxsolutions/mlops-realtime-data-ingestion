@@ -266,11 +266,37 @@ export class RDISagemakerStudio extends Construct {
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.runtime = props.runtime;
 
+    const region = Stack.of(this).region;
     const account = Stack.of(this).account;
 
     //
     // Create SageMaker Studio Domain Execution Role
     //
+    const studioPolicyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'AllowRepoAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'codecommit:BatchGet*',
+            'codecommit:Create*',
+            'codecommit:DeleteBranch',
+            'codecommit:Get*',
+            'codecommit:List*',
+            'codecommit:Describe*',
+            'codecommit:Put*',
+            'codecommit:Post*',
+            'codecommit:Merge*',
+            'codecommit:Test*',
+            'codecommit:Update*',
+            'codecommit:GitPull',
+            'codecommit:GitPush'
+          ],
+          resources: [`arn:aws:codecommit:${region}:${account}:sagemaker-${this.prefix}*`],
+        }),
+      ],
+    });
+
     this.executionRole = new Role(this, 'StudioRole', {
       roleName: `${this.prefix}-sagemaker-studio-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
