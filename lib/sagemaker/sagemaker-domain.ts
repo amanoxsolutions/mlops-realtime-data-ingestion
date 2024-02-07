@@ -34,6 +34,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
   public readonly domainId: string;
   public readonly portfolioId: string;
   public readonly customResourceLayerArn: string;
+  public readonly eventBridgeSchedulerRole: Role;
 
   constructor(scope: Construct, id: string, props: RDISagemakerDomainCustomResourceProps) {
     super(scope, id);
@@ -46,6 +47,29 @@ export class RDISagemakerDomainCustomResource extends Construct {
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy;
     this.customResourceLayerArn = props.customResourceLayerArn;
+
+    const eventBridgeDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:StartPipelineExecution'
+          ],
+          resources: [`arn:aws:sagemaker:${region}:${account}:pipeline/*`],
+        }),
+      ],
+    });
+
+    this.eventBridgeSchedulerRole = new Role(this, 'EventBridgeSchedulerRole', {
+      roleName: `${this.prefix}-eventbridge-scheduler-role`,
+      assumedBy: new ServicePrincipal('scheduler.amazonaws.com'),
+    });
+    // Create the inline policy separatly to avoid circular dependencies
+    const eventBridgeSchedulerPolicy = new Policy(this, 'EventBridgeSchedulerPolicy', {
+      policyName: 'eventbridge-scheduler-policy',
+      document: eventBridgeDocument,
+      roles: [this.eventBridgeSchedulerRole],
+    });
 
     const policyDocument = new PolicyDocument({
       statements: [
@@ -242,6 +266,7 @@ interface RDISagemakerStudioProps {
   readonly dataBucketArn: string;
   readonly experimentBucketArn: string;
   readonly dataAccessPolicy: Policy;
+  readonly monitoringJobPolicy: Policy;
   readonly vpcId: string;
   readonly subnetIds: string[];
   readonly customResourceLayerArn: string;
@@ -356,6 +381,19 @@ export class RDISagemakerStudio extends Construct {
       cleanupDomain.node.addDependency(sagemakerUser);
     }
 
+    const iamPassRole = new PolicyStatement({
+      sid: 'iamPassRole',
+      actions: [
+        'iam:PassRole',
+      ],
+      effect: Effect.ALLOW,
+      resources: [
+        `arn:aws:iam::${account}:role/service-role/AmazonSageMakerServiceCatalogProductsExecutionRole`,
+        `${domain.eventBridgeSchedulerRole.roleArn}`,
+      ],
+    })
+    props.monitoringJobPolicy.addStatements(iamPassRole);
+
     // Attach the data access policy to the IAM service role AmazonSageMakerServiceCatalogProductsUseRole
     // This is the role that will be automatically used by the SageMaker project for the MLOps pipeline
     // actions and it needs to have access to the data buckets and Feature Store
@@ -363,5 +401,6 @@ export class RDISagemakerStudio extends Construct {
       `arn:aws:iam::${account}:role/service-role/AmazonSageMakerServiceCatalogProductsUseRole`
     );
     serviceCatalogProductsUseRole.attachInlinePolicy(props.dataAccessPolicy);
+    serviceCatalogProductsUseRole.attachInlinePolicy(props.monitoringJobPolicy);
   } 
 }

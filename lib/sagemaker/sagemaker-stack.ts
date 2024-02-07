@@ -117,6 +117,25 @@ export class SagemakerStack extends Stack {
       policyName: `${this.prefix}-data-access-policy`,
       document: dataAccessDocument,
     });
+    const monitoringJobDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'EventBridgeSchedulerPolicy',
+          actions: [
+            'scheduler:UpdateSchedule',
+            'scheduler:CreateSchedule',
+          ],
+          effect: Effect.ALLOW,
+          resources: [
+            `arn:aws:scheduler:${this.region}:${this.account}:schedule/*/*`,
+          ],
+        }),
+      ],
+    });
+    const monitoringJobPolicy = new Policy(this, 'MonitoringJobPolicy', {
+      policyName: `${this.prefix}-sagemaker-monitoringjob-policy`,
+      document: monitoringJobDocument,
+    });
 
     this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
       prefix: this.prefix,
@@ -125,6 +144,7 @@ export class SagemakerStack extends Stack {
       dataBucketArn: dataBucketArn,
       experimentBucketArn: this.experimentBucket.bucketArn,
       dataAccessPolicy: dataAccessPolicy,
+      monitoringJobPolicy: monitoringJobPolicy,
       vpcId: props.vpc.vpcId,
       subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
       customResourceLayerArn: customResourceLayerArn,
