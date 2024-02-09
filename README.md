@@ -7,23 +7,23 @@ An end-to-end realtime machine learning pipeline on AWS including:
 * model monitoring
 * model deployment
 
-This application is currently:
-* ingesting in real time Blockchain transactions,
-* filtering duplicate transactions,
-* aggregating in real time some transaction features to compute the minute
-  * total number of transactions per minute
-  * total number of transaction fees collected per minute
-  * average number of transaction fees collected per minute
-* saving in real time the aggregated features into the Amazon SageMaker Feature Store
-
-> **Warning**
-> This opensource project is work in progress
-> Do not hesitate to contact us if you want to participate
 ## ToDo
 The current focus is to finalize the real time data ingestion pipeline
-* Create a Notebook to build a Forecasting model
-* Configure AWS Glue DataBrew to detect data drift and emit CloudWatch alarms
+* Change the architecture to replace the legacy Kinesis Data Analytics by a combination of Kinesis Data Streams with 
+Managed Apache Flink
 * Automating the deletion of all the stacks when destroying the pipeline
+
+## The Data
+For this project, we decided to ingest blockchain transactions from the blockchain.com API (see documentation here). 
+We focus on 3 simple metrics:
+* The total number of transactions
+* The total amount of transaction fees
+* The average amount of transaction fees
+
+These metrics are computed per minute. Although it might not be the best window period to analyze blockchain 
+transactions, it allows us to quickly gather a lot of data points in a short period of time, avoiding to run the demo 
+for too long which has an impact on the AWS billing.
+
 ## Architecture
 The current architecture only covers the real time data ingestion into S3 and SageMaker Feature Store
 ![](doc/images/mlops-realtime-data-ingestion.jpg)
@@ -42,4 +42,6 @@ You do not have much to configure and can directly play with the application and
 * [The Data Ingestion](./doc/INGESTION.md)
 
 ## Cost
-This demo deploys many services (e.g. Fargate, DynamoDB, Kinesis Firehose, Kinesys Analytics) and must be run for several days to collect enough data to be able to start training a model. This demo do generate costs which could be expensive, depending on your budget. The demo might cost about 15-20$ a day to run.
+This demo deploys many services (e.g. Fargate, DynamoDB, Kinesis Firehose, Kinesys Analytics) and must be run for 
+several days to collect enough data to be able to start training a model. This demo do generate costs which could be 
+expensive, depending on your budget. The full demo costs about $850 per month in the Ireland region.
