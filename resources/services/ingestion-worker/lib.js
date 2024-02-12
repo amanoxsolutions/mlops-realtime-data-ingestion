@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { EventBridgeClient, PutEventsCommand } = require("@aws-sdk/client-eventbridge");
-const { CloudWatchClient, PutEventsCommand  } = require("@aws-sdk/client-cloudwatch");
+const { CloudWatchClient, PutMetricDataCommand  } = require("@aws-sdk/client-cloudwatch");
 
 const ebClient = new EventBridgeClient({
   region: process.env.AWS_REGION,
