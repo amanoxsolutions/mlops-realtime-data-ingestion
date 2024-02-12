@@ -56,7 +56,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       region: region,
     });
     const analyticsWidget = new GraphWidget({
-      title: 'Ingestion Pipeline - Data Size',
+      title: 'Ingestion Pipeline - Kinesis Analytics Output Data Size',
       height: 9,
       width: 12,
       left: [kinesisAnalyticsOutput],
