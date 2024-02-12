@@ -87,7 +87,7 @@ async function writeMetric(dataSize) {
     await cwClient.putMetricData(params).promise();
     console.log('-- Wrote custom metric to CloudWatch');
   } catch (error) {
-    console.log("Error", err);
+    console.log("Error", error);
   }
 }
 
