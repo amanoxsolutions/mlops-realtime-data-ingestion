@@ -1,7 +1,12 @@
 const axios = require('axios');
 const { EventBridgeClient, PutEventsCommand } = require("@aws-sdk/client-eventbridge");
+const { CloudWatchClient  } = require("@aws-sdk/client-cloudwatch");
 
 const ebClient = new EventBridgeClient({
+  region: process.env.AWS_REGION,
+});
+
+const cwClient = new CloudWatchClient({
   region: process.env.AWS_REGION,
 });
 
@@ -59,6 +64,33 @@ async function pushEntryOnEventBus(entry, throwError = false) {
   }
 }
 
+// Function to write a custom metric containing the size of the ingested data in bytes to CloudWatch
+async function writeMetric(dataSize) {
+  // write the metric to CloudWatch
+  const params = {
+    MetricData: [
+      {
+        MetricName: 'IngestedDataSize',
+        Dimensions: [
+          {
+            Name: 'IngestedData',
+            Value: 'Size',
+          },
+        ],
+        Unit: 'Bytes',
+        Value: dataSize,
+      },
+    ],
+    Namespace: 'DataIngestionPipeline',
+  };
+  try {
+    await cwClient.putMetricData(params).promise();
+    console.log('-- Wrote custom metric to CloudWatch');
+  } catch (error) {
+    console.log("Error", err);
+  }
+}
+
 // Function to push data on the eventBridge Bus
 async function pushDataOnEventBus(data, detailType, throwError = false) {
   const eventBusName = process.env.EVENT_BUS_NAME || 'default';
@@ -77,6 +109,8 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
   // The maximum event size is 256KB. If the event is greater than 256
   // we need to split it into multiple parts
   const entrySize = getEntrySize(entry);
+  // write the metric to CloudWatch about the amount of ingested data
+  writeMetric(entrySize);
   console.log(`-- Full data entry size is ${entrySize} bytes`);
   if (entrySize > 256000) {
     // get the total number of transactions

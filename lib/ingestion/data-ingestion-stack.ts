@@ -10,6 +10,8 @@ import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Dashboard, GraphWidget } from 'aws-cdk-lib/aws-cloudwatch';
+import { RDIIngestionPipelineDashboard } from './dashboard';
 
 
 export interface RealtimeDataIngestionStackProps extends StackProps {
@@ -27,6 +29,8 @@ export class RealtimeDataIngestionStack extends Stack {
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
   public readonly vpc: IVpc;
+  public readonly dashboard: Dashboard;
+  public readonly pipelineWidget: GraphWidget;
 
   constructor(scope: Construct, id: string, props: RealtimeDataIngestionStackProps) {
     super(scope, id, props);
@@ -172,5 +176,12 @@ export class RealtimeDataIngestionStack extends Stack {
       stringValue: dataBucketArn,
       description: 'ARN of the ingestion data S3 Bucket',
     });
+
+    // Create the dashboard
+    const customDashboard = new RDIIngestionPipelineDashboard(this, 'IngestionPipelineDashboard', {
+      prefix: this.prefix,
+    });
+    this.dashboard = customDashboard.dashboard;
+    this.pipelineWidget = customDashboard.pipelineWidget;
   }
 }
