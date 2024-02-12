@@ -62,7 +62,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       left: [kinesisAnalyticsOutput],
       stacked: false,
     });
-    analyticsWidget.position(12, 0);
     this.dashboard.addWidgets(analyticsWidget);
+    analyticsWidget.position(12, 0);
   }
 }
