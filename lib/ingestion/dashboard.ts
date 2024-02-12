@@ -48,6 +48,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/Firehose',
+      dimensionsMap: { DeliveryStreamName: `${this.prefix}-kf-stream` },
       color: Color.ORANGE,
       region: region,
     });
@@ -58,6 +59,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/Firehose',
+      dimensionsMap: { DeliveryStreamName: `${this.prefix}-kf-stream` },
       color: Color.RED,
       region: region,
     });
