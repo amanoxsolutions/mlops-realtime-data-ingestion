@@ -40,6 +40,7 @@ export class RDIFeatureStore extends Construct {
   public readonly aggFeatureGroup: CfnFeatureGroup;
   public readonly bucket: IBucket;
   public readonly analyticsStream: CfnApplication;
+  public readonly analyticsAppName: string;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
     super(scope, id);
@@ -136,7 +137,7 @@ export class RDIFeatureStore extends Construct {
     //
     // Realtime ingestion with Kinesis Data Analytics
     //
-    const analyticsAppName = `${this.prefix}-analytics`;
+    this.analyticsAppName = `${this.prefix}-analytics`;
 
     // Lambda Function to ingest aggregated data into SageMaker Feature Store
     // Create the Lambda function used by Kinesis Firehose to pre-process the data
@@ -163,7 +164,7 @@ export class RDIFeatureStore extends Construct {
 
     // Setup Kinesis Analytics CloudWatch Logs
     const analyticsLogGroup = new LogGroup(this, 'AnalyticsLogGroup', {
-      logGroupName: analyticsAppName,
+      logGroupName: this.analyticsAppName,
       retention: RetentionDays.ONE_MONTH,
       removalPolicy: this.removalPolicy,
     });
@@ -236,7 +237,7 @@ export class RDIFeatureStore extends Construct {
 
     // Kinesis Data Analytics Application
     this.analyticsStream = new CfnApplication(this, 'Analytics', {
-      applicationName: analyticsAppName,
+      applicationName: this.analyticsAppName,
       applicationCode: fs.readFileSync(path.join(__dirname, '../../resources/kinesis/analytics.sql')).toString(),
       inputs: [
         {
@@ -261,13 +262,13 @@ export class RDIFeatureStore extends Construct {
     const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
       prefix: this.prefix,
       runtime: this.runtime,
-      kinesis_analytics_name: analyticsAppName,
+      kinesis_analytics_name: this.analyticsAppName,
       customResourceLayerArn: props.customResourceLayerArn,
     });
     startKinesisAnalytics.node.addDependency(this.analyticsStream)
 
     const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
-      applicationName: analyticsAppName,
+      applicationName: this.analyticsAppName,
       output: {
         destinationSchema: {
           recordFormatType: 'JSON'

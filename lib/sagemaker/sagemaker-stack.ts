@@ -8,6 +8,9 @@ import { RDISagemakerProject } from './sagemaker-project';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Bucket, IBucket, BlockPublicAccess, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Dashboard, GraphWidget } from 'aws-cdk-lib/aws-cloudwatch';
+import { RDIIngestionPipelineDashboard } from './dashboard';
+
 
 export interface SagemakerStackProps extends StackProps {
   readonly prefix: string;
@@ -15,6 +18,8 @@ export interface SagemakerStackProps extends StackProps {
   readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
   readonly vpc: IVpc;
+  readonly ingestionPipelineDashboard: Dashboard;
+  readonly ingestionPipelineWidget: GraphWidget;
 }
   
 export class SagemakerStack extends Stack {
@@ -26,6 +31,7 @@ export class SagemakerStack extends Stack {
   public readonly featureStore: RDIFeatureStore;
   public readonly project: RDISagemakerProject;
   public readonly experimentBucket: IBucket;
+  public readonly ingestionPipelineDashboard: Dashboard;
 
   constructor(scope: Construct, id: string, props: SagemakerStackProps) {
     super(scope, id, props);
@@ -34,6 +40,7 @@ export class SagemakerStack extends Stack {
     this.s3Suffix = props.s3Suffix;
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
+    this.ingestionPipelineDashboard = props.ingestionPipelineDashboard;
 
     // Get the necessary information of the ingestion stack from SSM parameters
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
@@ -168,6 +175,14 @@ export class SagemakerStack extends Stack {
       portfolioId: this.domain.portfolioId,
       domainExecutionRole: this.domain.executionRole,
       dataAccessPolicy: dataAccessPolicy,
+    });
+
+    // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard
+    new RDIIngestionPipelineDashboard(this, 'IngestionPipelineDashboard', {
+      prefix: this.prefix,
+      dashboard: this.ingestionPipelineDashboard,
+      pipelineWidget: props.ingestionPipelineWidget,
+      analyticsAppName: this.featureStore.analyticsAppName,
     });
   }
 }

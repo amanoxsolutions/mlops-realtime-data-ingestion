@@ -40,6 +40,8 @@ export class RealtimeDataIngestionStage extends Stage {
     new SagemakerStack(this, "SagemakerStack", {
       ...sagemakerProperties,
       vpc: ingestionStack.vpc,
+      ingestionPipelineDashboard: ingestionStack.dashboard,
+      ingestionPipelineWidget: ingestionStack.pipelineWidget,
     });    
   }
 }
