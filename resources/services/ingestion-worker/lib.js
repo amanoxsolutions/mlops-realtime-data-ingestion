@@ -84,7 +84,7 @@ async function writeMetric(dataSize) {
     Namespace: 'DataIngestionPipeline',
   };
   try {
-    await cwClient.putMetricData(params).promise();
+    await cwClient.send(new PutMetricDataCommand(params));
     console.log('-- Wrote custom metric to CloudWatch');
   } catch (error) {
     console.log("Error", error);
