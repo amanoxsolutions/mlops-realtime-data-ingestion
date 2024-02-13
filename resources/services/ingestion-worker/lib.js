@@ -85,7 +85,7 @@ async function writeMetric(dataSize) {
   };
   try {
     await cwClient.send(new PutMetricDataCommand(params));
-    console.log('-- Wrote custom metric to CloudWatch');
+    console.log(`-- Write custom metric to CloudWatch IngestedDataSize=${dataSize} bytes`);
   } catch (error) {
     console.log("Error", error);
   }
@@ -109,8 +109,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
   // The maximum event size is 256KB. If the event is greater than 256
   // we need to split it into multiple parts
   const entrySize = getEntrySize(entry);
-  // write the metric to CloudWatch about the amount of ingested data
-  writeMetric(entrySize);
+  const ingestedDataSize = 0;
   console.log(`-- Full data entry size is ${entrySize} bytes`);
   if (entrySize > 256000) {
     // get the total number of transactions
@@ -146,7 +145,8 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
         // we keep the entry transactions list as is and add it to the list of 
         // paramaters entries
         entry.Detail = JSON.stringify({txs: entryTransactions});
-        console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
+        console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${currentEntrySize} bytes`);
+        ingestedDataSize += currentEntrySize
         pushEntryOnEventBus(Object.assign({}, entry), throwError);
         // we reset the list of entry transactions to the current transaction
         entryTransactions = [data.txs[i]];
@@ -161,14 +161,18 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     // add it to the entry and push it on the event bus if its size is inferior to 256KB
     if (entryTransactions.length > 0 && currentEntrySize <= 256000) {
       entry.Detail = JSON.stringify({txs: entryTransactions});
-      console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
+      console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${currentEntrySize} bytes`);
       pushEntryOnEventBus(Object.assign({}, entry), throwError);
+      ingestedDataSize += currentEntrySize;
     } else {
       console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${tempEntrySize} bytes superior to the limit of 256KB`);
     }
   } else {
+    ingestedDataSize = entrySize;
     pushEntryOnEventBus(entry, throwError);
   }
+  // write the metric to CloudWatch about the amount of ingested data
+  writeMetric(ingestedDataSize);
 }
 
 module.exports = { ingestData , pushDataOnEventBus };
