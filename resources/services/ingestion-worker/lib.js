@@ -109,7 +109,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
   // The maximum event size is 256KB. If the event is greater than 256
   // we need to split it into multiple parts
   const entrySize = getEntrySize(entry);
-  const ingestedDataSize = 0;
+  let ingestedDataSize = 0;
   console.log(`-- Full data entry size is ${entrySize} bytes`);
   if (entrySize > 256000) {
     // get the total number of transactions
