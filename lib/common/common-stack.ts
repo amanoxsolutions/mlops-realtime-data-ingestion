@@ -34,9 +34,22 @@ export class CommonResourcesStack extends Stack {
     });
 
     new StringParameter(this, 'CustomResourceLayerSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/custom-resource-layer-arn',
       stringValue: customResourceLayer.layerVersionArn,
       description: 'Custom Resource Lambda Layer ARN',
+    });
+
+    // Store in SSM Parameter Store project prefix and bucket suffix values
+    new StringParameter(this, 'ProjectPrefixSSMParameter', {
+      parameterName: `/rdi-mlops/stack-parameters/project-prefix`,
+      stringValue: this.prefix,
+      description: 'Prefix of the project',
+    });
+
+    new StringParameter(this, 'BucketSuffixSSMParameter', {
+      parameterName: `/rdi-mlops/stack-parameters/bucket-suffix`,
+      stringValue: this.s3Suffix,
+      description: 'Suffix of the S3 buckets',
     });
   }
 }

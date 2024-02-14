@@ -6,8 +6,7 @@ import {
   Effect, 
   Role, 
   Policy, 
-  ServicePrincipal, 
-  CompositePrincipal 
+  ServicePrincipal 
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';

@@ -299,6 +299,7 @@ export class RDISagemakerStudio extends Construct {
     //
     const studioPolicyDocument = new PolicyDocument({
       statements: [
+        // Grant Access to code commit
         new PolicyStatement({
           sid: 'AllowRepoAccess',
           effect: Effect.ALLOW,
@@ -318,6 +319,16 @@ export class RDISagemakerStudio extends Construct {
             'codecommit:GitPush'
           ],
           resources: [`arn:aws:codecommit:${region}:${account}:sagemaker-${this.prefix}*`],
+        }),
+        // Grant access to SSM parameters /rdi-mlops/stack-parameters/*
+        new PolicyStatement({
+          sid: 'AllowSSMParameterAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'ssm:DescribeParameters',
+            'ssm:GetParameter*',
+          ],
+          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/*`],
         }),
       ],
     });

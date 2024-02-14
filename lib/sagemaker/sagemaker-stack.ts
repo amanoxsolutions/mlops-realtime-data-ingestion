@@ -44,15 +44,15 @@ export class SagemakerStack extends Stack {
 
     // Get the necessary information of the ingestion stack from SSM parameters
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
-      parameterName: `/${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/custom-resource-layer-arn',
     }).stringValue
 
     const ingestionFirehoseStreamArn = StringParameter.fromStringParameterAttributes(this, 'FirehoseStreamSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-firehose-stream-arn',
     }).stringValue
 
     const dataBucketArn = StringParameter.fromStringParameterAttributes(this, 'DataBucketSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/ingestion-data-bucket-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-data-bucket-arn',
     }).stringValue
 
     // S3 bucket to store the Model artifacts
@@ -183,6 +183,55 @@ export class SagemakerStack extends Stack {
       dashboard: this.ingestionPipelineDashboard,
       pipelineWidget: props.ingestionPipelineWidget,
       analyticsAppName: this.featureStore.analyticsAppName,
+    });
+
+    // Store SageMaker environment values in SSM Parameter Store.
+    // We need to store 
+    // - the SageMaker Project Name, 
+    // - the SageMaker project ID,
+    // - the SageMaker project bucket Name and ARN
+    // - the SageMaker Feature Group Name
+    // - the SageMaker feature Store bucket name and ARN
+    // - the SageMaker execution role ARN
+    new StringParameter(this, 'SagemakerProjectNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-name',
+      stringValue: this.project.projectName,
+      description: 'SageMaker Project Name',
+    });
+    new StringParameter(this, 'SagemakerProjectIdSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-id',
+      stringValue: this.project.projectId,
+      description: 'SageMaker Project ID',
+    });
+    new StringParameter(this, 'SagemakerProjectBucketNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-name',
+      stringValue: `sagemaker-project-${this.project.projectId}`,	
+      description: 'SageMaker Project Bucket Name',
+    });
+    new StringParameter(this, 'SagemakerProjectBucketArnSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-arn',
+      stringValue: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,	
+      description: 'SageMaker Project Bucket ARN',
+    });
+    new StringParameter(this, 'SagemakerFeatureGroupNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-group-name',
+      stringValue: this.featureStore.featureGroupName,	
+      description: 'SageMaker Feature Group Name',
+    });
+    new StringParameter(this, 'SagemakerFeatureStoreBucketNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-name',
+      stringValue: this.featureStore.bucket.bucketName,	
+      description: 'SageMaker Feature Store Bucket Name',
+    });
+    new StringParameter(this, 'SagemakerFeatureStoreBucketArnSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-arn',
+      stringValue: this.featureStore.bucket.bucketArn,	
+      description: 'SageMaker Feature Store Bucket ARN',
+    });
+    new StringParameter(this, 'SagemakerExecutionRoleARN', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-execution-role-arn',
+      stringValue: this.domain.executionRole.roleArn,
+      description: 'SageMaker Execution Role ARN',
     });
   }
 }

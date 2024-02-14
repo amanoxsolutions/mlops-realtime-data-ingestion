@@ -44,7 +44,7 @@ export class RealtimeDataIngestionStack extends Stack {
 
     // Get the ARN of the custom resource Lambda Layer from SSM parameter
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
-      parameterName: `/${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/custom-resource-layer-arn',
     }).stringValue
 
     const inputTable = new RDIDynamodbTable(this, 'inputHashTable', {
@@ -166,13 +166,13 @@ export class RealtimeDataIngestionStack extends Stack {
     this.vpc = ingestionWorker.vpc;
 
     new StringParameter(this, 'FirehoseStreamSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-firehose-stream-arn',
       stringValue: inputStream.kinesisFirehose.attrArn,
       description: 'ARN of the ingestion Kinesis Firehose Stream',
     });
 
     new StringParameter(this, 'DataBucketSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/ingestion-data-bucket-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-data-bucket-arn',
       stringValue: dataBucketArn,
       description: 'ARN of the ingestion data S3 Bucket',
     });

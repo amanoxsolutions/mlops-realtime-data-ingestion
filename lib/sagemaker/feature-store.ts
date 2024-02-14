@@ -37,7 +37,7 @@ export class RDIFeatureStore extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
-  public readonly aggFeatureGroup: CfnFeatureGroup;
+  public readonly featureGroupName: string;
   public readonly bucket: IBucket;
   public readonly analyticsStream: CfnApplication;
   public readonly analyticsAppName: string;
@@ -112,6 +112,7 @@ export class RDIFeatureStore extends Construct {
     }));
 
     // Create the Feature Group
+    this.featureGroupName = `${this.prefix}-agg-feature-group`;
     const cfnFeatureGroup = new CfnFeatureGroup(this, 'FeatureGroup', {
       eventTimeFeatureName: fgConfig.event_time_feature_name,
       featureDefinitions: fgConfig.features.map(
@@ -120,7 +121,7 @@ export class RDIFeatureStore extends Construct {
           featureType: FeatureStoreTypes[feature.type as keyof typeof FeatureStoreTypes],
         })
       ),
-      featureGroupName: `${this.prefix}-agg-feature-group`,
+      featureGroupName: this.featureGroupName ,
       recordIdentifierFeatureName: fgConfig.record_identifier_feature_name,
     
       // the properties below are optional
