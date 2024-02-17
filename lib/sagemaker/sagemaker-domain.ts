@@ -306,7 +306,7 @@ export class RDISagemakerStudio extends Construct {
             'ssm:GetParameter*',
             'ssm:ListParameters*',
           ],
-          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/*`],
+          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/*`],
         }),
       ],
     });
