@@ -305,6 +305,7 @@ export class RDISagemakerStudio extends Construct {
           actions: [
             'ssm:GetParameter*',
             'ssm:DescribeParameters',
+            'ssm:PutParameter*',
           ],
           resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/*`],
         }),
