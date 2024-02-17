@@ -297,7 +297,24 @@ export class RDISagemakerStudio extends Construct {
     //
     // Create SageMaker Studio Domain Execution Role
     //
-    const studioPolicyDocument = new PolicyDocument({
+    const ssmParameterDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'SSMParameterAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'ssm:GetParameter*',
+            'ssm:ListParameters*',
+          ],
+          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/*`],
+        }),
+      ],
+    });
+    const ssmParameterPolicy = new Policy(this, 'SSMParameterPolicy', {
+      policyName: `${this.prefix}-ssm-parameter-policy`,
+      document: ssmParameterDocument,
+    });
+    const codeCommitPolicyDocument = new PolicyDocument({
       statements: [
         // Grant Access to code commit
         new PolicyStatement({
@@ -320,17 +337,11 @@ export class RDISagemakerStudio extends Construct {
           ],
           resources: [`arn:aws:codecommit:${region}:${account}:sagemaker-${this.prefix}*`],
         }),
-        // Grant access to SSM parameters /rdi-mlops/stack-parameters/*
-        new PolicyStatement({
-          sid: 'AllowSSMParameterAccess',
-          effect: Effect.ALLOW,
-          actions: [
-            'ssm:DescribeParameters',
-            'ssm:GetParameter*',
-          ],
-          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/*`],
-        }),
       ],
+    });
+    const codeCommitPolicy = new Policy(this, 'CodeCommitPolicy', {
+      policyName: `${this.prefix}-codecommit-policy`,
+      document: codeCommitPolicyDocument,
     });
 
     this.executionRole = new Role(this, 'StudioRole', {
@@ -341,8 +352,10 @@ export class RDISagemakerStudio extends Construct {
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess'),
       ],
     });
-    // Attach the data access policy to the execution role
+    // Attach the data access, SSM Parameter Store and Code Commit policies to the execution role
     this.executionRole.attachInlinePolicy(props.dataAccessPolicy);
+    this.executionRole.attachInlinePolicy(ssmParameterPolicy);
+    this.executionRole.attachInlinePolicy(codeCommitPolicy);
 
     //
     // Create SageMaker Studio Domain
@@ -412,6 +425,7 @@ export class RDISagemakerStudio extends Construct {
       `arn:aws:iam::${account}:role/service-role/AmazonSageMakerServiceCatalogProductsUseRole`
     );
     serviceCatalogProductsUseRole.attachInlinePolicy(props.dataAccessPolicy);
+    serviceCatalogProductsUseRole.attachInlinePolicy(ssmParameterPolicy);
     serviceCatalogProductsUseRole.attachInlinePolicy(props.monitoringJobPolicy);
   } 
 }
