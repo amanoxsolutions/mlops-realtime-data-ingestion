@@ -428,5 +428,63 @@ export class RDISagemakerStudio extends Construct {
     serviceCatalogProductsUseRole.attachInlinePolicy(props.dataAccessPolicy);
     serviceCatalogProductsUseRole.attachInlinePolicy(ssmParameterPolicy);
     serviceCatalogProductsUseRole.attachInlinePolicy(props.monitoringJobPolicy);
+    // Add additional policies to the role for IAM, Lambda Function and SageMaker Pipelines
+    const additionalProjectRolePolicies = new Policy(this, 'AdditionalPolicies', {
+      policyName: `${this.prefix}-additional-policies`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'iam:List*',
+              'iam:Get*',
+              'iam:DeleteRole',
+              'iam:CreateRole',
+              'iam:CreatePolicy',
+              'iam:AttachRolePolicy',
+              'iam:DetachRolePolicy',
+              'iam:PutRolePolicy',
+              'iam:DeleteRolePolicy',
+              'iam:Tag*',
+              'iam:Untag*',
+              'iam:PassRole',
+            ],
+            resources: [
+              `arn:aws:iam::${account}:role/${this.prefix}-*`,
+              `arn:aws:iam::${account}:policy/${this.prefix}-*`,
+            ],
+          }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'lambda:Get*',
+              'lambda:CreateFunction',
+              'lambda:PublishVersion',
+              'lambda:UpdateFunction*',
+              'lambda:DeleteFunction',
+              'lambda:TagResource',
+              'lambda:UntagResource',
+            ],
+            resources: [
+              `arn:aws:lambda:${region}:${account}:function:${this.prefix}-*`,
+            ],
+          }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'sagemaker:CreatePipeline',
+              'sagemaker:DeletePipeline',
+              'sagemaker:DescribePipeline',
+              'sagemaker:ListPipelines',
+              'sagemaker:UpdatePipeline',
+            ],
+            resources: [
+              `arn:aws:sagemaker:${region}:${account}:pipeline/${this.prefix}-*`,
+            ],
+          }),
+        ],
+      }),
+    });
+    serviceCatalogProductsUseRole.attachInlinePolicy(additionalProjectRolePolicies);
   } 
 }
