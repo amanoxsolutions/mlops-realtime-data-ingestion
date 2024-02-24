@@ -482,6 +482,29 @@ export class RDISagemakerStudio extends Construct {
               `arn:aws:sagemaker:${region}:${account}:pipeline/${this.prefix}-*`,
             ],
           }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'scheduler:Get*',
+              'scheduler:List*',
+            ],
+            resources: [
+              `arn:aws:scheduler:${region}:${account}:schedule/default/*`,
+            ],
+          }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'scheduler:CreateSchedule',
+              'scheduler:UpdateSchedule',
+              'scheduler:DeleteSchedule',
+              'scheduler:TagResource',
+              'scheduler:UntagResource',
+            ],
+            resources: [
+              `arn:aws:scheduler:${region}:${account}:schedule/default/${this.prefix}-*`,
+            ],
+          }),
         ],
       }),
     });
