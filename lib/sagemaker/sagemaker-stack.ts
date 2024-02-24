@@ -127,14 +127,26 @@ export class SagemakerStack extends Stack {
     const monitoringJobDocument = new PolicyDocument({
       statements: [
         new PolicyStatement({
-          sid: 'EventBridgeSchedulerPolicy',
-          actions: [
-            'scheduler:UpdateSchedule',
-            'scheduler:CreateSchedule',
-          ],
           effect: Effect.ALLOW,
+          actions: [
+            'scheduler:Get*',
+            'scheduler:List*',
+          ],
           resources: [
-            `arn:aws:scheduler:${this.region}:${this.account}:schedule/*/*`,
+            `arn:aws:scheduler:${this.region}:${this.account}:schedule/default/*`,
+          ],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'scheduler:CreateSchedule',
+            'scheduler:UpdateSchedule',
+            'scheduler:DeleteSchedule',
+            'scheduler:TagResource',
+            'scheduler:UntagResource',
+          ],
+          resources: [
+            `arn:aws:scheduler:${this.region}:${this.account}:schedule/default/${this.prefix}-*`,
           ],
         }),
       ],
