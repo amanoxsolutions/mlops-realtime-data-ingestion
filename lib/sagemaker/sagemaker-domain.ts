@@ -495,6 +495,13 @@ export class RDISagemakerStudio extends Construct {
               `arn:aws:cloudwatch:${region}:${account}:alarm:${this.prefix}-*`,
             ],
           }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'cloudwatch:PutMetricData',
+            ],
+            resources: ['*'],
+          }),
         ],
       }),
     });
