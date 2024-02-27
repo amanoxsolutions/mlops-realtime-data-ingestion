@@ -486,15 +486,13 @@ export class RDISagemakerStudio extends Construct {
           new PolicyStatement({
             effect: Effect.ALLOW,
             actions: [
-              'cloudformation:CreateStack',
-              'cloudformation:UpdateStack',
-              'cloudformation:DeleteStack',
-              'cloudformation:Describe*',
-              'cloudformation:GetTemplate',
-              'cloudformation:ValidateTemplate', 
+              'cloudwatch:PutMetricAlarm',
+              'cloudwatch:DeleteAlarms',
+              'cloudwatch:Describe*',
+              'cloudwatch:*AlarmActions',
             ],
             resources: [
-              `arn:aws:cloudformation:${region}:${account}:stack/${this.prefix}-*`,
+              `arn:aws:cloudwatch:${region}:${account}:alarm:${this.prefix}-*`,
             ],
           }),
         ],
