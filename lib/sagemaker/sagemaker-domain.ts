@@ -464,6 +464,7 @@ export class RDISagemakerStudio extends Construct {
               'lambda:DeleteFunction',
               'lambda:TagResource',
               'lambda:UntagResource',
+              'lambda:List*',
             ],
             resources: [
               `arn:aws:lambda:${region}:${account}:function:${this.prefix}-*`,
