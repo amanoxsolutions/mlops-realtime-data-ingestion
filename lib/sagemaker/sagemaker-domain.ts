@@ -489,8 +489,8 @@ export class RDISagemakerStudio extends Construct {
               'cloudformation:UpdateStack',
               'cloudformation:DeleteStack',
               'cloudformation:Describe*',
-              "cloudformation:GetTemplate",
-              "cloudformation:ValidateTemplate" 
+              'cloudformation:GetTemplate',
+              'cloudformation:ValidateTemplate', 
             ],
             resources: [
               `arn:aws:cloudformation:${region}:${account}:stack/${this.prefix}-*`,
