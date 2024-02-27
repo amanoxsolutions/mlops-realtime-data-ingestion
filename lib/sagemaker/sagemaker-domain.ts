@@ -482,6 +482,20 @@ export class RDISagemakerStudio extends Construct {
               `arn:aws:sagemaker:${region}:${account}:pipeline/${this.prefix}-*`,
             ],
           }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'cloudformation:CreateStack',
+              'cloudformation:UpdateStack',
+              'cloudformation:DeleteStack',
+              'cloudformation:Describe*',
+              "cloudformation:GetTemplate",
+              "cloudformation:ValidateTemplate" 
+            ],
+            resources: [
+              `arn:aws:cloudformation:${region}:${account}:stack/${this.prefix}-*`,
+            ],
+          }),
         ],
       }),
     });
