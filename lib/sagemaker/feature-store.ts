@@ -163,20 +163,6 @@ export class RDIFeatureStore extends Construct {
     });
     lambda.function.addToRolePolicy(lambdaPolicyStatement);
 
-    // Setup Kinesis Analytics CloudWatch Logs
-    const analyticsLogGroup = new LogGroup(this, 'AnalyticsLogGroup', {
-      logGroupName: this.analyticsAppName,
-      retention: RetentionDays.ONE_MONTH,
-      removalPolicy: this.removalPolicy,
-    });
-
-    const logStreamName = 'analytics-logstream'
-    const analyticsLogStream = new LogStream(this, 'AnalyticsLogStream', {
-      logGroup: analyticsLogGroup,
-      logStreamName: logStreamName,
-      removalPolicy: this.removalPolicy,
-    });
-
     // IAM Role for Kinesis Data Analytics
     const analyticsRole = new Role(this, 'AnalyticsRole', {
       roleName: `${this.prefix}-analytics-role`,
@@ -221,10 +207,7 @@ export class RDIFeatureStore extends Construct {
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
-              resources: [ 
-                analyticsLogGroup.logGroupArn,
-                `${analyticsLogGroup.logGroupArn}:*`,
-               ],
+              resources: ['*'],
               actions: [
                 'logs:PutLogEvents', 
                 'logs:DescribeLogGroups',
