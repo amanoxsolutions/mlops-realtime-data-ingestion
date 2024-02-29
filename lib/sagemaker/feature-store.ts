@@ -144,7 +144,7 @@ export class RDIFeatureStore extends Construct {
     // Create the Lambda function used by Kinesis Firehose to pre-process the data
     const lambda = new RDILambda(this, 'IngestIntoFeatureStore', {
       prefix: this.prefix,
-      name: 'analytics-to-featurestore2',
+      name: 'analytics-to-featurestore',
       codePath: 'resources/lambdas/analytics_to_featurestore',
       runtime: this.runtime,
       memorySize: 512,
