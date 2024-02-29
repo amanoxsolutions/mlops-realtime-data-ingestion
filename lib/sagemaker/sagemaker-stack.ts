@@ -10,6 +10,7 @@ import { Bucket, IBucket, BlockPublicAccess, BucketEncryption } from 'aws-cdk-li
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Dashboard, GraphWidget } from 'aws-cdk-lib/aws-cloudwatch';
 import { RDIIngestionPipelineDashboard } from './dashboard';
+import { RDICleanupStepFunction } from './cleanup-project';
 
 
 export interface SagemakerStackProps extends StackProps {
@@ -244,6 +245,13 @@ export class SagemakerStack extends Stack {
       parameterName: '/rdi-mlops/stack-parameters/sagemaker-execution-role-arn',
       stringValue: this.domain.executionRole.roleArn,
       description: 'SageMaker Execution Role ARN',
+    });
+
+    // Create a Step Function to cleanup the SageMaker resources
+    new RDICleanupStepFunction(this, 'CleanupSagemakerProject', {
+      prefix: this.prefix,
+      removalPolicy: this.removalPolicy,
+      runtime: this.runtime,
     });
   }
 }
