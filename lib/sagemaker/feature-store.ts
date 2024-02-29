@@ -86,7 +86,7 @@ export class RDIFeatureStore extends Construct {
 
     // Create the IAM Role for Feature Store
     const fgRole = new Role(this, 'FeatureStoreRole', {
-      roleName: `${this.prefix}-sagemaker-feature-store-role`,
+      roleName: `${this.prefix}-sagemaker-feature-store-role2`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
       managedPolicies: [
         ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess')],
