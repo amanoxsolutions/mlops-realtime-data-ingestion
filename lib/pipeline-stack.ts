@@ -31,7 +31,7 @@ export class DataIngestionPipelineStack extends Stack {
     console.log('unique resource Suffix source string: 👉 ', `${this.account}-${props.shortBranchName}`);
     console.log('unique resource Suffix hash: 👉 ', uniqueSuffix);
 
-    const runtime = props.runtime || Runtime.PYTHON_3_9;
+    const runtime = props.runtime || Runtime.PYTHON_3_11;
 
     const codestarConnection = new CodestarConnection(this, 'CsConnection', {
       prefix: props.prefix,

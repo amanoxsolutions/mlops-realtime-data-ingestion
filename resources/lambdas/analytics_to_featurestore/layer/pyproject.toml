@@ -5,8 +5,8 @@ description = ""
 authors = ["Matthieu Lienart <matthieu.lienart@amanox.ch>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-aws-lambda-powertools = {extras = ["tracer"], version = "^2.25.1"}
+python = "^3.11"
+aws-lambda-powertools = {extras = ["tracer"], version = "^2.34.2"}
 
 [tool.poetry.dev-dependencies]
 
