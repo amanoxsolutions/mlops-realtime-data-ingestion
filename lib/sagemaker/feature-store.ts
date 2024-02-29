@@ -142,7 +142,7 @@ export class RDIFeatureStore extends Construct {
 
     // Lambda Function to ingest aggregated data into SageMaker Feature Store
     // Create the Lambda function used by Kinesis Firehose to pre-process the data
-    const lambda = new RDILambda(this, 'IngestIntoFetureStore', {
+    const lambda = new RDILambda(this, 'IngestIntoFeatureStore', {
       prefix: this.prefix,
       name: 'analytics-to-featurestore',
       codePath: 'resources/lambdas/analytics_to_featurestore',

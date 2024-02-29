@@ -51,7 +51,7 @@ export class RDIStartKinesisAnalytics extends Construct {
 
     const customResourceHandler = new SingletonFunction(this, 'Singleton', {
       functionName: `${this.prefix}-cr-start-kinesis-app`,
-      lambdaPurpose: 'CustomResourceToStartKinesisApp',
+      lambdaPurpose: 'CustomResourceToStartKinesisApp2',
       uuid: '384bbf76-66b8-11ee-8c99-0242ac120002',
       role: singeltonRole,
       code: Code.fromAsset('resources/lambdas/start_kinesis_app'),

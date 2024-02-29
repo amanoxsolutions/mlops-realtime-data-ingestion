@@ -41,7 +41,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
-    const lambdaPurpose = 'CustomResourceToCreateUpdateDeleteSagemakerDomain'
+    const lambdaPurpose = 'CustomResourceToCreateUpdateDeleteSagemakerDomain2'
 
     this.prefix = props.prefix;
     this.runtime = props.runtime;
@@ -193,7 +193,7 @@ export class CleanupSagemakerDomainUser extends Construct {
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
-    const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomainUser'
+    const lambdaPurpose = 'CustomResourceToCleanupSageMakerDomainUser2'
 
     this.prefix = props.prefix;
     this.runtime = props.runtime;

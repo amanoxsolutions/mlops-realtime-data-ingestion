@@ -36,7 +36,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
-    const lambdaPurpose = 'CustomResourceToCreateUpdateDeleteSagemakerMlopsProject'
+    const lambdaPurpose = 'CustomResourceToCreateUpdateDeleteSagemakerMlopsProject2'
 
     this.prefix = props.prefix;
     this.runtime = props.runtime;
