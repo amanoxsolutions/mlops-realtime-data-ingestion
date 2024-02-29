@@ -1,4 +1,4 @@
-import { Stack, StackProps, RemovalPolicy, Duration, Size } from 'aws-cdk-lib';
+import { Stack, StackProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
@@ -31,6 +31,7 @@ export class CommonResourcesStack extends Stack {
       description: `${props.prefix}-custom-resource Lambda Layer`,
       compatibleRuntimes: [props.runtime],
       layerVersionName: `${props.prefix}-custom-resource-layer`,
+      removalPolicy: RemovalPolicy.RETAIN, // we need to keep the old layer version otherwise the custom resource will fail
     });
 
     new StringParameter(this, 'CustomResourceLayerSSMParameter', {
