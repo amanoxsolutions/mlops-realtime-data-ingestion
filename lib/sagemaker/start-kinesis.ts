@@ -42,7 +42,7 @@ export class RDIStartKinesisAnalytics extends Construct {
     // Create the role for the custom resource Lambda
     // We do this manually to be able to give it a human readable name
     const singeltonRole = new Role(this, 'SingeltonRole', {
-      roleName: `${this.prefix}-cr-start-kinesis-app-role2`,
+      roleName: `${this.prefix}-cr-start-kinesis-app-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
       inlinePolicies: {
         'lambda-cr-start-kinesis-app-policy': policyDocument,

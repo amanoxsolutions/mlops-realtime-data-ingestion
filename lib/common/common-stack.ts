@@ -31,7 +31,7 @@ export class CommonResourcesStack extends Stack {
       description: `${props.prefix}-custom-resource Lambda Layer`,
       compatibleRuntimes: [props.runtime],
       layerVersionName: `${props.prefix}-custom-resource-layer`,
-      removalPolicy: RemovalPolicy.RETAIN, // we need to keep the old layer versions otherwise the custom resource will fail to update
+      removalPolicy: RemovalPolicy.RETAIN, // we need to keep the old layer version otherwise the custom resource will fail
     });
 
     new StringParameter(this, 'CustomResourceLayerSSMParameter', {
