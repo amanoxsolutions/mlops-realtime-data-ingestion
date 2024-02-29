@@ -60,6 +60,7 @@ export class SagemakerStack extends Stack {
       bucketName: `${this.prefix}-sagemaker-experiment-${this.s3Suffix}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: BucketEncryption.S3_MANAGED,
+      bucketKeyEnabled: true,
       enforceSSL: true,
       versioned: false,
       removalPolicy: this.removalPolicy,

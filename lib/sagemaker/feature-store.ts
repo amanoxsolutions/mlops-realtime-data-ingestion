@@ -60,6 +60,7 @@ export class RDIFeatureStore extends Construct {
       bucketName: `${this.prefix}-sagemaker-feature-store-bucket-${props.s3Suffix}`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
+      bucketKeyEnabled: true,
       removalPolicy: this.removalPolicy,
       autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
     });
@@ -287,6 +288,7 @@ export class RDIFeatureStore extends Construct {
       bucketName: `${this.prefix}-glue-assets-${props.s3Suffix}`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
+      bucketKeyEnabled: true,
       removalPolicy: this.removalPolicy,
       autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
     });
