@@ -79,12 +79,12 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     // Create the role for the custom resource Lambda
     // We do this manually to be able to give it a human readable name
     const singeltonRole = new Role(this, 'SingeltonRole', {
-      roleName: `${this.prefix}-cr-manage-sagemaker-project-role`,
+      roleName: `${this.prefix}-cr-manage-sagemaker-project-role2`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
     // Create the inline policy separately to avoid circular dependencies
     const singeltonPolicy = new Policy(this, 'SingeltonPolicy', {
-      policyName: 'lambda-cr-manage-sagemaker-project-policy',
+      policyName: 'lambda-cr-manage-sagemaker-project-policy2',
       document: policyDocument,
       roles: [singeltonRole],
     });
@@ -99,7 +99,7 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     );
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${this.prefix}-cr-manage-sagemaker-project`,
+      functionName: `${this.prefix}-cr-manage-sagemaker-project2`,
       lambdaPurpose: lambdaPurpose,
       uuid: '529ab48d-3fe7-44a1-9abe-232b36c41763',
       role: singeltonRole,

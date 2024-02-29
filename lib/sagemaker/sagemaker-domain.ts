@@ -61,12 +61,12 @@ export class RDISagemakerDomainCustomResource extends Construct {
     });
 
     this.eventBridgeSchedulerRole = new Role(this, 'EventBridgeSchedulerRole', {
-      roleName: `${this.prefix}-eventbridge-scheduler-role`,
+      roleName: `${this.prefix}-eventbridge-scheduler-role2`,
       assumedBy: new ServicePrincipal('scheduler.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies
     const eventBridgeSchedulerPolicy = new Policy(this, 'EventBridgeSchedulerPolicy', {
-      policyName: 'eventbridge-scheduler-policy',
+      policyName: 'eventbridge-scheduler-policy2',
       document: eventBridgeDocument,
       roles: [this.eventBridgeSchedulerRole],
     });
@@ -128,18 +128,18 @@ export class RDISagemakerDomainCustomResource extends Construct {
     // Create the role for the custom resource Lambda
     // We do this manually to be able to give it a human readable name
     const singeltonRole = new Role(this, 'SingeltonRole', {
-      roleName: `${this.prefix}-cr-manage-sagemaker-domain-role`,
+      roleName: `${this.prefix}-cr-manage-sagemaker-domain-role2`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies
     const singeltonPolicy = new Policy(this, 'SingeltonPolicy', {
-      policyName: 'lambda-cr-manage-sagemaker-domain-policy',
+      policyName: 'lambda-cr-manage-sagemaker-domain-policy2',
       document: policyDocument,
       roles: [singeltonRole],
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${this.prefix}-cr-manage-sagemaker-domain`,
+      functionName: `${this.prefix}-cr-manage-sagemaker-domain2`,
       lambdaPurpose: lambdaPurpose,
       uuid: '61e6b537-fe77-4e73-8304-1eb3480b0867',
       role: singeltonRole,
@@ -222,18 +222,18 @@ export class CleanupSagemakerDomainUser extends Construct {
     // Create the role for the custom resource Lambda
     // We do this manually to be able to give it a human readable name
     const singeltonRole = new Role(this, 'SingeltonRole', {
-      roleName: `${this.prefix}-cr-cleanup-sagemaker-domain-user-role`,
+      roleName: `${this.prefix}-cr-cleanup-sagemaker-domain-user-role2`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies
     const singeltonPolicy = new Policy(this, 'SingeltonPolicy', {
-      policyName: 'lambda-cr-cleanup-sagemaker-domain-user-policy',
+      policyName: 'lambda-cr-cleanup-sagemaker-domain-user-policy2',
       document: policyDocument,
       roles: [singeltonRole],
     });
 
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${this.prefix}-cr-cleanup-sagemaker-domain-user`,
+      functionName: `${this.prefix}-cr-cleanup-sagemaker-domain-user2`,
       lambdaPurpose: lambdaPurpose,
       uuid: '33b41147-8a9b-4300-856f-d5b5a3daab3e',
       role: singeltonRole,
