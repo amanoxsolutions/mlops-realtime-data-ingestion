@@ -57,7 +57,7 @@ def lambda_handler(event, context):
                     ConditionExpression=Attr(HASH_KEY_NAME).not_exists()
                 )
             except dynamodb_resource.meta.client.exceptions.ConditionalCheckFailedException:
-                logger.exception("been there seen that")
+                logger.info(f"been there seen that: {transaction_hash}")
             else:
                 transactions_to_store.append(transaction)
         logger.info(f"Added  {len(transactions_to_store)} transactions out of {len(record['detail']['txs'])} from the stream block payload.")
