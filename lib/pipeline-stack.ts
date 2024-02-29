@@ -45,7 +45,6 @@ export class DataIngestionPipelineStack extends Stack {
       bucketName: `${props.prefix}-pipeline-artifacts-bucket-${uniqueSuffix}`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
-      bucketKeyEnabled: true,
       removalPolicy: removalPolicy,
       autoDeleteObjects: removalPolicy === RemovalPolicy.DESTROY,
     });
