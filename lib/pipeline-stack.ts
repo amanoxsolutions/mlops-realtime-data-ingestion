@@ -60,7 +60,7 @@ export class DataIngestionPipelineStack extends Stack {
           }
         ),
         // We pass to the CodeBuild job the branchName as a context parameter
-        commands: [`git checkout ${props.fullBranchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth']
+        commands: [`git checkout ${props.fullBranchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth --no-previous-parameters']
       }),
       dockerEnabledForSynth: true,
       cliVersion: '2.100.0',
