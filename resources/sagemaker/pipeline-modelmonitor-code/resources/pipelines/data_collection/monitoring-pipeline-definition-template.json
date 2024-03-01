@@ -185,7 +185,6 @@
                                         "Values": [
                                             "s3://sagemaker-project-${project_id}",
                                             "monitoring-custom-metric-${stage_name}",
-                                            "${timestamp}",
                                             {
                                                 "Get": "Execution.PipelineExecutionId"
                                             },

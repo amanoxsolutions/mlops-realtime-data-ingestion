@@ -228,7 +228,7 @@ if __name__ == "__main__":
     for folder_name in ["input", "target", "predictions", "evaluation"]:
         if not os.path.isdir(f"{local_data_folder}/{folder_name}"):
             os.makedirs(f"{local_data_folder}/{folder_name}", exist_ok=True)
-    write_dicts_to_file(f"{local_data_folder}/input/input.json", input_data)
+    write_dicts_to_file(f"{local_data_folder}/input/input.jsonl", input_data)
     df_target_data.to_csv(f"{local_data_folder}/target/target.csv", header=True, index=False) 
     df_predictions.to_csv(f"{local_data_folder}/predictions/predictions.csv", header=True, index=False) 
     with open(f"{local_data_folder}/evaluation/evaluation.json", "w") as f:

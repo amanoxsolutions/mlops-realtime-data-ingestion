@@ -195,8 +195,8 @@ if __name__ == "__main__":
     for folder_name in ["input", "target"]:
         if not os.path.isdir(f"{local_data_folder}/{folder_name}"):
             os.makedirs(f"{local_data_folder}/{folder_name}", exist_ok=True)
-    write_dicts_to_file(f"{local_data_folder}/target/target.json", target_data)
-    write_dicts_to_file(f"{local_data_folder}/input/input.json", input_data)
+    write_dicts_to_file(f"{local_data_folder}/target/target.jsonl", target_data)
+    write_dicts_to_file(f"{local_data_folder}/input/input.jsonl", input_data)
 
     endpoint_name=f"{stack_parameters['sagemaker-project-name']}-staging"
     predictor = DeepARPredictor(endpoint_name=endpoint_name, sagemaker_session=sagemaker_session)
