@@ -47,28 +47,12 @@ def ground_truth_with_id(data: str, uuid: str) -> OutputData:
 
 
 def predictions_with_id(uuid: str, input_data: List[DeepARData], prediction: float) -> OutputData:
-    # "captureData": {
-    #         "endpointInput": {
-    #             "observedContentType": "text/csv",
-    #             "mode": "INPUT",
-    #             "data": ",".join([str(x) for x in input_data[0]["target"]]),
-    #             "encoding": "CSV"
-    #         },
-    #         "endpointOutput": {
-    #             "observedContentType": "text/csv; charset=character-encoding",
-    #             "mode": "OUTPUT",
-    #             "data": str(df_predictions["0.5"].values[record_index]),
-    #             "encoding": "CSV"
-    #         }
-    #     },
     return {
         "captureData": {
             "endpointInput": {
                 "observedContentType": "application/json",
                 "mode": "INPUT",
-                "data": {
-                    "instances" : input_data
-                },
+                "data": f"{{\"instances\" : {input_data} }}",
                 "encoding": "JSON"
             },
             "endpointOutput": {

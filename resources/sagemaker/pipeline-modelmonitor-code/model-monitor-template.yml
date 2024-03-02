@@ -196,9 +196,6 @@ Parameters:
   InferenceAttribute:
     Type: String
     Description: Index or JSONpath to locate predicted label(s)
-  RecordPreprocessorSourceUri:
-    Type: String
-    Description: Amazon S3 prefix that contains the preprocessing script
   ProbabilityAttribute:
     Type: String
     Description: Index or JSONpath to locate probabilities.
@@ -370,8 +367,6 @@ Resources:
           Ref: ModelMonitorImageUri
         ProblemType:
           Ref: ProblemType
-        RecordPreprocessorSourceUri:
-          Ref: RecordPreprocessorSourceUri
       ModelQualityJobInput:
         EndpointInput:
           EndpointName:

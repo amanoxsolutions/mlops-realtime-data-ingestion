@@ -200,11 +200,11 @@ def main():
 
     # create monitoring pipeline configuration from the JSON template file
     # Copy script files to S3
-    s3_client.upload_file(
-        "resources/pipelines/data_collection/preprocessor.py", 
-        monitor_outputs_bucket, 
-        f"code-artifacts/monitoring-data-collection/{timestamp}/preprocessor.py"
-    )
+    #s3_client.upload_file(
+    #    "resources/pipelines/data_collection/preprocessor.py",
+    #    monitor_outputs_bucket,
+    #    f"code-artifacts/monitoring-data-collection/{timestamp}/preprocessor.py"
+    #)
     s3_client.upload_file(
         "resources/pipelines/data_collection/monitoring_data_collection.py", 
         monitor_outputs_bucket, 

@@ -14,7 +14,7 @@
     "MonitoringJobInstanceCount": "1",
     "MonitoringJobInstanceVolumeSizeInGB": "20",
     "ProblemType": "Regression",
-    "InferenceAttribute": "target_value",
+    "InferenceAttribute": "0",
     "ProbabilityAttribute": "",
     "FeaturesAttribute": "",
     "ProbabilityThresholdAttribute": "",
