@@ -1,4 +1,11 @@
 # Deploy the Data Ingestion Environment
+## What are the Prerequisites?
+The list below is for _Windows_ environment
+* The AWS CLI ([documentation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))  
+* Docker Desktop ([Documentation](https://docs.docker.com/desktop/windows/install/))  
+* NPM and Node.js ([Documenttaion](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
+* The AWS CDK: `npm install -g aws-cdk`
+* Configure your programmatic access to AWS for the CLI (see instructions [here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_auth)).
 
 ## 1. Fork this Repository
 
@@ -6,21 +13,23 @@
 Please refer to the AWS document [Create a connection to GitHub](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-github.html)
 
 ## 3. Edit the Data Ingestion Configuration
-In the `bin/data-ingestion.ts` file configure the 
+In [the `bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/bin/data-ingestion.ts#L35-L36) configure the 
 * repository name
 * your AWS CodeStar connection name
 
 ```
 new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
+  [...]
   repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
   codestarConnectionName: 'mlops-realtime-data-ingestion',
 });
 ```
 
 ## 4. Deploy the CI/CD Pipeline
-If you have multiple AWS CLI configuration profiles use the `--profile <your profile name>` to use it for authentication.
+> [!TIP]
+> If your AWS CLI is using a named profile instead of the default profile,  specify this profile when issuing AWS CLI & CDK commands using the `--profile <your profile name>` option or the AWS_PROFILE environment variable.
 
-Bootsrap the CDK
+Bootsrap the CDK (documentation [here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap))
 ```
 cdk bootstrap aws://<account number>/<aws region>
 ```
@@ -57,11 +66,3 @@ It will
 2. package the code assets for the different stacks' deployment.
 3. deploy the stacks in sequential orders using CloudFormation.
 
-## 5. Destroy the Stacks
-Unfortunately running the command 
-```
-cdk destroy
-```
-will only destroy the CI/CD pipeline stack. Not the data ingestion and the SageMaker stacks. 
-To delete all resources, go into CloudFormation and delete the stacks manually.
-(Automating this is a TODO)

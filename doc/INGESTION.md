@@ -1,6 +1,20 @@
 # Data Ingestion
 This documentation gives you some information to look at the data being ingested in the various AWS services et different
 stages of the data pipeline.
+## Data Ingestion Pipeline Architecture
+![](doc/images/mlops-realtime-data-ingestion-ingestion.jpg)
+The pipeline works as follow:
+1. An AWS Fargate container polls the data source API every second to ingest the last 100 transactions and publish all transactions on the data ingestion event bus of AWS EventBridge.
+2. An AWS EventBridge Rule routes the ingested data to Amazon Kinesis Data Firehose streaming service.
+3. An AWS Lambda Function is used in combination with Amazon DynamoDB to keep track of recently ingested transactions and filter out transactions already ingested.
+4. The raw data are delivered by Amazon Kinesis Data Firehose to Amazon Kinesis Data Analytics and to an Amazon S3 Bucket for archival.
+5. Amazon Kinesis Data Analytics aggregates the data in near real time, computing the following 3 metrics per minute:
+   - total number of transactions
+   - total amount of transaction fees
+   - average amount of transaction fees
+6. An AWS Lambda Function writes the aggregated data into Amazon SageMaker Feature Store which is used as the centralized data store for machine learning training and predictions.
+7. An AWS Glue Job periodically aggregates the small files in the Amazon SageMaker Feature Store S3 Bucket to improve performance when reading data.
+
 ## Controlling the Kinesis Firehose Data Ingestion
 Once the stack is deployed, the AWS Fargate container will automatically start polling blokchain data and write them into Amazon EventBridge,
 which will be sent automatically to Kinesis Firehose.
