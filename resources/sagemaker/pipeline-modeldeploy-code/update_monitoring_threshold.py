@@ -36,7 +36,7 @@ if __name__ == "__main__":
         response = s3_client.get_object(Bucket=bucket, Key=object_key)
         evaluation_output = json.loads(response["Body"].read())
         logger.info(f"Model evaluation output: {evaluation_output}")
-        mean_quantile_loss_value = evaluation_output["deepar_metrics"]["mean_quantile_loss"]["value"]
+        weighted_quantile_loss_value = evaluation_output["deepar_metrics"]["weighted_quantile_loss"]["value"]
         # Read the SSM Parameters storing the model validation thresholds by the parameters path
         model_validation_thresholds = {}
         response = ssm_client.get_parameters_by_path(
@@ -47,15 +47,15 @@ if __name__ == "__main__":
         for param in response["Parameters"]:
             model_validation_thresholds[param["Name"].split("/")[-1]] = float(param["Value"])
         # Update the threshold stored in the SSM Parameter Store if the threshold is lower
-        if mean_quantile_loss_value < model_validation_thresholds["mean_quantile_loss"]:
+        if weighted_quantile_loss_value < model_validation_thresholds["weighted_quantile_loss"]:
             ssm_client.put_parameter(
-                Name=f"/rdi-mlops/sagemaker/model-build/validation-threshold/mean_quantile_loss",
-                Description=f"Model build pipeline parameter for validation-threshold/mean_quantile_loss",
-                Value=f"{mean_quantile_loss_value:.4f}",
+                Name=f"/rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss",
+                Description=f"Model build pipeline parameter for validation-threshold/weighted_quantile_loss",
+                Value=f"{weighted_quantile_loss_value:.4f}",
                 Type="String",
                 Overwrite=True,
             )
-            logger.info(f"Updated model validation threshold in SSM parameter /rdi-mlops/sagemaker/model-build/validation-threshold/mean_quantile_loss to: {mean_quantile_loss_value:.3f}")
+            logger.info(f"Updated model validation threshold in SSM parameter /rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss to: {weighted_quantile_loss_value:.3f}")
     except ClientError as e:
         logger.error(f"An error occurred: {e}")
         raise e

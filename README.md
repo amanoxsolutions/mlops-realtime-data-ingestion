@@ -32,6 +32,15 @@ At a high level, the data are ingested as follow:
 See [this documentation](./doc/INGESTION.md) for more details.
 ![](doc/images/mlops-realtime-data-ingestion-ingestion-overview.jpg)
 ## MLOps Architecture
+The MLOps project contains 3 CodeCommit repositories with their own CodePipeline pipelines to train, deploy and monitor the model.
+1. The __Model Build__ pipeline creates a SageMaker Pipeline orchestrating all the steps to train a model and, if it passes the validation threshold, register the model, which then has to be manually approved.
+2. If the registered model is approved, the __Model Deploy__ pipeline is automatically triggered and deploys the model behind 2 SageMaker API Endpoints, one for the staging environment and one for the production environment. 
+3. If the new model baseline performance is better than the existing one, we update the model monitoring alarm threshold with the new model performance. Note that in a real world scenario you might not want to update the model monitoring threshold like that, as it might be dictated by business criteria. We do this in this demo to test automated retraining and improvement of the model.
+4. Once the endpoints are __IN_SERVICE__, it triggers automatically the __Model Monitor__ pipeline, which deploys resources to monitor the pipeline
+5. Every hour, a SageMaker Pipeline is executed to test the model against the latest data. The performance of the model is tracked by the SageMaker Monitoring service and a custom CloudWatch Alarm. We use a custom CloudWatch Alarm because, as of now
+   * AWS does not support monitoring for custom metrics (like the [weighted quantile loss](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html) we use for the DeepAR model) and,
+   * AWS does not provide any built-in mechanism to capture the SageMaker Monitoring raising an alarm when a model performance is breached.
+6. If our custom metric is breached, the CloudWatch Alarm will trigger a Lambda Function, which will trigger the __Model Build__ pipeline, retraining a new model, looping back automatically to the step one of this MLOps pipeline.
 ![](doc/images/mlops-realtime-data-ingestion-mlops.jpg)
 ## What are the Prerequisites?
 The list below is for _Windows_ environment

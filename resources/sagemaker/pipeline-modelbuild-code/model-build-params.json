@@ -12,6 +12,6 @@
         "learning_rate": 4.5e-4
     },
     "validation-threshold": {
-        "mean_quantile_loss": 0.24
+        "weighted_quantile_loss": 0.24
     }
 }

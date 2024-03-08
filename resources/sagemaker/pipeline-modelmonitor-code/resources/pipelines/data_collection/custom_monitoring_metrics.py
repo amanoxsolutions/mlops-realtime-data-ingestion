@@ -174,7 +174,7 @@ if __name__ == "__main__":
         df_aggregate.loc[df_aggregate[f"quantile{q}"] > df_aggregate["target"], f"quantile_loss_{q}"] = (1-(q/10)) * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
         df_aggregate.loc[df_aggregate[f"quantile{q}"] <= df_aggregate["target"], f"quantile_loss_{q}"] = q/10 * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
         weighted_quantile_loss.append(2 * df_aggregate[f"quantile_loss_{q}"].sum() / abs(df_aggregate["target"]).sum())
-    mean_quantile_loss = sum(weighted_quantile_loss) / len(weighted_quantile_loss)
+    weighted_quantile_loss = sum(weighted_quantile_loss) / len(weighted_quantile_loss)
 
     report_dict = {
         "deepar_metrics": {
@@ -182,8 +182,8 @@ if __name__ == "__main__":
                 "value": rmse,
                 "standard_deviation": "NaN"
             },
-            "mean_quantile_loss": {
-                "value": mean_quantile_loss,
+            "weighted_quantile_loss": {
+                "value": weighted_quantile_loss,
                 "standard_deviation": "NaN"
             }
         },
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     cw_client.put_metric_data(
         MetricData=[
             {
-                "MetricName": "mean_quantile_loss",
+                "MetricName": "weighted_quantile_loss",
                 "Dimensions": [
                     {
                         "Name": "StageName",
@@ -202,7 +202,7 @@ if __name__ == "__main__":
                     }
                 ],
                 "Unit": "None",
-                "Value": mean_quantile_loss
+                "Value": weighted_quantile_loss
             },
         ],
         Namespace="CustomModelMonitoring"
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     cw_client.put_metric_data(
         MetricData=[
             {
-                "MetricName": "mean_quantile_loss_threshold",
+                "MetricName": "weighted_quantile_loss_threshold",
                 "Dimensions": [
                     {
                         "Name": "StageName",
@@ -218,7 +218,7 @@ if __name__ == "__main__":
                     }
                 ],
                 "Unit": "None",
-                "Value": model_validation_thresholds['mean_quantile_loss']
+                "Value": model_validation_thresholds['weighted_quantile_loss']
             },
         ],
         Namespace="CustomModelMonitoring"

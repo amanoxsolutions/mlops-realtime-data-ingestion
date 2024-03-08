@@ -289,7 +289,7 @@ def extend_config(
     project_prefix: str,
     monitoring_pipelinde_definition_object: str,
     timestamp: str,
-    mean_quantile_loss_threshold: str
+    weighted_quantile_loss_threshold: str
 ) -> Dict[str, Dict[str, str]]:
     """
     Extend the stage configuration of the Monitoring Schedule with additional parameters and tags based.
@@ -359,7 +359,7 @@ def extend_config(
         "MonitoringPipelineDefinitionKey": monitoring_pipelinde_definition_object,
         "ModelBuildTriggerLambdaCodeS3Bucket": monitor_outputs_bucket,
         "ModelBuildTriggerLambdaCodeS3Key": f"code-artifacts/monitoring-data-collection/{timestamp}/trigger_model_build.zip",
-        "ModelQualityMeanQuantileLossThreshold": mean_quantile_loss_threshold
+        "ModelQualityMeanQuantileLossThreshold": weighted_quantile_loss_threshold
     }
 
     # create new tags

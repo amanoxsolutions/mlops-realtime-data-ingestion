@@ -130,8 +130,8 @@ def main():
     project_prefix = ssm_client.get_parameter(
         Name="/rdi-mlops/stack-parameters/project-prefix"
     )["Parameter"]["Value"]
-    mean_quantile_loss_threshold = ssm_client.get_parameter(
-        Name="/rdi-mlops/sagemaker/model-build/validation-threshold/mean_quantile_loss"
+    weighted_quantile_loss_threshold = ssm_client.get_parameter(
+        Name="/rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss"
     )["Parameter"]["Value"]
     # Configure logging to output the line number and message
     log_format = "%(levelname)s: [%(filename)s:%(lineno)s] %(message)s"
@@ -177,7 +177,7 @@ def main():
         project_prefix,
         staging_monitoring_pipeline_config_key,
         timestamp,
-        mean_quantile_loss_threshold
+        weighted_quantile_loss_threshold
     )
     prod_monitor_config = extend_config(
         args,
@@ -190,7 +190,7 @@ def main():
         project_prefix,
         prod_monitoring_pipeline_config_key,
         timestamp,
-        mean_quantile_loss_threshold
+        weighted_quantile_loss_threshold
     )
 
     # export monitor configs

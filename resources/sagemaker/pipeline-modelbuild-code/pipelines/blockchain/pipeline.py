@@ -608,14 +608,14 @@ def get_pipeline(
     )
 
     # condition step for evaluating model quality and branching execution
-    print(f"model validation threshold used is : mean_quantile_loss <= {model_validation_thresholds['mean_quantile_loss']}")
+    print(f"model validation threshold used is : weighted_quantile_loss <= {model_validation_thresholds['weighted_quantile_loss']}")
     cond_lte = ConditionLessThanOrEqualTo(
         left=JsonGet(
             step_name=step_eval.name,
             property_file=evaluation_report,
-            json_path="deepar_metrics.mean_quantile_loss.value"
+            json_path="deepar_metrics.weighted_quantile_loss.value"
         ),
-        right=model_validation_thresholds["mean_quantile_loss"],
+        right=model_validation_thresholds["weighted_quantile_loss"],
     )
     step_cond = ConditionStep(
         name=CONDITON_STEP_NAME,
