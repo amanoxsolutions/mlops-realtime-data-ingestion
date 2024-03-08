@@ -494,14 +494,19 @@ export class RDISagemakerStudio extends Construct {
               'cloudwatch:DeleteAlarms',
               'cloudwatch:Describe*',
               'cloudwatch:*AlarmActions',
+              'cloudwatch:PutDashboard',
+              'cloudwatch:DeleteDashboards',
             ],
             resources: [
               `arn:aws:cloudwatch:${region}:${account}:alarm:${this.prefix}-*`,
+              `arn:aws:cloudwatch:${region}:${account}:dashboard:${this.prefix}-*`,
             ],
           }),
           new PolicyStatement({
             effect: Effect.ALLOW,
             actions: [
+              'cloudwatch:Get*',
+              'cloudwatch:List*',
               'cloudwatch:PutMetricData',
             ],
             resources: ['*'],
