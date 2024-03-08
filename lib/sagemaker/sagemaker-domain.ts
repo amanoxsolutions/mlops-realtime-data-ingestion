@@ -499,7 +499,7 @@ export class RDISagemakerStudio extends Construct {
             ],
             resources: [
               `arn:aws:cloudwatch:${region}:${account}:alarm:${this.prefix}-*`,
-              `arn:aws:cloudwatch:${region}:${account}:dashboard:${this.prefix}-*`,
+              `arn:aws:cloudwatch::${account}:dashboard/${this.prefix}-*`,
             ],
           }),
           new PolicyStatement({
