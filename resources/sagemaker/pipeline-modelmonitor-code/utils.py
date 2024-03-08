@@ -359,7 +359,7 @@ def extend_config(
         "MonitoringPipelineDefinitionKey": monitoring_pipelinde_definition_object,
         "ModelBuildTriggerLambdaCodeS3Bucket": monitor_outputs_bucket,
         "ModelBuildTriggerLambdaCodeS3Key": f"code-artifacts/monitoring-data-collection/{timestamp}/trigger_model_build.zip",
-        "ModelQualityMeanQuantileLossThreshold": weighted_quantile_loss_threshold
+        "ModelQualityWeightedQuantileLossThreshold": weighted_quantile_loss_threshold
     }
 
     # create new tags

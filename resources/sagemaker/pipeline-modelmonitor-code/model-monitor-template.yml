@@ -213,7 +213,7 @@ Parameters:
     Type: String
     Description: Amazon S3 object key of the model build trigger lambda code ZIP file.
     MinLength: 3
-  ModelQualityMeanQuantileLossThreshold:
+  ModelQualityWeightedQuantileLossThreshold:
     Type: String
     Description: Threshold for the mean quantile loss metric
 Conditions:
@@ -791,7 +791,7 @@ Resources:
       Period: 3600
       EvaluationPeriods: 1
       Threshold: 
-        Ref: ModelQualityMeanQuantileLossThreshold
+        Ref: ModelQualityWeightedQuantileLossThreshold
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
   ModelMonitoringCloudWatchDashboard:
