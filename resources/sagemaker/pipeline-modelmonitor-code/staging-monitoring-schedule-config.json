@@ -6,7 +6,7 @@
     "EnableModelBiasMonitor": "no",
     "EnableModelExplainabilityMonitor": "no",
     "DataQualityScheduleExpression": "cron(0 * ? * * *)",
-    "ModelQualityDataCollectionScheduleExpression": "cron(30 * * * ? *)",
+    "ModelQualityDataCollectionScheduleExpression": "cron(30 * ? * * *)",
     "ModelQualityScheduleExpression": "cron(0 * ? * * *)",
     "ModelBiasScheduleExpression": "cron(0 * ? * * *)",
     "ModelExplainabilityScheduleExpression": "cron(0 * ? * * *)",
