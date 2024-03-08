@@ -794,6 +794,41 @@ Resources:
         Ref: ModelQualityMeanQuantileLossThreshold
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+  ModelMonitoringCloudWatchDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName:
+        Fn::Join:
+          - ''
+          - - Ref: ProjectPrefix
+            - '-'
+            - Ref: StageName
+            - -model-monitoring-dashboard
+      DashboardBody: 
+        Fn::Sub: |
+          {
+            "widgets": [
+                {
+                    "type": "metric",
+                    "x": 0,
+                    "y": 0,
+                    "width": 24,
+                    "height": 9,
+                    "properties": {
+                        "view": "timeSeries",
+                        "stacked": false,
+                        "metrics": [
+                            [ "CustomModelMonitoring", "mean_quantile_loss_threshold", "StageName", "staging", { "region": "${AWS::Region}" } ],
+                            [ ".", "mean_quantile_loss", ".", ".", { "region": "${AWS::Region}" } ],
+                            [ "AWS/Lambda", "Invocations", "FunctionName", "${SageMakerProjectName}-staging-trigger-modelbuild", { "region": "${AWS::Region}", "stat": "Sum" } ]
+                        ],
+                        "region": "${AWS::Region}",
+                        "period": 3600,
+                        "stat": "Maximum"
+                    }
+                }
+            ]
+          }
 Outputs:
   MonitorSageMakerProjectName:
     Value:
