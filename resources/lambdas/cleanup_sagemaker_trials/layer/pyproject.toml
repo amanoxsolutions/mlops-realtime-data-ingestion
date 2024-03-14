@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "cleanup_sagemaker_trials"
+version = "0.1.0"
+description = ""
+authors = ["Matthieu Lienart <matthieu.lienart@amanox.ch>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aws-lambda-powertools = {extras = ["tracer"], version = "^2.34.2"}
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

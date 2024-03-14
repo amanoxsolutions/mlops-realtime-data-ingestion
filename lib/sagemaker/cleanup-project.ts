@@ -41,7 +41,7 @@ export class RDICleanupStepFunction extends Construct {
     //
     // Lambda Function to Cleanup the SSM Parameters
     //
-    const cleanupSsmParametersPolicyDocument = new PolicyDocument({
+    const cleanupPolicyDocument = new PolicyDocument({
       statements: [
         new PolicyStatement({
           sid: 'AllowToDescribeParameters',
@@ -54,6 +54,23 @@ export class RDICleanupStepFunction extends Construct {
           resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`]
         }),
         new PolicyStatement({
+          sid: 'AllowToListSagemakerResources',
+          actions: ['sagemaker:List*'],
+          resources: ['*']
+        }),
+        new PolicyStatement({
+          sid: 'AllowToDeleteSagemakerResources',
+          actions: ['sagemaker:Delete*'],
+          resources: [
+            `arn:aws:sagemaker:${region}:${account}:training-job/deepar-tuning*`,
+            `arn:aws:sagemaker:${region}:${account}:hyper-parameter-tuning-job/deepar-tuning*`,
+            `arn:aws:sagemaker:${region}:${account}:pipeline/${this.prefix}*`,
+            `arn:aws:sagemaker:${region}:${account}:pipeline/sagemaker-model-monitoring*`,
+            `arn:aws:sagemaker:${region}:${account}:pipeline/blockchainforecastpipeline*`,
+            `arn:aws:sagemaker:${region}:${account}:pipeline/modelmonitordataingestion*`,
+          ]
+        }),
+        new PolicyStatement({
           sid: 'AllowToPutCloudWatchLogEvents',
           actions: [
             'logs:PutLogEvents', 
@@ -64,24 +81,49 @@ export class RDICleanupStepFunction extends Construct {
         })
       ]
     });
-    const cleanupSsmParametersRole = new Role(this, 'CleanupSsmParametersRole', {
+    const cleanupRole = new Role(this, 'CleanupSsmParametersRole', {
       roleName: `${this.prefix}-cleanup-ssm-parameters-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies
     new Policy(this, 'CleanupSsmParametersPolicy', {
       policyName: 'cleanup-ssm-parameters-policy',
-      document: cleanupSsmParametersPolicyDocument,
-      roles: [cleanupSsmParametersRole],
+      document: cleanupPolicyDocument,
+      roles: [cleanupRole],
     });
+
+    //
+    // Lambda Functions
+    //
+    // Lambda Function to cleanup SSM parameters
     const cleanupSsmParameters = new RDILambda(this, 'CleanupSsmParametersLambda', {
       prefix: this.prefix,
       name: 'cleanup-ssm-parameters',
       codePath: 'resources/lambdas/cleanup_ssm_parameters',
-      role: cleanupSsmParametersRole,
+      role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
       timeout: Duration.seconds(30),
+    });
+    // Lambda function to cleanup SageMaker Experiment Trials
+    const cleanupSagemakerTrials = new RDILambda(this, 'CleanupSagemakerTrialsLambda', {
+      prefix: this.prefix,
+      name: 'cleanup-sagemaker-trials',
+      codePath: 'resources/lambdas/cleanup_sagemaker_trials',
+      role: cleanupRole,
+      runtime: this.runtime,
+      memorySize: 256,
+      timeout: Duration.seconds(60),
+    });
+    // Lambda function to cleanup the SageMaker Experiments
+    const cleanupSagemakerExperiments = new RDILambda(this, 'CleanupSagemakerExperimentsLambda', {
+      prefix: this.prefix,
+      name: 'cleanup-sagemaker-experiments',
+      codePath: 'resources/lambdas/cleanup_sagemaker_experiments',
+      role: cleanupRole,
+      runtime: this.runtime,
+      memorySize: 256,
+      timeout: Duration.seconds(60),
     });
 
     //
@@ -120,8 +162,16 @@ export class RDICleanupStepFunction extends Construct {
       lambdaFunction: cleanupSsmParameters.function,
       outputPath: '$.Payload',
     });
+    const cleanupSagemakerTrialsTask = new LambdaInvoke(this, 'InvokeCleanupSagemakerTrials', {
+      lambdaFunction: cleanupSagemakerTrials.function,
+      outputPath: '$.Payload',
+    });
+    const cleanupSagemakerExperimentsTask = new LambdaInvoke(this, 'InvokeCleanupSagemakerExperiments', {
+      lambdaFunction: cleanupSagemakerExperiments.function,
+      outputPath: '$.Payload',
+    });
 
-    const definition = cleanupSsmParametersTask
+    const definition = cleanupSsmParametersTask.next(cleanupSagemakerTrialsTask).next(cleanupSagemakerExperimentsTask);
 
     this.stateMachine = new StateMachine(this, 'StateMachine', {
       definition,
