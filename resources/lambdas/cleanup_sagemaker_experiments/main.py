@@ -13,11 +13,12 @@ ACCOUNT_ID = sts.get_caller_identity().get("Account")
 @logger.inject_lambda_context(log_event=True)
 @tracer.capture_lambda_handler()
 def lambda_handler(event, context):
-    # Get the SageMaker project name from SSM parameter store
-    project_name = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/sagemaker-project-name").get("Parameter").get("Value")
+    # Get the SageMaker prefix name from SSM parameter store
+    project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
     # List all the sagemaker trials where the TrialSource.SourceArn starts with either
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:training-job/deepar-tuning
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/{project_name}
+    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:training-job/{project_prefix}
+    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/{project_prefix}
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/sagemaker-model-monitoring
     next_token = None
     trials = []
@@ -32,7 +33,9 @@ def lambda_handler(event, context):
             if trial["TrialSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:training-job/deepar-tuning"
             ) or trial["TrialSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:pipeline/{project_name}"
+                f"{sagemaker_arn_prefix}:training-job/{project_prefix}"
+            ) or trial["TrialSource"]["SourceArn"].startswith(
+                f"{sagemaker_arn_prefix}:pipeline/{project_prefix}"
             ) or trial["TrialSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:pipeline/sagemaker-model-monitoring"
             ):

@@ -13,14 +13,15 @@ ACCOUNT_ID = sts.get_caller_identity().get("Account")
 @logger.inject_lambda_context(log_event=True)
 @tracer.capture_lambda_handler()
 def lambda_handler(event, context):
-    # Get the SageMaker project name from SSM parameter store
-    project_name = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/sagemaker-project-name").get("Parameter").get("Value")
+    # Get the SageMaker prefix name from SSM parameter store
+    project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
     # List all the sagemaker experiments where the ExperimentSource.SourceArn starts with either
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/blockchainforecastpipeline
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/modelmonitordataingestion
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/sagemaker-model-monitoring-dataingestion
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/{project_id}-
+    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/{project_prefix}-
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:hyper-parameter-tuning-job/deepar-tuning
+    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:hyper-parameter-tuning-job/{project_prefix}-
     next_token = None
     experiments = []
     sagemaker_arn_prefix = f"arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}"
@@ -38,9 +39,11 @@ def lambda_handler(event, context):
             ) or experiment["ExperimentSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:pipeline/sagemaker-model-monitoring-dataingestion"
             ) or experiment["ExperimentSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:pipeline/{project_name}"
+                f"{sagemaker_arn_prefix}:pipeline/{project_prefix}"
             ) or experiment["ExperimentSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:hyper-parameter-tuning-job/deepar-tuning"
+            ) or experiment["ExperimentSource"]["SourceArn"].startswith(
+                f"{sagemaker_arn_prefix}:hyper-parameter-tuning-job/{project_prefix}"
             ):
                 experiments.append(experiment)
         next_token = response.get("NextToken")
