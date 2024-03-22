@@ -55,7 +55,10 @@ export class RDICleanupStepFunction extends Construct {
         }),
         new PolicyStatement({
           sid: 'AllowToListSagemakerResources',
-          actions: ['sagemaker:List*'],
+          actions: [
+            'sagemaker:List*',
+            'sagemaker:Describe*'
+          ],
           resources: ['*']
         }),
         new PolicyStatement({
@@ -68,6 +71,7 @@ export class RDICleanupStepFunction extends Construct {
             `arn:aws:sagemaker:${region}:${account}:pipeline/sagemaker-model-monitoring*`,
             `arn:aws:sagemaker:${region}:${account}:pipeline/blockchainforecastpipeline*`,
             `arn:aws:sagemaker:${region}:${account}:pipeline/modelmonitordataingestion*`,
+            `arn:aws:sagemaker:${region}:${account}:model/*`,
           ]
         }),
         new PolicyStatement({
@@ -113,7 +117,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.seconds(60),
+      timeout: Duration.minutes(3),
     });
     // Lambda function to cleanup the SageMaker Experiments
     const cleanupSagemakerExperiments = new RDILambda(this, 'CleanupSagemakerExperimentsLambda', {
@@ -123,7 +127,17 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.seconds(60),
+      timeout: Duration.minutes(3),
+    });
+    // Lambda Function to cleanup SageMaker Models
+    const cleanupSagemakerModels = new RDILambda(this, 'CleanupSagemakerModelsLambda', {
+      prefix: this.prefix,
+      name: 'cleanup-sagemaker-models',
+      codePath: 'resources/lambdas/cleanup_sagemaker_models',
+      role: cleanupRole,
+      runtime: this.runtime,
+      memorySize: 256,
+      timeout: Duration.minutes(3),
     });
 
     //
@@ -170,8 +184,15 @@ export class RDICleanupStepFunction extends Construct {
       lambdaFunction: cleanupSagemakerExperiments.function,
       outputPath: '$.Payload',
     });
+    const cleanupSagemakerModelsTask = new LambdaInvoke(this, 'InvokeCleanupSagemakerModels', {
+      lambdaFunction: cleanupSagemakerModels.function,
+      outputPath: '$.Payload',
+    });
 
-    const definition = cleanupSsmParametersTask.next(cleanupSagemakerTrialsTask).next(cleanupSagemakerExperimentsTask);
+    const definition = cleanupSsmParametersTask
+      .next(cleanupSagemakerTrialsTask)
+      .next(cleanupSagemakerExperimentsTask)
+      .next(cleanupSagemakerModelsTask);
 
     this.stateMachine = new StateMachine(this, 'StateMachine', {
       definition,
