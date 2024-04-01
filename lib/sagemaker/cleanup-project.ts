@@ -45,7 +45,10 @@ export class RDICleanupStepFunction extends Construct {
       statements: [
         new PolicyStatement({
           sid: 'AllowToDescribeParameters',
-          actions: ['ssm:DescribeParameters'],
+          actions: [
+            'ssm:DescribeParameters',
+            'ssm:GetParameter*',
+          ],
           resources: ['*']
         }),
         new PolicyStatement({
