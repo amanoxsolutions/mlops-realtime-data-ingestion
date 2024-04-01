@@ -210,6 +210,8 @@ export class RDIFeatureStore extends Construct {
               resources: ['*'],
               actions: [
                 'logs:PutLogEvents', 
+                'logs:CreateLogGroup',
+                'logs:CreateLogStream',
                 'logs:DescribeLogGroups',
                 'logs:DescribeLogStreams'
               ] 

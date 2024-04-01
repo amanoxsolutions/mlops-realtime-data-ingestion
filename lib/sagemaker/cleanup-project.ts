@@ -89,8 +89,8 @@ export class RDICleanupStepFunction extends Construct {
           sid: 'AllowToPutCloudWatchLogEvents',
           actions: [
             'logs:PutLogEvents', 
-            'logs:DescribeLogGroups',
-            'logs:DescribeLogStreams',
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
           ],
           resources: ['*'],
         })
@@ -128,8 +128,8 @@ export class RDICleanupStepFunction extends Construct {
       codePath: 'resources/lambdas/cleanup_sagemaker_trials',
       role: cleanupRole,
       runtime: this.runtime,
-      memorySize: 256,
-      timeout: Duration.minutes(5),
+      memorySize: 512,
+      timeout: Duration.minutes(15),
       hasLayer: true,
     });
     // Lambda function to cleanup the SageMaker Experiments

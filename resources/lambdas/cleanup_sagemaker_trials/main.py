@@ -1,5 +1,5 @@
 import boto3
-import os
+import concurrent.futures
 from aws_lambda_powertools import Logger
 
 logger = Logger()
@@ -14,10 +14,8 @@ def lambda_handler(event, context):
     # Get the SageMaker prefix name from SSM parameter store
     project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
     # List all the sagemaker trials where the TrialSource.SourceArn starts with either
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:training-job/deepar-tuning
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:training-job/{project_prefix}
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/{project_prefix}
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/sagemaker-model-monitoring
     trials = []
     sagemaker_arn_prefix = f"arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}"
     paginator = sm.get_paginator("list_trials")
@@ -38,12 +36,17 @@ def lambda_handler(event, context):
     for trial in trials:
         trial_name = trial.get("TrialName")
         trial_components = sm.list_trial_components(TrialName=trial_name).get("TrialComponentSummaries")
-        for trial_component in trial_components:
-            trial_component_name = trial_component.get("TrialComponentName")
-            # First dissaciate the trial component from the trial
-            sm.disassociate_trial_component(TrialComponentName=trial_component_name, TrialName=trial_name)
-            # Then delete the trial component
-            sm.delete_trial_component(TrialComponentName=trial_component_name)
-            logger.info(f"Deleted trial {trial_name} component {trial_component_name}")
+        # Dissacosiate and delete the trial components in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {executor.submit(disassociate_and_delete_trial_components, trial_name, trial_component.get("TrialComponentName")) for trial_component in trial_components}
+            concurrent.futures.wait(futures)
         sm.delete_trial(TrialName=trial_name)
         logger.info(f"Deleted trial {trial_name}")
+
+def disassociate_and_delete_trial_components(trial_name : str, trial_component_name: str):
+    # First dissaciate the trial component from the trial
+    sm.disassociate_trial_component(TrialComponentName=trial_component_name, TrialName=trial_name)
+    logger.info(f"Dissaciated trial {trial_name} component {trial_component_name}")
+    # Then delete the trial component
+    sm.delete_trial_component(TrialComponentName=trial_component_name)
+    logger.info(f"Deleted trial {trial_name} component {trial_component_name}")
