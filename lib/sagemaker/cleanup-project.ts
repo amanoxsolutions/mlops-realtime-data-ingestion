@@ -139,6 +139,16 @@ export class RDICleanupStepFunction extends Construct {
       memorySize: 256,
       timeout: Duration.minutes(3),
     });
+    // Lambda Function to cleanup SageMaker Pipelines
+    const cleanupSagemakerPipelines = new RDILambda(this, 'CleanupSagemakerPipelinesLambda', {
+      prefix: this.prefix,
+      name: 'cleanup-sagemaker-pipelines',
+      codePath: 'resources/lambdas/cleanup_sagemaker_pipelines',
+      role: cleanupRole,
+      runtime: this.runtime,
+      memorySize: 256,
+      timeout: Duration.minutes(3),
+    });
 
     //
     // Create the Step Function IAM Role
@@ -188,11 +198,16 @@ export class RDICleanupStepFunction extends Construct {
       lambdaFunction: cleanupSagemakerModels.function,
       outputPath: '$.Payload',
     });
+    const cleanupSagemakerPipelinesTask = new LambdaInvoke(this, 'InvokeCleanupSagemakerPipelines', {
+      lambdaFunction: cleanupSagemakerPipelines.function,
+      outputPath: '$.Payload',
+    });
 
     const definition = cleanupSsmParametersTask
       .next(cleanupSagemakerTrialsTask)
       .next(cleanupSagemakerExperimentsTask)
-      .next(cleanupSagemakerModelsTask);
+      .next(cleanupSagemakerModelsTask)
+      .next(cleanupSagemakerPipelinesTask);
 
     this.stateMachine = new StateMachine(this, 'StateMachine', {
       definition,
