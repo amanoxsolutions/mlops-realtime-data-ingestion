@@ -75,7 +75,7 @@ def create(event, _):
 @helper.delete
 def delete(event, _):
     project_properties = event.get("ResourceProperties")
-    project_name = project_properties.get("ProjectName")
+    project_name = event.get("PhysicalResourceId")
     domain_execution_role_arn = project_properties.get("DomainExecutionRoleArn")
     removal_policy = project_properties.get("RemovalPolicy", "destroy").lower()
     if removal_policy == "destroy":
@@ -85,9 +85,9 @@ def delete(event, _):
         try:
             response = sagemaker.describe_project(ProjectName=project_name)
         except ClientError as error:
-            if error.response["Error"]["Code"] == "ResourceNotFound":
-                logger.info(f"SageMaker project {project_name} does not exist")
-                return
+            logger.info(f"Error code: {error.response['Error']['Code']}")
+            logger.info(f"SageMaker project {project_name} does not exist")
+            return
         # Delete the SageMaker project
         response = sagemaker.delete_project(
             ProjectName=project_name

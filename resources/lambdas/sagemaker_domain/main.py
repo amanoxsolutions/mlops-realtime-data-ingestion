@@ -106,9 +106,9 @@ def delete(event, _):
         try:
             sagemaker.describe_domain(DomainId=domain_id)
         except ClientError as error:
-            if error.response["Error"]["Code"] == "ResourceNotFound":
-                logger.info(f"SageMaker domain {domain_id} does not exist")
-                return
+            logger.info(f"Error code: {error.response['Error']['Code']}")
+            logger.info(f"SageMaker domain {domain_id} does not exist")
+            return
         # Delete the SageMaker domain
         logger.info(f"Deleting domain {domain_id} and its EFS file system")
         response = sagemaker.delete_domain(
@@ -123,10 +123,10 @@ def delete(event, _):
             try:
                 sagemaker.describe_domain(DomainId=domain_id)
             except ClientError as error:
-                if error.response["Error"]["Code"] == "ResourceNotFound":
-                    logger.info(f"Deleted domain {domain_id} successfully deleted")
-                    deleted = True
-                    return
+                logger.info(f"Error code: {error.response['Error']['Code']}")
+                logger.info(f"Deleted domain {domain_id} successfully deleted")
+                deleted = True
+                return
             time.sleep(5)
     else:
         logger.info(f"Skipping deletion of domain {domain_id} because removal policy is set to {removal_policy}")

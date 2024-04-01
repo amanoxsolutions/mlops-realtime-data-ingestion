@@ -216,6 +216,14 @@ export class CleanupSagemakerDomainUser extends Construct {
           ],
           resources: [`arn:aws:sagemaker:${region}:${account}:app/${props.sagemakerStudioDomainId}/${props.sagemakerStudioUserProfile}/*/*`],
         }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeSpace',
+            'sagemaker:DeleteSpace',
+          ],
+          resources: [`arn:aws:sagemaker:${region}:${account}:space/*`],
+        }),
       ],
     });
 
