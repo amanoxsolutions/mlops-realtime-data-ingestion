@@ -16,11 +16,7 @@ def lambda_handler(event, context):
     # Get the SageMaker prefix name from SSM parameter store
     project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
     # List all the sagemaker experiments where the ExperimentSource.SourceArn starts with either
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/blockchainforecastpipeline
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/modelmonitordataingestion
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/sagemaker-model-monitoring-dataingestion
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/{project_prefix}-
-    # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:hyper-parameter-tuning-job/deepar-tuning
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:hyper-parameter-tuning-job/{project_prefix}-
     experiments = []
     sagemaker_arn_prefix = f"arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}"
@@ -28,15 +24,7 @@ def lambda_handler(event, context):
     for page in paginator.paginate():
         for experiment in page["ExperimentSummaries"]:
             if experiment["ExperimentSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:pipeline/blockchainforecastpipeline"
-            ) or experiment["ExperimentSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:pipeline/modelmonitordataingestion"
-            ) or experiment["ExperimentSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:pipeline/sagemaker-model-monitoring-dataingestion"
-            ) or experiment["ExperimentSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:pipeline/{project_prefix}"
-            ) or experiment["ExperimentSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:hyper-parameter-tuning-job/deepar-tuning"
             ) or experiment["ExperimentSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:hyper-parameter-tuning-job/{project_prefix}"
             ):
