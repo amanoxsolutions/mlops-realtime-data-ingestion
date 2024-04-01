@@ -19,6 +19,7 @@ interface RDICleanupStepFunctionProps {
   readonly prefix: string;
   readonly removalPolicy?: RemovalPolicy;
   readonly runtime: Runtime;
+  readonly sagemakerProjectBucketArn: string;
 }
 
 export class RDICleanupStepFunction extends Construct {
@@ -84,6 +85,14 @@ export class RDICleanupStepFunction extends Construct {
             `arn:aws:sagemaker:${region}:${account}:experiment-trial/*`,
             `arn:aws:sagemaker:${region}:${account}:experiment/*`,
           ]
+        }),
+        new PolicyStatement({
+          sid: 'DeleteS3Objects',
+          actions: [
+            's3:ListObjectsV2',
+            's3:DeleteObject*',
+          ],
+          resources: [`${props.sagemakerProjectBucketArn}/*`]	
         }),
         new PolicyStatement({
           sid: 'AllowToPutCloudWatchLogEvents',

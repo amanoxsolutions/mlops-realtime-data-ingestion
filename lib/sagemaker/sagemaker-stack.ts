@@ -252,6 +252,7 @@ export class SagemakerStack extends Stack {
       prefix: this.prefix,
       removalPolicy: this.removalPolicy,
       runtime: this.runtime,
+      sagemakerProjectBucketArn: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,
     });
   }
 }
