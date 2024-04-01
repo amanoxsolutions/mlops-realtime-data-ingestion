@@ -26,7 +26,7 @@ for too long which has an impact on the AWS billing.
 ## Architecture
 ### The Full Architecture
 ![](./doc/images/mlops-realtime-data-ingestion.jpg)
-## Near Real Time Data Ingestion Architecture
+### Near Real Time Data Ingestion Architecture
 At a high level, the data are ingested as follow:
 1. A container running on AWS Fargate polls the data and writes them to EventBridge
 2. EventBridge sends the data to Kinesis Data Firehose
