@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { Stack, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { RDILambda } from '../lambda';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import { Fail, StateMachine, StateMachineType, Succeed, IStateMachine } from 'aws-cdk-lib/aws-stepfunctions';
+import { StateMachine, StateMachineType, IStateMachine } from 'aws-cdk-lib/aws-stepfunctions';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import {
@@ -49,11 +49,13 @@ export class RDICleanupStepFunction extends Construct {
           resources: ['*']
         }),
         new PolicyStatement({
+          sid: 'AllowToGetSagemakerStackParameters',
+          actions: ['ssm:GetParameter*'],
+          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/*`]
+        }),
+        new PolicyStatement({
           sid: 'AllowToDeleteSagemakerModelParameters',
-          actions: [
-            'ssm:DeleteParameter*',
-            'ssm:GetParameter*',
-          ],
+          actions: ['ssm:DeleteParameter*'],
           resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`]
         }),
         new PolicyStatement({
@@ -66,7 +68,10 @@ export class RDICleanupStepFunction extends Construct {
         }),
         new PolicyStatement({
           sid: 'AllowToDeleteSagemakerResources',
-          actions: ['sagemaker:Delete*'],
+          actions: [
+            'sagemaker:Delete*',
+            'sagemaker:DisassociateTrialComponent',
+          ],
           resources: [
             `arn:aws:sagemaker:${region}:${account}:training-job/deepar-tuning*`,
             `arn:aws:sagemaker:${region}:${account}:hyper-parameter-tuning-job/deepar-tuning*`,
@@ -124,7 +129,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.minutes(3),
+      timeout: Duration.minutes(5),
       hasLayer: true,
     });
     // Lambda function to cleanup the SageMaker Experiments

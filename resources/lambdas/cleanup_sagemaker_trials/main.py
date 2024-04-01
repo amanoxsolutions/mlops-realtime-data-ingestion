@@ -36,9 +36,14 @@ def lambda_handler(event, context):
     logger.info(f"Found {len(trials)} trials to delete")
     # For each trial get the trial components and delete them
     for trial in trials:
-        trial_components = sm.list_trial_components(TrialName=trial.get("TrialName")).get("TrialComponentSummaries")
+        trial_name = trial.get("TrialName")
+        trial_components = sm.list_trial_components(TrialName=trial_name).get("TrialComponentSummaries")
         for trial_component in trial_components:
-            sm.delete_trial_component(TrialComponentName=trial_component.get("TrialComponentName"))
-            logger.info(f"Deleted trial {trial.get('TrialName')} component {trial_component.get('TrialComponentName')}")
-        sm.delete_trial(TrialName=trial.get("TrialName"))
-        logger.info(f"Deleted trial {trial.get('TrialName')}")
+            trial_component_name = trial_component.get("TrialComponentName")
+            # First dissaciate the trial component from the trial
+            sm.disassociate_trial_component(TrialComponentName=trial_component_name, TrialName=trial_name)
+            # Then delete the trial component
+            sm.delete_trial_component(TrialComponentName=trial_component_name)
+            logger.info(f"Deleted trial {trial_name} component {trial_component_name}")
+        sm.delete_trial(TrialName=trial_name)
+        logger.info(f"Deleted trial {trial_name}")

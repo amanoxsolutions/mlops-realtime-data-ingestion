@@ -43,15 +43,3 @@ def lambda_handler(event, context):
     for experiment in experiments:
         sm.delete_experiment(ExperimentName=experiment.get("ExperimentName"))
         logger.info(f"Deleted experiment {experiment.get('ExperimentName')}")
-    # get the trials of the experiments
-    for experiment in experiments:
-        trials = sm.list_trials(ExperimentName=experiment.get("ExperimentName")).get("TrialSummaries")
-        for trial in trials:
-            trial_components = sm.list_trial_components(TrialName=trial.get("TrialName")).get("TrialComponentSummaries")
-            for trial_component in trial_components:
-                sm.delete_trial_component(TrialComponentName=trial_component.get("TrialComponentName"))
-                logger.info(f"Deleted trial {trial.get('TrialName')} component {trial_component.get('TrialComponentName')}")
-            sm.delete_trial(TrialName=trial.get("TrialName"))
-            logger.info(f"Deleted trial {trial.get('TrialName')}")
-        sm.delete_experiment(ExperimentName=experiment.get("ExperimentName"))
-        logger.info(f"Deleted experiment {experiment.get('ExperimentName')}")
