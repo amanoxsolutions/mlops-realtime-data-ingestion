@@ -15,7 +15,7 @@ We provide a Step Function, to orchestrate the cleanup of all those resources
 ## 3. Cleanup the raw data ingestion bucket (optional)
 The S3 bucket storing the raw data ingested through Kinesis Firehose is configured to automatically delete the objects.
 Depending on how long you ran the demo and how much data are stored it can take quite some time for the cleanup of the S3 bucket to complete through CloudFormation.
-If you want to fasten the deletion of the `mlops-********-RealtimeDataIngestion-IngestionStack` stack, you can manually empty the data ingestion bucket `mlops-********-input-bucket-********`.
+If you want to fasten the deletion of the `mlops-********-RealtimeDataIngestion-IngestionStack` stack, we recommend to manually empty the data ingestion bucket `mlops-********-input-bucket-********` before hand.
 ## 4. Delete the CDK Stacks
 Unfortunately running the CLI command 
 ```
