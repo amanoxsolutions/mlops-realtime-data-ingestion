@@ -23,13 +23,9 @@ def lambda_handler(event, context):
     for page in paginator.paginate():
         for trial in page["TrialSummaries"]:
             if trial["TrialSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:training-job/deepar-tuning"
-            ) or trial["TrialSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:training-job/{project_prefix}"
             ) or trial["TrialSource"]["SourceArn"].startswith(
                 f"{sagemaker_arn_prefix}:pipeline/{project_prefix}"
-            ) or trial["TrialSource"]["SourceArn"].startswith(
-                f"{sagemaker_arn_prefix}:pipeline/sagemaker-model-monitoring"
             ):
                 trials.append(trial)
     logger.info(f"Found {len(trials)} trials to delete")

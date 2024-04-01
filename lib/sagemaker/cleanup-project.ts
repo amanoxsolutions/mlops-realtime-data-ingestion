@@ -151,7 +151,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.minutes(3),
+      timeout: Duration.minutes(1),
       hasLayer: true,
     });
     // Lambda Function to cleanup SageMaker Pipelines
@@ -162,7 +162,18 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.minutes(3),
+      timeout: Duration.seconds(30),
+      hasLayer: true,
+    });
+    // Lambda Functio to cleanup the SageMaker Project Bucket
+    const cleanupSagemakerProjectBucket = new RDILambda(this, 'CleanupSagemakerProjectBucketLambda', {
+      prefix: this.prefix,
+      name: 'cleanup-sagemaker-project-bucket',
+      codePath: 'resources/lambdas/cleanup_sagemaker_project_bucket',
+      role: cleanupRole,
+      runtime: this.runtime,
+      memorySize: 256,
+      timeout: Duration.minutes(5),
       hasLayer: true,
     });
 
@@ -218,6 +229,10 @@ export class RDICleanupStepFunction extends Construct {
       lambdaFunction: cleanupSagemakerPipelines.function,
       outputPath: '$.Payload',
     });
+    const cleanupSagemakerProjectBucketTask = new LambdaInvoke(this, 'InvokeCleanupSagemakerProjectBucket', {
+      lambdaFunction: cleanupSagemakerProjectBucket.function,
+      outputPath: '$.Payload',
+    });
 
     const definition = cleanupSagemakerTrialsTask
       .next(
@@ -227,6 +242,7 @@ export class RDICleanupStepFunction extends Construct {
             cleanupSagemakerExperimentsTask
             .next(cleanupSagemakerModelsTask)
             .next(cleanupSagemakerPipelinesTask)
+            .next(cleanupSagemakerProjectBucketTask)
             .next(cleanupSsmParametersTask)
           )
       );
