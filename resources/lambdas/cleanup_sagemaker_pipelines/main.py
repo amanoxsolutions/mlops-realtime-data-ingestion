@@ -10,18 +10,12 @@ def lambda_handler(event, context):
     # Get the SageMaker prefix name from SSM parameter store
     project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
     # List the SageMaker pipelines where the PipelineName starts with the project prefix
-    next_token = None
     pipelines = []
-    while True:
-        response = sm.list_pipelines(
-            NextToken=next_token,
-        )
-        for pipeline in response.get("PipelineSummaries"):
+    paginator = sm.get_paginator("list_pipelines")
+    for page in paginator.paginate():
+        for pipeline in page["PipelineSummaries"]:
             if pipeline["PipelineName"].startswith(project_prefix):
                 pipelines.append(pipeline)
-        next_token = response.get("NextToken")
-        if not next_token:
-            break
     # Delete all the remaining pipelines which name starts with the project prefix
     logger.info(f"Found {len(pipelines)} pipelines to delete")
     for pipeline in pipelines:

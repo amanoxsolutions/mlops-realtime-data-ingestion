@@ -45,15 +45,15 @@ export class RDICleanupStepFunction extends Construct {
       statements: [
         new PolicyStatement({
           sid: 'AllowToDescribeParameters',
-          actions: [
-            'ssm:DescribeParameters',
-            'ssm:GetParameter*',
-          ],
+          actions: ['ssm:DescribeParameters'],
           resources: ['*']
         }),
         new PolicyStatement({
           sid: 'AllowToDeleteSagemakerModelParameters',
-          actions: ['ssm:DeleteParameter*'],
+          actions: [
+            'ssm:DeleteParameter*',
+            'ssm:GetParameter*',
+          ],
           resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`]
         }),
         new PolicyStatement({
