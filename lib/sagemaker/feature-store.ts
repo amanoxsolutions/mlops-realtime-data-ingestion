@@ -7,8 +7,8 @@ import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
 import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
 import { RDILambda } from '../lambda';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import * as fgConfig from '../../resources/sagemaker/agg-fg-schema.json';
-import * as sourceSchema from '../../resources/sagemaker/source-schema.json';
+import * as fgConfig from '../../resources/sagemaker/featurestore/agg-fg-schema.json';
+import * as sourceSchema from '../../resources/sagemaker/featurestore/source-schema.json';
 import { RDIStartKinesisAnalytics } from './start-kinesis';
 import { CfnTrigger, CfnJob } from 'aws-cdk-lib/aws-glue';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
@@ -30,15 +30,17 @@ interface RDIFeatureStoreProps {
   readonly firehoseStreamArn: string;
   readonly runtime: Runtime;
   readonly customResourceLayerArn: string;
+  readonly dataAccessPolicy: Policy;
 }
 
 export class RDIFeatureStore extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
-  public readonly aggFeatureGroup: CfnFeatureGroup;
+  public readonly featureGroupName: string;
   public readonly bucket: IBucket;
   public readonly analyticsStream: CfnApplication;
+  public readonly analyticsAppName: string;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
     super(scope, id);
@@ -61,6 +63,25 @@ export class RDIFeatureStore extends Construct {
       removalPolicy: this.removalPolicy,
       autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
     });
+
+    // Create an IAM Policy allowing access to the SageMaker Project S3 Bucket and attach it to the data access policy
+    const featurestoreBucketPolicy = new PolicyStatement({
+      sid: 'FeatureStoreBucketPolicy',
+      effect: Effect.ALLOW,
+      actions: [
+        's3:ListBucket',
+        's3:ListAllMyBuckets',
+        's3:GetBucket*',
+        's3:GetObject*', 
+        's3:PutObject*', 
+        's3:DeleteObject*',
+      ],
+      resources: [
+        this.bucket.bucketArn,
+        `${this.bucket.bucketArn}/*`,
+      ],
+    });
+    props.dataAccessPolicy.addStatements(featurestoreBucketPolicy);
 
 
     // Create the IAM Role for Feature Store
@@ -91,6 +112,7 @@ export class RDIFeatureStore extends Construct {
     }));
 
     // Create the Feature Group
+    this.featureGroupName = `${this.prefix}-agg-feature-group`;
     const cfnFeatureGroup = new CfnFeatureGroup(this, 'FeatureGroup', {
       eventTimeFeatureName: fgConfig.event_time_feature_name,
       featureDefinitions: fgConfig.features.map(
@@ -99,7 +121,7 @@ export class RDIFeatureStore extends Construct {
           featureType: FeatureStoreTypes[feature.type as keyof typeof FeatureStoreTypes],
         })
       ),
-      featureGroupName: `${this.prefix}-agg-feature-group`,
+      featureGroupName: this.featureGroupName ,
       recordIdentifierFeatureName: fgConfig.record_identifier_feature_name,
     
       // the properties below are optional
@@ -116,7 +138,7 @@ export class RDIFeatureStore extends Construct {
     //
     // Realtime ingestion with Kinesis Data Analytics
     //
-    const analyticsAppName = `${this.prefix}-analytics`;
+    this.analyticsAppName = `${this.prefix}-analytics`;
 
     // Lambda Function to ingest aggregated data into SageMaker Feature Store
     // Create the Lambda function used by Kinesis Firehose to pre-process the data
@@ -140,20 +162,6 @@ export class RDIFeatureStore extends Construct {
       resources: [`arn:aws:sagemaker:${region}:${account}:feature-group/${cfnFeatureGroup.featureGroupName}`],
     });
     lambda.function.addToRolePolicy(lambdaPolicyStatement);
-
-    // Setup Kinesis Analytics CloudWatch Logs
-    const analyticsLogGroup = new LogGroup(this, 'AnalyticsLogGroup', {
-      logGroupName: analyticsAppName,
-      retention: RetentionDays.ONE_MONTH,
-      removalPolicy: this.removalPolicy,
-    });
-
-    const logStreamName = 'analytics-logstream'
-    const analyticsLogStream = new LogStream(this, 'AnalyticsLogStream', {
-      logGroup: analyticsLogGroup,
-      logStreamName: logStreamName,
-      removalPolicy: this.removalPolicy,
-    });
 
     // IAM Role for Kinesis Data Analytics
     const analyticsRole = new Role(this, 'AnalyticsRole', {
@@ -199,12 +207,11 @@ export class RDIFeatureStore extends Construct {
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
-              resources: [ 
-                analyticsLogGroup.logGroupArn,
-                `${analyticsLogGroup.logGroupArn}:*`,
-               ],
+              resources: ['*'],
               actions: [
                 'logs:PutLogEvents', 
+                'logs:CreateLogGroup',
+                'logs:CreateLogStream',
                 'logs:DescribeLogGroups',
                 'logs:DescribeLogStreams'
               ] 
@@ -216,7 +223,7 @@ export class RDIFeatureStore extends Construct {
 
     // Kinesis Data Analytics Application
     this.analyticsStream = new CfnApplication(this, 'Analytics', {
-      applicationName: analyticsAppName,
+      applicationName: this.analyticsAppName,
       applicationCode: fs.readFileSync(path.join(__dirname, '../../resources/kinesis/analytics.sql')).toString(),
       inputs: [
         {
@@ -241,13 +248,13 @@ export class RDIFeatureStore extends Construct {
     const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
       prefix: this.prefix,
       runtime: this.runtime,
-      kinesis_analytics_name: analyticsAppName,
+      kinesis_analytics_name: this.analyticsAppName,
       customResourceLayerArn: props.customResourceLayerArn,
     });
     startKinesisAnalytics.node.addDependency(this.analyticsStream)
 
     const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
-      applicationName: analyticsAppName,
+      applicationName: this.analyticsAppName,
       output: {
         destinationSchema: {
           recordFormatType: 'JSON'

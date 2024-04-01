@@ -1,0 +1,957 @@
+Description: Toolchain template which provides the resources needed to represent infrastructure as code.This template specifically creates Amazon SageMaker Monitoring Schedules.
+Parameters:
+  ProjectPrefix:
+      Type: String
+      AllowedPattern: ^[a-zA-Z](-*[a-zA-Z0-9])*
+      Description: Prefix used for the project resources
+      MaxLength: 16
+      MinLength: 1
+  SageMakerProjectName:
+    Type: String
+    AllowedPattern: ^[a-zA-Z](-*[a-zA-Z0-9])*
+    Description: Name of the Amazon SageMaker project.
+    MaxLength: 32
+    MinLength: 1
+  SageMakerProjectId:
+    Type: String
+    AllowedPattern: ^[a-zA-Z](-*[a-zA-Z0-9])*
+    Description: Id of the Amazon SageMaker project.
+    MaxLength: 32
+    MinLength: 1
+  StageName:
+    Type: String
+    Description: The stage name of the deployment (for example, staging, prod, etc.)
+  ModelMonitorRoleArn:
+    Type: String
+    AllowedPattern: ^arn:aws[a-z\-]*:iam::\d{12}:role/?[a-zA-Z_0-9+=,.@\-_/]+$
+    Description: Execution AWS IAM role arn used by the model monitor.
+  EndpointName:
+    Type: String
+    Description: The name of the endpoint to monitor
+    MinLength: 1
+  EnableDataQualityMonitor:
+    Type: String
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Description: Flag to enable/disable DataQuality monitor
+  EnableModelQualityMonitor:
+    Type: String
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Description: Flag to enable/disable ModelQuality monitor
+  EnableModelBiasMonitor:
+    Type: String
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Description: Flag to enable/disable ModelBias monitor
+  EnableModelExplainabilityMonitor:
+    Type: String
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Description: Flag to enable/disable ModelExplainability monitor
+  MonitoringJobInstanceType:
+    Type: String
+    AllowedPattern: ^[a-zA-Z0-9_.+-]+\.[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$
+    Description: AWS EC2 instance type that model monitoring jobs will be running on. For example, ml.m5.large
+    MinLength: 7
+  MonitoringJobInstanceCount:
+    Type: Number
+    Default: '1'
+    Description: Instance count used by model monitoring job. For example, 1
+  MonitoringJobInstanceVolumeSizeInGB:
+    Type: Number
+    Default: '20'
+    Description: Instance volume size used in model monitoring jobs. For example, 20
+  DataQualityMaxRuntimeInSeconds:
+    Type: Number
+    Default: '3600'
+    Description: Max runtime in seconds the job is allowed to run the DataQuality job. For data quality and model explainability, this can be up to 3600 seconds for an hourly schedule. For model bias and model quality hourly schedules, this can be up to 1800 seconds.
+    MaxValue: 86400
+    MinValue: 1
+  ModelQualityMaxRuntimeInSeconds:
+    Type: Number
+    Default: '1800'
+    Description: Max runtime in seconds the job is allowed to run the ModelQuality job. For data quality and model explainability, this can be up to 3600 seconds for an hourly schedule. For model bias and model quality hourly schedules, this can be up to 1800 seconds.
+    MaxValue: 86400
+    MinValue: 1
+  ModelBiasMaxRuntimeInSeconds:
+    Type: Number
+    Default: '1800'
+    Description: Max runtime in seconds the job is allowed to run the ModelBias job. For data quality and model explainability, this can be up to 3600 seconds for an hourly schedule. For model bias and model quality hourly schedules, this can be up to 1800 seconds.
+    MaxValue: 86400
+    MinValue: 1
+  ModelExplainabilityMaxRuntimeInSeconds:
+    Type: Number
+    Default: '3600'
+    Description: Max runtime in seconds the job is allowed to run the ModelExplainability job. For data quality and model explainability, this can be up to 3600 seconds for an hourly schedule. For model bias and model quality hourly schedules, this can be up to 1800 seconds.
+    MaxValue: 86400
+    MinValue: 1
+  KMSKeyArn:
+    Type: String
+    Default: ''
+    AllowedPattern: (^arn:aws[a-z\-]*:kms:(us(-gov)?|ap|ca|cn|eu|sa|af|me)-(central|(north|south)?(east|west)?)-\d:\d{12}:key/.+|^$)
+    ConstraintDescription: Please enter kmsKey ARN
+    Description: The AWS KMS ARN to encrypt the output of the batch transform job and instance volume (optional).
+    MaxLength: 2048
+    MinLength: 0
+  DataQualityConstraintsS3Uri:
+    Type: String
+    Description: Amazon S3 URI of the DataQuality Baseline's constraints.json file
+    MinLength: 3
+  DataQualityStatisticsS3Uri:
+    Type: String
+    Description: Amazon S3 URI of the DataQuality Baseline's statistics.json file
+    MinLength: 3
+  ModelQualityConstraintsS3Uri:
+    Type: String
+    Description: Amazon S3 URI of the ModelQuality Baseline's constraints.json file
+    MinLength: 3
+  ModelBiasConstraintsS3Uri:
+    Type: String
+    Description: Amazon S3 URI of the ModelBias Baseline's constraints.json file
+    MinLength: 3
+  ModelExplainabilityConstraintsS3Uri:
+    Type: String
+    Description: Amazon S3 URI of the ModelExplainability Baseline's constraints.json file
+    MinLength: 3
+  MonitoringScheduleName:
+    Type: String
+    Description: Unique name of the monitoring schedule job
+    MaxLength: 63
+    MinLength: 3
+  DataQualityMonitoringOutputS3Uri:
+    Type: String
+    Description: Amazon S3 path (including bucket name) to store the output of the DataQuality Monitoring Schedule.
+    MinLength: 3
+  ModelQualityMonitoringOutputS3Uri:
+    Type: String
+    Description: Amazon S3 path (including bucket name) to store the output of the ModelQuality Monitoring Schedule.
+    MinLength: 3
+  ModelBiasMonitoringOutputS3Uri:
+    Type: String
+    Description: Amazon S3 path (including bucket name) to store the output of the ModelBias Monitoring Schedule.
+    MinLength: 3
+  ModelExplainabilityMonitoringOutputS3Uri:
+    Type: String
+    Description: Amazon S3 path (including bucket name) to store the output of the ModelExplainability Monitoring Schedule.
+    MinLength: 3
+  MonitoringPipelineDefinitionBucket:
+    Type: String
+    Description: Amazon S3 bucket name where the model monitoring pipeline definition is stored.
+    MinLength: 3
+  MonitoringPipelineDefinitionKey:
+    Type: String
+    Description: Amazon S3 object key where the model monitoring pipeline definition is stored.
+    MinLength: 3
+  DataQualityScheduleExpression:
+    Type: String
+    AllowedPattern: ^cron\((\S+\s){5}\S+\)$
+    Description: cron expression to run the DataQuality monitoring schedule. For example, cron(0 * ? * * *).
+  ModelQualityDataCollectionScheduleExpression:
+    Type: String
+    AllowedPattern: ^(\S+\s){5}\S+$
+    Description: cron expression to run the ModelQuality monitoring schedule. For example, 0 * ? * * *.
+  ModelQualityScheduleExpression:
+    Type: String
+    AllowedPattern: ^cron\((\S+\s){5}\S+\)$
+    Description: cron expression to run the ModelQuality monitoring schedule. For example, cron(0 * ? * * *).
+  ModelBiasScheduleExpression:
+    Type: String
+    AllowedPattern: ^cron\((\S+\s){5}\S+\)$
+    Description: cron expression to run the ModelBias monitoring schedule. For example, cron(0 * ? * * *).
+  ModelExplainabilityScheduleExpression:
+    Type: String
+    AllowedPattern: ^cron\((\S+\s){5}\S+\)$
+    Description: cron expression to run the ModelExplainability monitoring schedule. For example, cron(0 * ? * * *).
+  ModelBiasConfigS3Uri:
+    Type: String
+    Description: Amazon S3 URI of the ModelBias monitor's config file
+    MinLength: 3
+  ModelExplainabilityConfigS3Uri:
+    Type: String
+    Description: Amazon S3 URI of the ModelExplainability monitor's config file
+    MinLength: 3
+  ModelMonitorImageUri:
+    Type: String
+    Description: The ModelMonitor image uri
+  ClarifyImageUri:
+    Type: String
+    Description: The Clarify image uri
+  GroundTruthInput:
+    Type: String
+    Default: ''
+    AllowedPattern: (^(https|s3)://([^/]+)/?(.*)$|^$)
+    Description: Amazon S3 prefix that contains the ground truth data
+  ProblemType:
+    Type: String
+    AllowedValues:
+      - Regression
+      - BinaryClassification
+      - MulticlassClassification
+    Description: 'Problem type. Possible values: Regression | BinaryClassification | MulticlassClassification'
+  InferenceAttribute:
+    Type: String
+    Description: Index or JSONpath to locate predicted label(s)
+  ProbabilityAttribute:
+    Type: String
+    Description: Index or JSONpath to locate probabilities.
+  ProbabilityThresholdAttribute:
+    Type: String
+    Description: Threshold to convert probabilities to binaries
+  FeaturesAttribute:
+    Type: String
+    Description: Index or JSONpath to locate features
+  ModelBuildTriggerLambdaCodeS3Bucket:
+    Type: String
+    Description: Amazon S3 bucket name where the model build trigger lambda code is stored.
+    MinLength: 3
+  ModelBuildTriggerLambdaCodeS3Key:
+    Type: String
+    Description: Amazon S3 object key of the model build trigger lambda code ZIP file.
+    MinLength: 3
+  ModelQualityWeightedQuantileLossThreshold:
+    Type: String
+    Description: Threshold for the mean quantile loss metric
+Conditions:
+  KMSKeyProvided:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: KMSKeyArn
+          - ''
+  InferenceAttributeProvided:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: InferenceAttribute
+          - ''
+  ProbabilityAttributeProvided:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: ProbabilityAttribute
+          - ''
+  ProbabilityThresholdAttributeProvided:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: ProbabilityThresholdAttribute
+          - ''
+  FeaturesAttributeProvided:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: FeaturesAttribute
+          - ''
+  EnableDataQualityCondition:
+    Fn::Equals:
+      - Ref: EnableDataQualityMonitor
+      - 'yes'
+  GroundTruthS3UriProvidedAndModelQualityMonitorEnabled:
+    Fn::And:
+      - Fn::Not:
+          - Fn::Equals:
+              - Ref: GroundTruthInput
+              - ''
+      - Fn::Equals:
+          - Ref: EnableModelQualityMonitor
+          - 'yes'
+  GroundTruthS3UriProvidedAndModelBiasMonitorEnabled:
+    Fn::And:
+      - Fn::Not:
+          - Fn::Equals:
+              - Ref: GroundTruthInput
+              - ''
+      - Fn::Equals:
+          - Ref: EnableModelBiasMonitor
+          - 'yes'
+  EnableModelExplainabilityCondition:
+    Fn::Equals:
+      - Ref: EnableModelExplainabilityMonitor
+      - 'yes'
+Resources:
+  DataQualityJobDefinition:
+    Type: AWS::SageMaker::DataQualityJobDefinition
+    Properties:
+      DataQualityAppSpecification:
+        ImageUri:
+          Ref: ModelMonitorImageUri
+      DataQualityJobInput:
+        EndpointInput:
+          EndpointName:
+            Ref: EndpointName
+          LocalPath: /opt/ml/processing/input/data_quality_input
+      DataQualityJobOutputConfig:
+        KmsKeyId:
+          Fn::If:
+            - KMSKeyProvided
+            - Ref: KMSKeyArn
+            - Ref: AWS::NoValue
+        MonitoringOutputs:
+          - S3Output:
+              LocalPath: /opt/ml/processing/output/data_quality_output
+              S3UploadMode: EndOfJob
+              S3Uri:
+                Ref: DataQualityMonitoringOutputS3Uri
+      JobResources:
+        ClusterConfig:
+          InstanceCount:
+            Ref: MonitoringJobInstanceCount
+          InstanceType:
+            Ref: MonitoringJobInstanceType
+          VolumeKmsKeyId:
+            Fn::If:
+              - KMSKeyProvided
+              - Ref: KMSKeyArn
+              - Ref: AWS::NoValue
+          VolumeSizeInGB:
+            Ref: MonitoringJobInstanceVolumeSizeInGB
+      RoleArn:
+        Ref: ModelMonitorRoleArn
+      DataQualityBaselineConfig:
+        ConstraintsResource:
+          S3Uri:
+            Ref: DataQualityConstraintsS3Uri
+        StatisticsResource:
+          S3Uri:
+            Ref: DataQualityStatisticsS3Uri
+      StoppingCondition:
+        MaxRuntimeInSeconds:
+          Ref: DataQualityMaxRuntimeInSeconds
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    Condition: EnableDataQualityCondition
+  DataQualityMonitoringSchedule:
+    Type: AWS::SageMaker::MonitoringSchedule
+    Properties:
+      MonitoringScheduleConfig:
+        MonitoringJobDefinitionName:
+          Fn::GetAtt:
+            - DataQualityJobDefinition
+            - JobDefinitionName
+        MonitoringType: DataQuality
+        ScheduleConfig:
+          ScheduleExpression:
+            Ref: DataQualityScheduleExpression
+      MonitoringScheduleName:
+        Fn::Join:
+          - ''
+          - - Ref: MonitoringScheduleName
+            - -DataQuality
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    DependsOn:
+      - DataQualityJobDefinition
+    Condition: EnableDataQualityCondition
+  ModelQualityJobDefinition:
+    Type: AWS::SageMaker::ModelQualityJobDefinition
+    Properties:
+      JobResources:
+        ClusterConfig:
+          InstanceCount:
+            Ref: MonitoringJobInstanceCount
+          InstanceType:
+            Ref: MonitoringJobInstanceType
+          VolumeKmsKeyId:
+            Fn::If:
+              - KMSKeyProvided
+              - Ref: KMSKeyArn
+              - Ref: AWS::NoValue
+          VolumeSizeInGB:
+            Ref: MonitoringJobInstanceVolumeSizeInGB
+      ModelQualityAppSpecification:
+        ImageUri:
+          Ref: ModelMonitorImageUri
+        ProblemType:
+          Ref: ProblemType
+      ModelQualityJobInput:
+        EndpointInput:
+          EndpointName:
+            Ref: EndpointName
+          InferenceAttribute:
+            Fn::If:
+              - InferenceAttributeProvided
+              - Ref: InferenceAttribute
+              - Ref: AWS::NoValue
+          LocalPath: /opt/ml/processing/input/model_quality_input
+          ProbabilityAttribute:
+            Fn::If:
+              - ProbabilityAttributeProvided
+              - Ref: ProbabilityAttribute
+              - Ref: AWS::NoValue
+          ProbabilityThresholdAttribute:
+            Fn::If:
+              - ProbabilityThresholdAttributeProvided
+              - Ref: ProbabilityThresholdAttribute
+              - Ref: AWS::NoValue
+        GroundTruthS3Input:
+          S3Uri:
+            Ref: GroundTruthInput
+      ModelQualityJobOutputConfig:
+        KmsKeyId:
+          Fn::If:
+            - KMSKeyProvided
+            - Ref: KMSKeyArn
+            - Ref: AWS::NoValue
+        MonitoringOutputs:
+          - S3Output:
+              LocalPath: /opt/ml/processing/output/model_quality_output
+              S3UploadMode: EndOfJob
+              S3Uri:
+                Ref: ModelQualityMonitoringOutputS3Uri
+      RoleArn:
+        Ref: ModelMonitorRoleArn
+      ModelQualityBaselineConfig:
+        ConstraintsResource:
+          S3Uri:
+            Ref: ModelQualityConstraintsS3Uri
+      StoppingCondition:
+        MaxRuntimeInSeconds:
+          Ref: ModelQualityMaxRuntimeInSeconds
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    Condition: GroundTruthS3UriProvidedAndModelQualityMonitorEnabled
+  ModelQualityMonitoringSchedule:
+    Type: AWS::SageMaker::MonitoringSchedule
+    Properties:
+      MonitoringScheduleConfig:
+        MonitoringJobDefinitionName:
+          Fn::GetAtt:
+            - ModelQualityJobDefinition
+            - JobDefinitionName
+        MonitoringType: ModelQuality
+        ScheduleConfig:
+          ScheduleExpression:
+            Ref: ModelQualityScheduleExpression
+      MonitoringScheduleName:
+        Fn::Join:
+          - ''
+          - - Ref: MonitoringScheduleName
+            - -ModelQuality
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    DependsOn:
+      - ModelQualityJobDefinition
+    Condition: GroundTruthS3UriProvidedAndModelQualityMonitorEnabled
+  ModelBiasJobDefinition:
+    Type: AWS::SageMaker::ModelBiasJobDefinition
+    Properties:
+      JobResources:
+        ClusterConfig:
+          InstanceCount:
+            Ref: MonitoringJobInstanceCount
+          InstanceType:
+            Ref: MonitoringJobInstanceType
+          VolumeKmsKeyId:
+            Fn::If:
+              - KMSKeyProvided
+              - Ref: KMSKeyArn
+              - Ref: AWS::NoValue
+          VolumeSizeInGB:
+            Ref: MonitoringJobInstanceVolumeSizeInGB
+      ModelBiasAppSpecification:
+        ConfigUri:
+          Ref: ModelBiasConfigS3Uri
+        ImageUri:
+          Ref: ClarifyImageUri
+      ModelBiasJobInput:
+        EndpointInput:
+          EndpointName:
+            Ref: EndpointName
+          FeaturesAttribute:
+            Fn::If:
+              - FeaturesAttributeProvided
+              - Ref: FeaturesAttribute
+              - Ref: AWS::NoValue
+          InferenceAttribute:
+            Fn::If:
+              - InferenceAttributeProvided
+              - Ref: InferenceAttribute
+              - Ref: AWS::NoValue
+          LocalPath: /opt/ml/processing/input/model_bias_input
+          ProbabilityAttribute:
+            Fn::If:
+              - ProbabilityAttributeProvided
+              - Ref: ProbabilityAttribute
+              - Ref: AWS::NoValue
+          ProbabilityThresholdAttribute:
+            Fn::If:
+              - ProbabilityThresholdAttributeProvided
+              - Ref: ProbabilityThresholdAttribute
+              - Ref: AWS::NoValue
+        GroundTruthS3Input:
+          S3Uri:
+            Ref: GroundTruthInput
+      ModelBiasJobOutputConfig:
+        KmsKeyId:
+          Fn::If:
+            - KMSKeyProvided
+            - Ref: KMSKeyArn
+            - Ref: AWS::NoValue
+        MonitoringOutputs:
+          - S3Output:
+              LocalPath: /opt/ml/processing/output/model_bias_output
+              S3UploadMode: EndOfJob
+              S3Uri:
+                Ref: ModelBiasMonitoringOutputS3Uri
+      RoleArn:
+        Ref: ModelMonitorRoleArn
+      ModelBiasBaselineConfig:
+        ConstraintsResource:
+          S3Uri:
+            Ref: ModelBiasConstraintsS3Uri
+      StoppingCondition:
+        MaxRuntimeInSeconds:
+          Ref: ModelBiasMaxRuntimeInSeconds
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    Condition: GroundTruthS3UriProvidedAndModelBiasMonitorEnabled
+  ModelBiasMonitoringSchedule:
+    Type: AWS::SageMaker::MonitoringSchedule
+    Properties:
+      MonitoringScheduleConfig:
+        MonitoringJobDefinitionName:
+          Fn::GetAtt:
+            - ModelBiasJobDefinition
+            - JobDefinitionName
+        MonitoringType: ModelBias
+        ScheduleConfig:
+          ScheduleExpression:
+            Ref: ModelBiasScheduleExpression
+      MonitoringScheduleName:
+        Fn::Join:
+          - ''
+          - - Ref: MonitoringScheduleName
+            - -ModelBias
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    DependsOn:
+      - ModelBiasJobDefinition
+    Condition: GroundTruthS3UriProvidedAndModelBiasMonitorEnabled
+  ModelExplainabilityJobDefinition:
+    Type: AWS::SageMaker::ModelExplainabilityJobDefinition
+    Properties:
+      JobResources:
+        ClusterConfig:
+          InstanceCount:
+            Ref: MonitoringJobInstanceCount
+          InstanceType:
+            Ref: MonitoringJobInstanceType
+          VolumeKmsKeyId:
+            Fn::If:
+              - KMSKeyProvided
+              - Ref: KMSKeyArn
+              - Ref: AWS::NoValue
+          VolumeSizeInGB:
+            Ref: MonitoringJobInstanceVolumeSizeInGB
+      ModelExplainabilityAppSpecification:
+        ConfigUri:
+          Ref: ModelExplainabilityConfigS3Uri
+        ImageUri:
+          Ref: ClarifyImageUri
+      ModelExplainabilityJobInput:
+        EndpointInput:
+          EndpointName:
+            Ref: EndpointName
+          FeaturesAttribute:
+            Fn::If:
+              - FeaturesAttributeProvided
+              - Ref: FeaturesAttribute
+              - Ref: AWS::NoValue
+          InferenceAttribute:
+            Fn::If:
+              - InferenceAttributeProvided
+              - Ref: InferenceAttribute
+              - Ref: AWS::NoValue
+          LocalPath: /opt/ml/processing/input/model_explainability_input
+          ProbabilityAttribute:
+            Fn::If:
+              - ProbabilityAttributeProvided
+              - Ref: ProbabilityAttribute
+              - Ref: AWS::NoValue
+      ModelExplainabilityJobOutputConfig:
+        KmsKeyId:
+          Fn::If:
+            - KMSKeyProvided
+            - Ref: KMSKeyArn
+            - Ref: AWS::NoValue
+        MonitoringOutputs:
+          - S3Output:
+              LocalPath: /opt/ml/processing/output/model_explainability_output
+              S3UploadMode: EndOfJob
+              S3Uri:
+                Ref: ModelExplainabilityMonitoringOutputS3Uri
+      RoleArn:
+        Ref: ModelMonitorRoleArn
+      ModelExplainabilityBaselineConfig:
+        ConstraintsResource:
+          S3Uri:
+            Ref: ModelExplainabilityConstraintsS3Uri
+      StoppingCondition:
+        MaxRuntimeInSeconds:
+          Ref: ModelExplainabilityMaxRuntimeInSeconds
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    Condition: EnableModelExplainabilityCondition
+  ModelExplainabilityMonitoringSchedule:
+    Type: AWS::SageMaker::MonitoringSchedule
+    Properties:
+      MonitoringScheduleConfig:
+        MonitoringJobDefinitionName:
+          Fn::GetAtt:
+            - ModelExplainabilityJobDefinition
+            - JobDefinitionName
+        MonitoringType: ModelExplainability
+        ScheduleConfig:
+          ScheduleExpression:
+            Ref: ModelExplainabilityScheduleExpression
+      MonitoringScheduleName:
+        Fn::Join:
+          - ''
+          - - Ref: MonitoringScheduleName
+            - -ModelExplainability
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+    DependsOn:
+      - ModelExplainabilityJobDefinition
+    Condition: EnableModelExplainabilityCondition
+  TriggerModelBuildLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Join:
+          - ''
+          - - Ref: MonitoringScheduleName
+            - -trigger-modelbuild-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TriggerModelBuildLambdaFunctionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codepipeline:StartPipelineExecution
+                Resource: 
+                  Fn::Join:
+                    - ''
+                    - - arn:aws:codepipeline:*:*:sagemaker-
+                      - Ref: SageMakerProjectName
+                      - '-'
+                      - Ref: SageMakerProjectId
+                      - -modelbuild
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+  TriggerModelBuildLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Join:
+          - ''
+          - - Ref: MonitoringScheduleName
+            - -trigger-modelbuild
+      Handler: main.lambda_handler
+      Role:
+        Fn::GetAtt:
+          - TriggerModelBuildLambdaFunctionRole
+          - Arn
+      Code:
+        S3Bucket:
+          Ref: ModelBuildTriggerLambdaCodeS3Bucket
+        S3Key:
+          Ref: ModelBuildTriggerLambdaCodeS3Key
+      Architectures: 
+        - arm64
+      Runtime: python3.11
+      Timeout: 3
+      Environment:
+        Variables:
+          SAGEMAKER_PROJECT_NAME:
+            Ref: SageMakerProjectName
+          SAGEMAKER_PROJECT_ID:
+            Ref: SageMakerProjectId
+      Tags:
+        - Key: sagemaker:project-name
+          Value:
+            Ref: SageMakerProjectName
+  TriggerModelBuildLambdaFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - TriggerModelBuildLambdaFunction
+          - Arn
+      Principal: lambda.alarms.cloudwatch.amazonaws.com
+      SourceAccount: 
+        Ref: AWS::AccountId
+  MonitoringDataCollectionPipeline:
+    Type: AWS::SageMaker::Pipeline
+    Properties:
+      PipelineName:
+        Fn::Join:
+          - ''
+          - - Ref: SageMakerProjectName
+            - '-'
+            - Ref: StageName
+            - -data-collection
+      PipelineDefinition:
+        PipelineDefinitionS3Location: 
+          Bucket: 
+            Ref: MonitoringPipelineDefinitionBucket
+          Key:
+            Ref: MonitoringPipelineDefinitionKey
+      RoleArn:
+        Ref: ModelMonitorRoleArn
+  MonitoringDataCollectionPipelineScedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      FlexibleTimeWindow: 
+        Mode: 'OFF'
+      Name: 
+        Fn::Join:
+          - ''
+          - - Ref: SageMakerProjectName
+            - '-'
+            - Ref: StageName
+            - -data-collection
+      ScheduleExpression: 
+        Ref: ModelQualityDataCollectionScheduleExpression
+      State: ENABLED
+      Target: 
+        Arn:
+          Fn::Join:
+            - ''
+            - - 'arn:aws:sagemaker:'
+              - Ref: AWS::Region
+              - ':'
+              - Ref: AWS::AccountId
+              - :pipeline/
+              - Ref: MonitoringDataCollectionPipeline
+        RoleArn:
+          Fn::Join:
+          - ''
+          - - 'arn:aws:iam::'
+            - Ref: AWS::AccountId
+            - ':role/'
+            - Ref: ProjectPrefix
+            - -eventbridge-scheduler-role
+        SageMakerPipelineParameters:
+          PipelineParameterList: []
+  MonitoringModelCustomCloudWatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Join:
+          - ''
+          - - Ref: SageMakerProjectName
+            - -custom-alarm
+      AlarmDescription: 'Custom CloudWatch Alarm for model monitoring'
+      AlarmActions:
+        - Fn::GetAtt:
+          - TriggerModelBuildLambdaFunction
+          - Arn
+      Namespace: CustomModelMonitoring
+      MetricName: weighted_quantile_loss
+      Dimensions:
+        - Name: StageName
+          Value:
+            Ref: StageName
+      Statistic: Maximum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 
+        Ref: ModelQualityWeightedQuantileLossThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+  ModelMonitoringCloudWatchDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName:
+        Fn::Join:
+          - ''
+          - - Ref: ProjectPrefix
+            - '-'
+            - Ref: StageName
+            - -model-monitoring-dashboard
+      DashboardBody: 
+        Fn::Sub: |
+          {
+            "widgets": [
+                {
+                    "type": "metric",
+                    "x": 0,
+                    "y": 0,
+                    "width": 24,
+                    "height": 9,
+                    "properties": {
+                        "view": "timeSeries",
+                        "stacked": false,
+                        "metrics": [
+                            [ "CustomModelMonitoring", "weighted_quantile_loss_threshold", "StageName", "staging", { "region": "${AWS::Region}" } ],
+                            [ ".", "weighted_quantile_loss", ".", ".", { "region": "${AWS::Region}" } ],
+                            [ "AWS/Lambda", "Invocations", "FunctionName", "${SageMakerProjectName}-staging-trigger-modelbuild", { "region": "${AWS::Region}", "stat": "Sum" } ]
+                        ],
+                        "region": "${AWS::Region}",
+                        "period": 3600,
+                        "stat": "Maximum"
+                    }
+                }
+            ]
+          }
+Outputs:
+  MonitorSageMakerProjectName:
+    Value:
+      Ref: SageMakerProjectName
+  DeploymentStageName:
+    Value:
+      Ref: StageName
+  DataQualityJobDefinitionName:
+    Value:
+      Fn::GetAtt:
+        - DataQualityJobDefinition
+        - JobDefinitionName
+    Condition: EnableDataQualityCondition
+  DataQualityMonitoringScheduleName:
+    Value:
+      Fn::Join:
+        - ''
+        - - Ref: MonitoringScheduleName
+          - -DataQuality
+    Condition: EnableDataQualityCondition
+  ModelQualityJobDefinitionName:
+    Value:
+      Fn::GetAtt:
+        - ModelQualityJobDefinition
+        - JobDefinitionName
+    Condition: GroundTruthS3UriProvidedAndModelQualityMonitorEnabled
+  ModelQualityMonitoringScheduleName:
+    Value:
+      Fn::Join:
+        - ''
+        - - Ref: MonitoringScheduleName
+          - -ModelQuality
+    Condition: GroundTruthS3UriProvidedAndModelQualityMonitorEnabled
+  ModelBiasJobDefinitionName:
+    Value:
+      Fn::GetAtt:
+        - ModelBiasJobDefinition
+        - JobDefinitionName
+    Condition: GroundTruthS3UriProvidedAndModelBiasMonitorEnabled
+  ModelBiasMonitoringScheduleName:
+    Value:
+      Fn::Join:
+        - ''
+        - - Ref: MonitoringScheduleName
+          - -ModelBias
+    Condition: GroundTruthS3UriProvidedAndModelBiasMonitorEnabled
+  ModelExplainabilityJobDefinitionName:
+    Value:
+      Fn::GetAtt:
+        - ModelExplainabilityJobDefinition
+        - JobDefinitionName
+    Condition: EnableModelExplainabilityCondition
+  ModelExplainablityMonitoringScheduleName:
+    Value:
+      Fn::Join:
+        - ''
+        - - Ref: MonitoringScheduleName
+          - -ModelExplainability
+    Condition: EnableModelExplainabilityCondition
+  DataQualityMonitorOutputLocation:
+    Value:
+      Fn::Join:
+        - ''
+        - - https://s3.console.aws.amazon.com/s3/buckets/
+          - Fn::Select:
+              - 1
+              - Fn::Split:
+                  - //
+                  - Ref: DataQualityMonitoringOutputS3Uri
+          - /
+          - Ref: EndpointName
+          - /
+          - Ref: MonitoringScheduleName
+          - -DataQuality/
+    Condition: EnableDataQualityCondition
+  ModelQualityMonitorOutputLocation:
+    Value:
+      Fn::Join:
+        - ''
+        - - https://s3.console.aws.amazon.com/s3/buckets/
+          - Fn::Select:
+              - 1
+              - Fn::Split:
+                  - //
+                  - Ref: ModelQualityMonitoringOutputS3Uri
+          - /
+          - Ref: EndpointName
+          - /
+          - Ref: MonitoringScheduleName
+          - -ModelQuality/
+    Condition: GroundTruthS3UriProvidedAndModelQualityMonitorEnabled
+  ModelBiasMonitorOutputLocation:
+    Value:
+      Fn::Join:
+        - ''
+        - - https://s3.console.aws.amazon.com/s3/buckets/
+          - Fn::Select:
+              - 1
+              - Fn::Split:
+                  - //
+                  - Ref: ModelBiasMonitoringOutputS3Uri
+          - /
+          - Ref: EndpointName
+          - /
+          - Ref: MonitoringScheduleName
+          - -ModelBias/
+    Condition: GroundTruthS3UriProvidedAndModelBiasMonitorEnabled
+  ModelExplainabilityMonitorOutputLocation:
+    Value:
+      Fn::Join:
+        - ''
+        - - https://s3.console.aws.amazon.com/s3/buckets/
+          - Fn::Select:
+              - 1
+              - Fn::Split:
+                  - //
+                  - Ref: ModelExplainabilityMonitoringOutputS3Uri
+          - /
+          - Ref: EndpointName
+          - /
+          - Ref: MonitoringScheduleName
+          - -ModelExplainability/
+    Condition: EnableModelExplainabilityCondition
+  MonitoredSagemakerEndpoint:
+    Value:
+      Ref: EndpointName

@@ -1,13 +1,14 @@
 [tool.poetry]
-name = "start-kinesis-app"
+name = "custom-resource-layer"
 version = "0.1.0"
 description = ""
 authors = ["Raphael Eymann <raphael.eymann@amanox.ch>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
+boto3 = "^1.34.52"
 crhelper = "^2.0.11"
-aws-lambda-powertools = "^2.25.1"
+aws-lambda-powertools = "^2.34.2"
 
 [tool.poetry.dev-dependencies]
 

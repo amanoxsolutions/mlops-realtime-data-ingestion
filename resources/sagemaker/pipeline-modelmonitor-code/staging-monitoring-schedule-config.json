@@ -1,0 +1,26 @@
+{
+  "Parameters": {
+    "StageName": "staging",
+    "EnableDataQualityMonitor": "no",
+    "EnableModelQualityMonitor": "yes",
+    "EnableModelBiasMonitor": "no",
+    "EnableModelExplainabilityMonitor": "no",
+    "DataQualityScheduleExpression": "cron(0 * ? * * *)",
+    "ModelQualityDataCollectionScheduleExpression": "cron(30 * ? * * *)",
+    "ModelQualityScheduleExpression": "cron(0 * ? * * *)",
+    "ModelBiasScheduleExpression": "cron(0 * ? * * *)",
+    "ModelExplainabilityScheduleExpression": "cron(0 * ? * * *)",
+    "MonitoringJobInstanceType": "ml.m5.large",
+    "MonitoringJobInstanceCount": "1",
+    "MonitoringJobInstanceVolumeSizeInGB": "20",
+    "ProblemType": "Regression",
+    "InferenceAttribute": "0",
+    "ProbabilityAttribute": "",
+    "FeaturesAttribute": "",
+    "ProbabilityThresholdAttribute": "",
+    "DataQualityMaxRuntimeInSeconds": "3300",
+    "ModelQualityMaxRuntimeInSeconds": "1800",
+    "ModelBiasMaxRuntimeInSeconds": "1800",
+    "ModelExplainabilityMaxRuntimeInSeconds": "3600"
+  }
+}

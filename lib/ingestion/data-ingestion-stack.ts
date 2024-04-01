@@ -1,4 +1,4 @@
-import { Stack, StackProps, RemovalPolicy, Duration, Size } from 'aws-cdk-lib';
+import { Stack, StackProps, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { RDIDynamodbTable } from './dynamodb';
 import { RDIIngestionWorker } from './fargate-worker';
@@ -10,13 +10,15 @@ import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
+import { Dashboard, GraphWidget } from 'aws-cdk-lib/aws-cloudwatch';
+import { RDIIngestionPipelineDashboard } from './dashboard';
 
 
 export interface RealtimeDataIngestionStackProps extends StackProps {
   readonly prefix: string;
   readonly s3Suffix: string;
   readonly s3Versioning?: boolean;
-  readonly removalPolicy?: RemovalPolicy;
+  readonly removalPolicy: RemovalPolicy;
   readonly runtime: Runtime;
 }
 
@@ -27,6 +29,8 @@ export class RealtimeDataIngestionStack extends Stack {
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
   public readonly vpc: IVpc;
+  public readonly dashboard: Dashboard;
+  public readonly pipelineWidget: GraphWidget;
 
   constructor(scope: Construct, id: string, props: RealtimeDataIngestionStackProps) {
     super(scope, id, props);
@@ -40,7 +44,7 @@ export class RealtimeDataIngestionStack extends Stack {
 
     // Get the ARN of the custom resource Lambda Layer from SSM parameter
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
-      parameterName: `/${props.prefix}/stack-parameters/custom-resource-layer-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/custom-resource-layer-arn',
     }).stringValue
 
     const inputTable = new RDIDynamodbTable(this, 'inputHashTable', {
@@ -102,7 +106,7 @@ export class RealtimeDataIngestionStack extends Stack {
       },
       bucketProps: { 
         bucketName: dataBucketName,
-        autoDeleteObjects: this.removalPolicy == RemovalPolicy.DESTROY,
+        autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
         removalPolicy: this.removalPolicy,
         versioned: this.s3Versioning,
       },
@@ -162,15 +166,22 @@ export class RealtimeDataIngestionStack extends Stack {
     this.vpc = ingestionWorker.vpc;
 
     new StringParameter(this, 'FirehoseStreamSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/ingestion-firehose-stream-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-firehose-stream-arn',
       stringValue: inputStream.kinesisFirehose.attrArn,
       description: 'ARN of the ingestion Kinesis Firehose Stream',
     });
 
     new StringParameter(this, 'DataBucketSSMParameter', {
-      parameterName: `/${props.prefix}/stack-parameters/ingestion-data-bucket-arn`,
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-data-bucket-arn',
       stringValue: dataBucketArn,
       description: 'ARN of the ingestion data S3 Bucket',
     });
+
+    // Create the dashboard
+    const customDashboard = new RDIIngestionPipelineDashboard(this, 'IngestionPipelineDashboard', {
+      prefix: this.prefix,
+    });
+    this.dashboard = customDashboard.dashboard;
+    this.pipelineWidget = customDashboard.pipelineWidget;
   }
 }

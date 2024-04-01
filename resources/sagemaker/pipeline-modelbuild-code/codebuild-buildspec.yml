@@ -1,0 +1,25 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - pip install --upgrade --force-reinstall . "awscli>=1.29.84" "botocore>1.21.30" "boto3>1.18.30"
+      - pip install --upgrade "sagemaker>=2.197.0"
+
+  pre_build:
+    commands:
+      - python pipelines/deploy_model_build_params.py
+  
+  build:
+    commands:
+      - export PYTHONUNBUFFERED=TRUE
+      - export SAGEMAKER_PROJECT_NAME_ID="${SAGEMAKER_PROJECT_NAME}-${SAGEMAKER_PROJECT_ID}"
+      - |
+        run-pipeline --module-name pipelines.blockchain.pipeline \
+          --role-arn $SAGEMAKER_PIPELINE_ROLE_ARN \
+          --tags "[{\"Key\":\"sagemaker:project-name\", \"Value\":\"${SAGEMAKER_PROJECT_NAME}\"}, {\"Key\":\"sagemaker:project-id\", \"Value\":\"${SAGEMAKER_PROJECT_ID}\"}]" \
+          --kwargs "{\"region\":\"${AWS_REGION}\",\"role\":\"${SAGEMAKER_PIPELINE_ROLE_ARN}\",\"sagemaker_project_name\":\"${SAGEMAKER_PROJECT_NAME}\",\"sagemaker_project_id\":\"${SAGEMAKER_PROJECT_ID}\",\"model_package_group_name\":\"${SAGEMAKER_PROJECT_NAME_ID}\",\"default_bucket\":\"${ARTIFACT_BUCKET}\"}"
+      - echo "Create/Update of the SageMaker Pipeline and execution completed."
+

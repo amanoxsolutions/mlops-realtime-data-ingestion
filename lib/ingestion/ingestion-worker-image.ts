@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { Construct } from 'constructs';
 import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Effect, PolicyStatement, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Repository, TagMutability, IRepository } from 'aws-cdk-lib/aws-ecr';
@@ -34,18 +34,33 @@ export class cleanupEcrRepo extends Construct {
     this.ecrRepositoryArn = props.ecrRepositoryArn;
     this.customResourceLayerArn = props.customResourceLayerArn;
 
-    const connectionPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: ['ecr:ListImages', 'ecr:BatchDeleteImage'],
-      resources: [this.ecrRepositoryArn],
-    });
-
     const lambdaPurpose = 'CustomResourceToCleanupEcrImages'
 
+    const policyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['ecr:ListImages', 'ecr:BatchDeleteImage'],
+          resources: [this.ecrRepositoryArn],
+        }),
+      ],
+    });
+
+    // Create the role for the custom resource Lambda
+    // We do this manually to be able to give it a human readable name
+    const singeltonRole = new Role(this, 'SingeltonRole', {
+      roleName: `${this.prefix}-cr-cleanup-ecr-images-role`,
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      inlinePolicies: {
+        'lambda-cr-cleanup-ecr-images-policy': policyDocument,
+      },
+    });
+
     const customResourceLambda = new SingletonFunction(this, 'Singleton', {
-      functionName: `${this.prefix}-cleanup-ecr-images`,
+      functionName: `${this.prefix}-cr-cleanup-ecr-images`,
       lambdaPurpose: lambdaPurpose,
       uuid: '54gf6lx0-r58g-88j5-d44t-l40cef953pqn',
+      role: singeltonRole,
       code: Code.fromAsset('resources/lambdas/cleanup_ecr'),
       handler: 'main.lambda_handler',
       timeout: Duration.seconds(60),
@@ -53,7 +68,6 @@ export class cleanupEcrRepo extends Construct {
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
-    customResourceLambda.addToRolePolicy(connectionPolicy);
 
     new CustomResource(this, 'Resource', {
       serviceToken: customResourceLambda.functionArn,

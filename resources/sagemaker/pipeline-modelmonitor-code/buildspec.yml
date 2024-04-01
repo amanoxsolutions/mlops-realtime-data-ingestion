@@ -1,0 +1,43 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      # Upgrade AWS CLI to the latest version
+      - pip install --upgrade --force-reinstall "botocore>1.21.30" "boto3>1.18.30" "awscli>1.20.20" "sagemaker==2.200.1"
+
+  build:
+    commands:
+      # Create Baseline Job and export the Monitoring schedule's staging and production configuration files
+      # the >- (block chomping indicator") is used to break the long command to multiple lines
+      - >-
+        python get_baselines_and_configs.py
+        --model-monitor-role "$MODEL_MONITOR_ROLE_ARN"
+        --sagemaker-project-id "$SAGEMAKER_PROJECT_ID"
+        --sagemaker-project-name "$SAGEMAKER_PROJECT_NAME"
+        --monitor-outputs-bucket "$MONITOR_OUTPUTS_BUCKET"
+        --export-staging-config $EXPORT_TEMPLATE_STAGING_CONFIG
+        --export-prod-config $EXPORT_TEMPLATE_PROD_CONFIG
+
+      # Package the infrastructure as code defined in model-monitor-template.yml by using AWS CloudFormation.
+      # Note that the Environment Variables like ARTIFACT_BUCKET, SAGEMAKER_PROJECT_NAME etc,. used below are expected to be setup by the
+      # CodeBuild rearouse in the infra pipeline (in the ServiceCatalog product)
+      - aws cloudformation package --template model-monitor-template.yml --s3-bucket $ARTIFACT_BUCKET --output-template $EXPORT_TEMPLATE_NAME
+
+      # Print the files to verify contents
+      - cat $EXPORT_TEMPLATE_STAGING_CONFIG
+      - cat $EXPORT_TEMPLATE_PROD_CONFIG
+      - cat pipeline-definition-staging.json
+      # - cat pipeline-definition-prod.json
+
+artifacts:
+  files:
+    - $EXPORT_TEMPLATE_NAME
+    - $EXPORT_TEMPLATE_STAGING_CONFIG
+    - $EXPORT_TEMPLATE_PROD_CONFIG
+    - pipeline-definition-staging.json
+    # - pipeline-definition-prod.json

@@ -104,6 +104,11 @@ export class RDIIngestionWorker extends Construct {
             actions: ['events:PutEvents'],
             resources: [props.eventBusArn],
           }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['cloudwatch:PutMetricData'],
+            resources: ['*'],
+          }),
         ],
       })
     }));

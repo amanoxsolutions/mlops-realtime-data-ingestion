@@ -1,0 +1,271 @@
+{
+    "Version": "2020-12-01",
+    "Metadata": {},
+    "Parameters": [],
+    "PipelineExperimentConfig": {
+        "ExperimentName": {
+            "Get": "Execution.PipelineName"
+        },
+        "TrialName": {
+            "Get": "Execution.PipelineExecutionId"
+        }
+    },
+    "Steps": [
+        {
+            "Name": "monitoring-data-collection-${stage_name}",
+            "Type": "Processing",
+            "Arguments": {
+                "ProcessingResources": {
+                    "ClusterConfig": {
+                        "InstanceType": "ml.t3.medium",
+                        "InstanceCount": 1,
+                        "VolumeSizeInGB": 30
+                    }
+                },
+                "AppSpecification": {
+                    "ImageUri": "${processing_image_uri}",
+                    "ContainerArguments": [
+                        "--local-data-folder",
+                        "/opt/ml/processing/data"
+                    ],
+                    "ContainerEntrypoint": [
+                        "python3",
+                        "/opt/ml/processing/input/code/monitoring_data_collection.py"
+                    ]
+                },
+                "RoleArn": "${execution_role_arn}",
+                "ProcessingInputs": [
+                    {
+                        "InputName": "code",
+                        "AppManaged": false,
+                        "S3Input": {
+                            "S3Uri": "s3://sagemaker-project-${project_id}/code-artifacts/monitoring-data-collection/${timestamp}/",
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                        }
+                    }
+                ],
+                "ProcessingOutputConfig": {
+                    "Outputs": [
+                        {
+                            "OutputName": "input",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "monitoring-data-collection-${stage_name}",
+                                            {
+                                                "Get": "Execution.PipelineExecutionId"
+                                            },
+                                            "input-data/input"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/input",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "target",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "monitoring-data-collection-${stage_name}",
+                                            {
+                                                "Get": "Execution.PipelineExecutionId"
+                                            },
+                                            "input-data/target"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/target",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "ground-truth",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "ground-truth-${stage_name}",
+                                            "${sagemaker_project_name}-${stage_name}"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/ground-truth",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "predictions",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "datacapture-${stage_name}",
+                                            "${sagemaker_project_name}-${stage_name}",
+                                            "AllTraffic"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/predictions",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        }
+                    ]
+                },
+                "Environment": {
+                    "AWS_REGION": "${region}"
+                }
+            }
+        },
+        {
+            "Name": "monitoring-custom-metric-${stage_name}",
+            "Type": "Processing",
+            "Arguments": {
+                "ProcessingResources": {
+                    "ClusterConfig": {
+                        "InstanceType": "ml.t3.medium",
+                        "InstanceCount": 1,
+                        "VolumeSizeInGB": 30
+                    }
+                },
+                "AppSpecification": {
+                    "ImageUri": "${processing_image_uri}",
+                    "ContainerArguments": [
+                        "--local-data-folder",
+                        "/opt/ml/processing/data"
+                    ],
+                    "ContainerEntrypoint": [
+                        "python3",
+                        "/opt/ml/processing/input/code/custom_monitoring_metrics.py"
+                    ]
+                },
+                "RoleArn": "${execution_role_arn}",
+                "ProcessingInputs": [
+                    {
+                        "InputName": "code",
+                        "AppManaged": false,
+                        "S3Input": {
+                            "S3Uri": "s3://sagemaker-project-${project_id}/code-artifacts/monitoring-data-collection/${timestamp}/",
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3CompressionType": "None"
+                        }
+                    }
+                ],
+                "ProcessingOutputConfig": {
+                    "Outputs": [
+                        {
+                            "OutputName": "input",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "monitoring-custom-metric-${stage_name}",
+                                            {
+                                                "Get": "Execution.PipelineExecutionId"
+                                            },
+                                            "input-data/input"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/input",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "target",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "monitoring-custom-metric-${stage_name}",
+                                            {
+                                                "Get": "Execution.PipelineExecutionId"
+                                            },
+                                            "input-data/target"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/target",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "predictions",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "monitoring-custom-metric-${stage_name}",
+                                            {
+                                                "Get": "Execution.PipelineExecutionId"
+                                            },
+                                            "output-data/predictions"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/predictions",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        },
+                        {
+                            "OutputName": "evaluation",
+                            "AppManaged": false,
+                            "S3Output": {
+                                "S3Uri": {
+                                    "Std:Join": {
+                                        "On": "/",
+                                        "Values": [
+                                            "s3://sagemaker-project-${project_id}",
+                                            "monitoring-custom-metric-${stage_name}",
+                                            {
+                                                "Get": "Execution.PipelineExecutionId"
+                                            },
+                                            "output-data/evaluation"
+                                        ]
+                                    }
+                                },
+                                "LocalPath": "/opt/ml/processing/data/evaluation",
+                                "S3UploadMode": "EndOfJob"
+                            }
+                        }
+                    ]
+                },
+                "Environment": {
+                    "AWS_REGION": "${region}",
+                    "STAGE_NAME": "${stage_name}"
+                }
+            }
+        }
+    ]
+}

@@ -1,0 +1,9 @@
+[run]
+include = pipelines/*
+concurrency = threading
+omit =
+    pipelines/deploy_model_build_params.py
+    pipelines/get_pipeline_definition.py
+    pipelines/run_pipeline.py
+    pipelines/_utils.py
+timid = True

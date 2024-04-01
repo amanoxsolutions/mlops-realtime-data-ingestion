@@ -1,5 +1,5 @@
 import { Construct } from "constructs";
-import { Stage, StageProps } from 'aws-cdk-lib';
+import { Stage, StageProps, RemovalPolicy } from 'aws-cdk-lib';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { CommonResourcesStack } from "./common/common-stack";
 import { RealtimeDataIngestionStack } from './ingestion/data-ingestion-stack';
@@ -9,6 +9,7 @@ export interface RealtimeDataIngestionStageProps extends StageProps {
   readonly prefix: string;
   readonly uniqueSuffix: string;
   readonly runtime: Runtime;
+  readonly removalPolicy: RemovalPolicy;
 }
 
 export class RealtimeDataIngestionStage extends Stage {
@@ -20,6 +21,7 @@ export class RealtimeDataIngestionStage extends Stage {
       prefix: props.prefix,
       s3Suffix: props.uniqueSuffix,
       runtime: props.runtime,
+      removalPolicy: props.removalPolicy,
     };
 
     // Stack to deploy common resources
@@ -38,6 +40,8 @@ export class RealtimeDataIngestionStage extends Stage {
     new SagemakerStack(this, "SagemakerStack", {
       ...sagemakerProperties,
       vpc: ingestionStack.vpc,
+      ingestionPipelineDashboard: ingestionStack.dashboard,
+      ingestionPipelineWidget: ingestionStack.pipelineWidget,
     });    
   }
 }

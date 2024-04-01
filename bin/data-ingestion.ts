@@ -22,7 +22,7 @@ console.log('Short branch name used for naming: 👉 ', shortBranchName);
 // and use it in the prefix of all the resource names
 const branchHash = getShortHashFromString(shortBranchName);
 console.log('Hash value computed from the branch name and used for resource names: 👉 ', branchHash);
-const prefix = `mlops-rdi-${shortBranchName.substring(0,4)}${branchHash}`;
+const prefix = `mlops-${shortBranchName.substring(0,4)}${branchHash}`;
 console.log('Prefix for all resources deployed by this stack: 👉 ', prefix);
 
 new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {

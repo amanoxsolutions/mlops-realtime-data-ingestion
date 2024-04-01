@@ -1,0 +1,17 @@
+{
+    "target": {
+        "target_col": "avg_fee_1min",
+        "prediction_length": 30,
+        "freq": "1min",
+        "num_validation_windows": 4
+    },
+    "training-hyperparameters": {
+        "epochs": 182,
+        "early_stopping_patience": 40,
+        "mini_batch_size": 77,
+        "learning_rate": 4.5e-4
+    },
+    "validation-threshold": {
+        "weighted_quantile_loss": 0.24
+    }
+}

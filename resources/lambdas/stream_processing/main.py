@@ -42,31 +42,22 @@ def lambda_handler(event, context):
             # only create item if it does not exist
             # https://stackoverflow.com/a/55110463/429162
             try:
+                #[2022-12-20 21:20] David Horvath
+#https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb.html#DynamoDB.Table.put_item
+#
+#[2022-12-20 21:20] David Horvath
+#To prevent a new item from replacing an existing item, use a conditional expression that contains the attribute_not_exists function with the name of the attribute being used as the partition key for the table. Since every record must contain that attribute, the attribute_not_exists function will only succeed if no matching item exists.
+
+
                 table_of_seen_items.put_item(
                     Item={
                         HASH_KEY_NAME: transaction_hash,
-                        "seen": 0,
                         TTL_ATTRIBUTE_NAME: int(time.time() + timedelta(hours=DDB_ITEM_TTL_HOURS).total_seconds())
                     },
                     ConditionExpression=Attr(HASH_KEY_NAME).not_exists()
                 )
             except dynamodb_resource.meta.client.exceptions.ConditionalCheckFailedException:
-                # if ConditionExpression resolves to false, the query will return a 400 err
-                continue
-
-            try:
-                # using write condition idempotence
-                table_of_seen_items.update_item(
-                    Key={HASH_KEY_NAME: transaction_hash},
-                    ConditionExpression=Attr("seen").eq(0),
-                    # Can not use both expression and non-expression parameters in the same request and we need ConditionExpression
-                    UpdateExpression=f"SET seen=:val",
-                    ExpressionAttributeValues={
-                        ":val": 1
-                    },
-                    ReturnValues="UPDATED_NEW")
-            except table_of_seen_items.meta.client.exceptions.ConditionalCheckFailedException as e:
-                logger.exception("been there seen that")
+                logger.info(f"been there seen that: {transaction_hash}")
             else:
                 transactions_to_store.append(transaction)
         logger.info(f"Added  {len(transactions_to_store)} transactions out of {len(record['detail']['txs'])} from the stream block payload.")

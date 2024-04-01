@@ -1,7 +1,12 @@
 const axios = require('axios');
 const { EventBridgeClient, PutEventsCommand } = require("@aws-sdk/client-eventbridge");
+const { CloudWatchClient, PutMetricDataCommand  } = require("@aws-sdk/client-cloudwatch");
 
 const ebClient = new EventBridgeClient({
+  region: process.env.AWS_REGION,
+});
+
+const cwClient = new CloudWatchClient({
   region: process.env.AWS_REGION,
 });
 
@@ -59,6 +64,33 @@ async function pushEntryOnEventBus(entry, throwError = false) {
   }
 }
 
+// Function to write a custom metric containing the size of the ingested data in bytes to CloudWatch
+async function writeMetric(dataSize) {
+  // write the metric to CloudWatch
+  const params = {
+    MetricData: [
+      {
+        MetricName: 'IngestedDataSize',
+        Dimensions: [
+          {
+            Name: 'IngestedData',
+            Value: 'Size',
+          },
+        ],
+        Unit: 'Bytes',
+        Value: dataSize,
+      },
+    ],
+    Namespace: 'DataIngestionPipeline',
+  };
+  try {
+    await cwClient.send(new PutMetricDataCommand(params));
+    console.log(`-- Write custom metric to CloudWatch IngestedDataSize=${dataSize} bytes`);
+  } catch (error) {
+    console.log("Error", error);
+  }
+}
+
 // Function to push data on the eventBridge Bus
 async function pushDataOnEventBus(data, detailType, throwError = false) {
   const eventBusName = process.env.EVENT_BUS_NAME || 'default';
@@ -77,6 +109,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
   // The maximum event size is 256KB. If the event is greater than 256
   // we need to split it into multiple parts
   const entrySize = getEntrySize(entry);
+  let ingestedDataSize = 0;
   console.log(`-- Full data entry size is ${entrySize} bytes`);
   if (entrySize > 256000) {
     // get the total number of transactions
@@ -112,7 +145,8 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
         // we keep the entry transactions list as is and add it to the list of 
         // paramaters entries
         entry.Detail = JSON.stringify({txs: entryTransactions});
-        console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
+        console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${currentEntrySize} bytes`);
+        ingestedDataSize += currentEntrySize
         pushEntryOnEventBus(Object.assign({}, entry), throwError);
         // we reset the list of entry transactions to the current transaction
         entryTransactions = [data.txs[i]];
@@ -127,14 +161,18 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     // add it to the entry and push it on the event bus if its size is inferior to 256KB
     if (entryTransactions.length > 0 && currentEntrySize <= 256000) {
       entry.Detail = JSON.stringify({txs: entryTransactions});
-      console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${getEntrySize(entry)} bytes`);
+      console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${currentEntrySize} bytes`);
       pushEntryOnEventBus(Object.assign({}, entry), throwError);
+      ingestedDataSize += currentEntrySize;
     } else {
       console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${tempEntrySize} bytes superior to the limit of 256KB`);
     }
   } else {
+    ingestedDataSize = entrySize;
     pushEntryOnEventBus(entry, throwError);
   }
+  // write the metric to CloudWatch about the amount of ingested data
+  writeMetric(ingestedDataSize);
 }
 
 module.exports = { ingestData , pushDataOnEventBus };
