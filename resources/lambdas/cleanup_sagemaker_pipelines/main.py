@@ -21,3 +21,4 @@ def lambda_handler(event, context):
     for pipeline in pipelines:
         sm.delete_pipeline(PipelineName=pipeline.get("PipelineName"))
         logger.info(f"Deleted pipeline {pipeline.get('PipelineName')}")
+    return {}

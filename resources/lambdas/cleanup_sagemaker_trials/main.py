@@ -33,9 +33,19 @@ def lambda_handler(event, context):
             ):
                 trials.append(trial)
     logger.info(f"Found {len(trials)} trials to delete")
+    ## If there are more than 50 trials, delte only the first 50 and set the more_trials flag to True
+    more_trials = False
+    if len(trials) > 50:
+        more_trials = True
+        trials = trials[:50]
     # Delete all trials in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(delete_trials, trials)
+    if more_trials:
+        logger.info("There are more than 50 trials to delete, please run the lambda again")
+    else:
+        logger.info("All trials deleted")
+    return {"more_trials": more_trials}
 
 def delete_trials(trial: Dict):
     trial_name = trial.get("TrialName")

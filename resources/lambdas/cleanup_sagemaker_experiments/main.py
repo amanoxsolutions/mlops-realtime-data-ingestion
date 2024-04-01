@@ -1,6 +1,8 @@
 import boto3
 import os
+import concurrent.futures
 from aws_lambda_powertools import Logger
+from typing import Dict
 
 logger = Logger()
 ssm = boto3.client("ssm")
@@ -40,6 +42,11 @@ def lambda_handler(event, context):
             ):
                 experiments.append(experiment)
     logger.info(f"Found {len(experiments)} experiments to delete")
-    for experiment in experiments:
-        sm.delete_experiment(ExperimentName=experiment.get("ExperimentName"))
-        logger.info(f"Deleted experiment {experiment.get('ExperimentName')}")
+    # Delete all experiments in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(delete_experiment, experiments)
+    return {}
+
+def delete_experiment(experiment: Dict):
+    sm.delete_experiment(ExperimentName=experiment.get("ExperimentName"))
+    logger.info(f"Deleted experiment {experiment.get('ExperimentName')}")

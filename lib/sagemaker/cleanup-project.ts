@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { Stack, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { RDILambda } from '../lambda';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import { StateMachine, StateMachineType, IStateMachine } from 'aws-cdk-lib/aws-stepfunctions';
+import { StateMachine, StateMachineType, IStateMachine, Choice, Condition } from 'aws-cdk-lib/aws-stepfunctions';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import {
@@ -139,8 +139,8 @@ export class RDICleanupStepFunction extends Construct {
       codePath: 'resources/lambdas/cleanup_sagemaker_experiments',
       role: cleanupRole,
       runtime: this.runtime,
-      memorySize: 256,
-      timeout: Duration.minutes(3),
+      memorySize: 512,
+      timeout: Duration.minutes(5),
       hasLayer: true,
     });
     // Lambda Function to cleanup SageMaker Models
@@ -220,10 +220,16 @@ export class RDICleanupStepFunction extends Construct {
     });
 
     const definition = cleanupSagemakerTrialsTask
-      .next(cleanupSagemakerExperimentsTask)
-      .next(cleanupSagemakerModelsTask)
-      .next(cleanupSagemakerPipelinesTask)
-      .next(cleanupSsmParametersTask);
+      .next(
+        new Choice(this, 'MoreTrialsToCleanup')
+          .when(Condition.booleanEquals('$.more_trials', true), cleanupSagemakerTrialsTask)
+          .otherwise(
+            cleanupSagemakerExperimentsTask
+            .next(cleanupSagemakerModelsTask)
+            .next(cleanupSagemakerPipelinesTask)
+            .next(cleanupSsmParametersTask)
+          )
+      );
 
     this.stateMachine = new StateMachine(this, 'StateMachine', {
       definition,

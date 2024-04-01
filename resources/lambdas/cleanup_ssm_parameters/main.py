@@ -15,3 +15,4 @@ def lambda_handler(event, context):
             if param["Name"].startswith("/rdi-mlops/sagemaker/model-build"):
                 ssm.delete_parameter(Name=param["Name"])
                 logger.info(f"Deleted SSM parameter {param['Name']}")
+    return {}

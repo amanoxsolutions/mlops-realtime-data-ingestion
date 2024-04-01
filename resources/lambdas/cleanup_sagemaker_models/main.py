@@ -41,3 +41,4 @@ def lambda_handler(event, context):
     for model_name in model_names:
         sm.delete_model(ModelName=model_name)
         logger.info(f"Deleted model {model_name}")
+    return {}
