@@ -108,6 +108,7 @@ export class RDICleanupStepFunction extends Construct {
       runtime: this.runtime,
       memorySize: 256,
       timeout: Duration.seconds(30),
+      hasLayer: true,
     });
     // Lambda function to cleanup SageMaker Experiment Trials
     const cleanupSagemakerTrials = new RDILambda(this, 'CleanupSagemakerTrialsLambda', {
@@ -118,6 +119,7 @@ export class RDICleanupStepFunction extends Construct {
       runtime: this.runtime,
       memorySize: 256,
       timeout: Duration.minutes(3),
+      hasLayer: true,
     });
     // Lambda function to cleanup the SageMaker Experiments
     const cleanupSagemakerExperiments = new RDILambda(this, 'CleanupSagemakerExperimentsLambda', {
@@ -128,6 +130,7 @@ export class RDICleanupStepFunction extends Construct {
       runtime: this.runtime,
       memorySize: 256,
       timeout: Duration.minutes(3),
+      hasLayer: true,
     });
     // Lambda Function to cleanup SageMaker Models
     const cleanupSagemakerModels = new RDILambda(this, 'CleanupSagemakerModelsLambda', {
@@ -138,6 +141,7 @@ export class RDICleanupStepFunction extends Construct {
       runtime: this.runtime,
       memorySize: 256,
       timeout: Duration.minutes(3),
+      hasLayer: true,
     });
     // Lambda Function to cleanup SageMaker Pipelines
     const cleanupSagemakerPipelines = new RDILambda(this, 'CleanupSagemakerPipelinesLambda', {
@@ -148,6 +152,7 @@ export class RDICleanupStepFunction extends Construct {
       runtime: this.runtime,
       memorySize: 256,
       timeout: Duration.minutes(3),
+      hasLayer: true,
     });
 
     //
@@ -203,11 +208,11 @@ export class RDICleanupStepFunction extends Construct {
       outputPath: '$.Payload',
     });
 
-    const definition = cleanupSsmParametersTask
-      .next(cleanupSagemakerTrialsTask)
+    const definition = cleanupSagemakerTrialsTask
       .next(cleanupSagemakerExperimentsTask)
       .next(cleanupSagemakerModelsTask)
-      .next(cleanupSagemakerPipelinesTask);
+      .next(cleanupSagemakerPipelinesTask)
+      .next(cleanupSsmParametersTask);
 
     this.stateMachine = new StateMachine(this, 'StateMachine', {
       definition,
