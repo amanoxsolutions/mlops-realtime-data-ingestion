@@ -24,7 +24,7 @@ These metrics are computed per minute. Although it might not be the best window 
 transactions, it allows us to quickly gather a lot of data points in a short period of time, avoiding to run the demo 
 for too long which has an impact on the AWS billing.
 ## Architecture
-## The Full Architecture
+### The Full Architecture
 ![](./doc/images/mlops-realtime-data-ingestion.jpg)
 ## Near Real Time Data Ingestion Architecture
 At a high level, the data are ingested as follow:
@@ -35,7 +35,7 @@ At a high level, the data are ingested as follow:
 
 See [this documentation](./doc/INGESTION.md) for more details.
 ![](./doc/images/mlops-realtime-data-ingestion-ingestion-overview.jpg)
-## MLOps Architecture
+### MLOps Architecture
 The MLOps project contains 3 CodeCommit repositories with their own CodePipeline pipelines to train, deploy and monitor the model.
 1. The __Model Build__ pipeline creates a SageMaker Pipeline orchestrating all the steps to train a model and, if it passes the validation threshold, register the model, which then has to be manually approved.
 2. If the registered model is approved, the __Model Deploy__ pipeline is automatically triggered and deploys the model behind 2 SageMaker API Endpoints, one for the staging environment and one for the production environment. 
