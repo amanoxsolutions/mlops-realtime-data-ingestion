@@ -10,7 +10,7 @@ The list below is for _Windows_ environment
 ## 2. Create an AWS Codestar Connection
 Please refer to the AWS document [Create a connection to GitHub](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-github.html)
 ## 3. Edit the Data Ingestion Configuration
-In [the `bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/bin/data-ingestion.ts#L35-L36) configure the 
+In the [`bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/bin/data-ingestion.ts#L35-L36) configure the 
 * repository name
 * your AWS CodeStar connection name
 ```
