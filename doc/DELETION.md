@@ -12,7 +12,11 @@ Delete each of these 2 stacks manually from top to bottom. The project stack wil
 ## 2. Delete the SageMaker resources
 Throughout the life of the MLOps lifecycle, different resources are deployed outside of the Infrastructure as Code stack of both the CDK Infrastructure stack and the AWS Service Catalog MLOps project stack.
 We provide a Step Function, to orchestrate the cleanup of all those resources
-## 3. Delete the CDK Stacks
+## 3. Cleanup the raw data ingestion bucket (optional)
+The S3 bucket storing the raw data ingested through Kinesis Firehose is configured to automatically delete the objects.
+Depending on how long you ran the demo and how much data are stored it can take quite some time for the cleanup of the S3 bucket to complete through CloudFormation.
+If you want to fasten the deletion of the `mlops-********-RealtimeDataIngestion-IngestionStack` stack, you can manually empty the data ingestion bucket `mlops-********-input-bucket-********`.
+## 4. Delete the CDK Stacks
 Unfortunately running the CLI command 
 ```
 cdk destroy
