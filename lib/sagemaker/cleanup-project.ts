@@ -75,6 +75,9 @@ export class RDICleanupStepFunction extends Construct {
             `arn:aws:sagemaker:${region}:${account}:pipeline/blockchainforecastpipeline*`,
             `arn:aws:sagemaker:${region}:${account}:pipeline/modelmonitordataingestion*`,
             `arn:aws:sagemaker:${region}:${account}:model/*`,
+            `arn:aws:sagemaker:${region}:${account}:experiment-trial-component/*`,
+            `arn:aws:sagemaker:${region}:${account}:experiment-trial/*`,
+            `arn:aws:sagemaker:${region}:${account}:experiment/*`,
           ]
         }),
         new PolicyStatement({
@@ -89,12 +92,12 @@ export class RDICleanupStepFunction extends Construct {
       ]
     });
     const cleanupRole = new Role(this, 'CleanupSsmParametersRole', {
-      roleName: `${this.prefix}-cleanup-ssm-parameters-role`,
+      roleName: `${this.prefix}-cleanup-sagemaker-and-ssm-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies
     new Policy(this, 'CleanupSsmParametersPolicy', {
-      policyName: 'cleanup-ssm-parameters-policy',
+      policyName: 'cleanup-sagemaker-and-ssm-policy',
       document: cleanupPolicyDocument,
       roles: [cleanupRole],
     });
