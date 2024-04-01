@@ -3,7 +3,6 @@ import os
 from aws_lambda_powertools import Logger
 
 logger = Logger()
-tracer = Tracer()
 ssm = boto3.client("ssm")
 sm = boto3.client("sagemaker")
 sts = boto3.client("sts")
@@ -11,7 +10,6 @@ AWS_REGION = boto3.session.Session().region_name
 ACCOUNT_ID = sts.get_caller_identity().get("Account")
 
 @logger.inject_lambda_context(log_event=True)
-@tracer.capture_lambda_handler()
 def lambda_handler(event, context):
     # Get the SageMaker prefix name from SSM parameter store
     project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
