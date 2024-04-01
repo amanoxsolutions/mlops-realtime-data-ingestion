@@ -84,4 +84,4 @@ The project provides you a SageMaker development environment with all the necess
 10. Commit & push all the changes for each repository
 
 The __Model Build__ pipeline will start right away, provision and running the SageMaker pipeline to train a model. But note that the __Model Deploy__ pipeline will also run and fail. At this stage this is normal since no model has been trained yet. Once the __Model Build__ pipeline completes and a model is waiting for your approval to be deployed, the __Model Deploy__ pipeline will be triggered automatically.
-See the [The MLOps Pipeline](./doc/MLOPS.md) documentation for more details.
+See the [The MLOps Pipeline](./MLOPS.md) documentation for more details.

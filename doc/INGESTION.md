@@ -2,7 +2,7 @@
 This documentation gives you some information to look at the data being ingested in the various AWS services et different
 stages of the data pipeline.
 ## Data Ingestion Pipeline Architecture
-![](../doc/images/mlops-realtime-data-ingestion-ingestion.jpg)
+![](./images/mlops-realtime-data-ingestion-ingestion.jpg)
 The pipeline works as follow:
 1. An AWS Fargate container polls the data source API every second to ingest the last 100 transactions and publish all transactions on the data ingestion event bus of AWS EventBridge.
 2. An AWS EventBridge Rule routes the ingested data to Amazon Kinesis Data Firehose streaming service.

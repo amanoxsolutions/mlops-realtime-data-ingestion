@@ -25,7 +25,7 @@ transactions, it allows us to quickly gather a lot of data points in a short per
 for too long which has an impact on the AWS billing.
 ## Architecture
 ## The Full Architecture
-![](doc/images/mlops-real-time-data-ingestion.jpg)
+![](./doc/images/mlops-real-time-data-ingestion.jpg)
 ## Near Real Time Data Ingestion Architecture
 At a high level, the data are ingested as follow:
 1. A container running on AWS Fargate polls the data and writes them to EventBridge
@@ -34,7 +34,7 @@ At a high level, the data are ingested as follow:
 4. Kinesis Data Analytics computes the chosen metrics per minute and writes them to SageMaker Feature Store
 
 See [this documentation](./doc/INGESTION.md) for more details.
-![](doc/images/mlops-real-time-data-ingestion-ingestion-overview.jpg)
+![](./doc/images/mlops-real-time-data-ingestion-ingestion-overview.jpg)
 ## MLOps Architecture
 The MLOps project contains 3 CodeCommit repositories with their own CodePipeline pipelines to train, deploy and monitor the model.
 1. The __Model Build__ pipeline creates a SageMaker Pipeline orchestrating all the steps to train a model and, if it passes the validation threshold, register the model, which then has to be manually approved.
@@ -45,7 +45,7 @@ The MLOps project contains 3 CodeCommit repositories with their own CodePipeline
    * AWS does not support monitoring for custom metrics (like the [weighted quantile loss](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html) we use for the DeepAR model) and,
    * AWS does not provide any built-in mechanism to capture the alarms raised by the SageMaker Monitoring service when a model performance is breached, in order to perform automatic retraining of the model.
 6. If our custom metric is breached, the CloudWatch Alarm will trigger a Lambda Function, which will trigger the __Model Build__ pipeline, retraining a new model, looping back automatically to the step one of this MLOps pipeline.
-![](doc/images/mlops-real-time-data-ingestion-mlops-overview.jpg)
+![](./doc/images/mlops-real-time-data-ingestion-mlops-overview.jpg)
 ## What are the Prerequisites?
 The list below is for _Windows_ environment
 * The AWS CLI ([documentation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))  
