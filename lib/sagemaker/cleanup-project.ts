@@ -89,10 +89,12 @@ export class RDICleanupStepFunction extends Construct {
         new PolicyStatement({
           sid: 'DeleteS3Objects',
           actions: [
-            's3:ListObjectsV2',
+            's3:ListBucket',
             's3:DeleteObject*',
           ],
-          resources: [`${props.sagemakerProjectBucketArn}/*`]	
+          resources: [
+            props.sagemakerProjectBucketArn,
+            `${props.sagemakerProjectBucketArn}/*`]	
         }),
         new PolicyStatement({
           sid: 'DeleteS3Bucket',
@@ -113,12 +115,12 @@ export class RDICleanupStepFunction extends Construct {
       ]
     });
     const cleanupRole = new Role(this, 'CleanupSsmParametersRole', {
-      roleName: `${this.prefix}-cleanup-sagemaker-and-ssm-role`,
+      roleName: `${this.prefix}-cleanup-sagemaker-project-role`,
       assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies
     new Policy(this, 'CleanupSsmParametersPolicy', {
-      policyName: 'cleanup-sagemaker-and-ssm-policy',
+      policyName: 'cleanup-sagemaker-project-policy',
       document: cleanupPolicyDocument,
       roles: [cleanupRole],
     });
