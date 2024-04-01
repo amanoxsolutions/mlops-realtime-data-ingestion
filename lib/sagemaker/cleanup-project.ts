@@ -95,6 +95,13 @@ export class RDICleanupStepFunction extends Construct {
           resources: [`${props.sagemakerProjectBucketArn}/*`]	
         }),
         new PolicyStatement({
+          sid: 'DeleteS3Bucket',
+          actions: [
+            's3:DeleteBucket',
+          ],
+          resources: [props.sagemakerProjectBucketArn]	
+        }),
+        new PolicyStatement({
           sid: 'AllowToPutCloudWatchLogEvents',
           actions: [
             'logs:PutLogEvents', 

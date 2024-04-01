@@ -21,4 +21,6 @@ def lambda_handler(event, context):
         delete_keys = {"Objects": object_list[i : i + 1000]}
         s3.delete_objects(Bucket=bucket_name, Delete=delete_keys)
         logger.info(f"Deleted {len(delete_keys['Objects'])} objects")
+    # Delete the bucket
+    s3.delete_bucket(Bucket=bucket_name)
     return {}
