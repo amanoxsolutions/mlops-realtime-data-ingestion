@@ -208,7 +208,7 @@ export class RDICleanupStepFunction extends Construct {
       ]
     });
     const stateMachineRole = new Role(this, 'StateMachineRole', {
-      roleName: `${this.prefix}-cleanup-sagemaker-project-role2`,
+      roleName: `${this.prefix}-cleanup-sagemaker-project-role`,
       assumedBy: new ServicePrincipal('states.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies

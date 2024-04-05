@@ -33,7 +33,7 @@ new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
   },
   prefix: prefix,
   repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
-  codestarConnectionName: 'github_amanox',
+  codestarConnectionName: 'mlops-realtime-data-ingestion',
   fullBranchName: fullBranchName,
   shortBranchName: shortBranchName,
 });
