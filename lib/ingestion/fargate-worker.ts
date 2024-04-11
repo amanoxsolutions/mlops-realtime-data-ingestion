@@ -27,7 +27,7 @@ interface RDIIngestionWorkerProps {
   readonly eventBusArn: string;
   readonly eventBusName: string;
   readonly eventDetailType: string;
-  readonly kinesisFirehoseArn: string;
+  readonly ingestionDataStreamArn: string;
   readonly ingestionIntervalMSec?: number;
 }
 
@@ -130,7 +130,7 @@ export class RDIIngestionWorker extends Construct {
       environment: {
         'EVENT_BUS_NAME': props.eventBusName,
         'EVENT_DETAIL_TYPE': props.eventDetailType,
-        'KINESIS_FIREHOSE_ARN': props.kinesisFirehoseArn,
+        'INGESTION_DATA_STREAM_ARN': props.ingestionDataStreamArn,
         'INGESTION_INTERVAL': this.ingestionIntervalMSec.toString(),
       },
       essential: true,

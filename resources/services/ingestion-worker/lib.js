@@ -103,7 +103,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
     DetailType: detailType,
     Source: 'Fargate Ingestion Worker',
     Resources: [
-        process.env.KINESIS_FIREHOSE_ARN,
+        process.env.INGESTION_DATA_STREAM_ARN,
     ],
   }
   // The maximum event size is 256KB. If the event is greater than 256

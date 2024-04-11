@@ -48,8 +48,8 @@ export class SagemakerStack extends Stack {
       parameterName: '/rdi-mlops/stack-parameters/custom-resource-layer-arn',
     }).stringValue
 
-    const ingestionFirehoseStreamArn = StringParameter.fromStringParameterAttributes(this, 'FirehoseStreamSSMParameter', {
-      parameterName: '/rdi-mlops/stack-parameters/ingestion-firehose-stream-arn',
+    const ingestionFirehoseStreamArn = StringParameter.fromStringParameterAttributes(this, 'DeliveryStreamSSMParameter', {
+      parameterName: 'rdi-mlops/stack-parameters/delivery-data-stream-arn',
     }).stringValue
 
     const dataBucketArn = StringParameter.fromStringParameterAttributes(this, 'DataBucketSSMParameter', {
@@ -170,15 +170,18 @@ export class SagemakerStack extends Stack {
       customResourceLayerArn: customResourceLayerArn,
     });
 
-    this.featureStore = new RDIFeatureStore(this, 'featureStore', {
-      prefix: this.prefix,
-      removalPolicy: this.removalPolicy,
-      runtime: this.runtime,
-      customResourceLayerArn: customResourceLayerArn,
-      firehoseStreamArn: ingestionFirehoseStreamArn,
-      s3Suffix: this.s3Suffix,
-      dataAccessPolicy: dataAccessPolicy,
-    });
+    // Temporarily disable the festure store construct
+    // The Kinesis Data Analytics in it must be removed
+    // and replaced with Manages Service for Apache Flink
+    // this.featureStore = new RDIFeatureStore(this, 'featureStore', {
+    //   prefix: this.prefix,
+    //   removalPolicy: this.removalPolicy,
+    //   runtime: this.runtime,
+    //   customResourceLayerArn: customResourceLayerArn,
+    //   firehoseStreamArn: ingestionFirehoseStreamArn,
+    //   s3Suffix: this.s3Suffix,
+    //   dataAccessPolicy: dataAccessPolicy,
+    // });
 
     this.project = new RDISagemakerProject(this, 'sagemakerProject', {
       prefix: this.prefix,

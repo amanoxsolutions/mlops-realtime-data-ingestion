@@ -4,17 +4,26 @@ import { Construct } from 'constructs';
 
 export interface RDIIngestionPipelineDashboardProps {
   readonly prefix: string;
+  readonly ingestionStreamName: string;
+  readonly deliveryStreamName: string;
+  readonly firehoseStreamName: string;
 }
 
 export class RDIIngestionPipelineDashboard extends Construct {
   public readonly prefix: string;
   public readonly dashboard: Dashboard;
   public readonly pipelineWidget: GraphWidget;
+  readonly ingestionStreamName: string;
+  readonly deliveryStreamName: string;
+  readonly firehoseStreamName: string;
 
   constructor(scope: Construct, id: string, props: RDIIngestionPipelineDashboardProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
+    this.ingestionStreamName = props.ingestionStreamName;
+    this.deliveryStreamName = props.deliveryStreamName;
+    this.firehoseStreamName = props.firehoseStreamName;
     const region = Stack.of(this).region;
 
     this.dashboard = new Dashboard(this, 'dashboard', {
@@ -45,13 +54,35 @@ export class RDIIngestionPipelineDashboard extends Construct {
       region: region,
     });
 
+    const ingestionStreamIncomingBytes = new Metric({
+      metricName: 'IncomingBytes',
+      label: 'Amount of data in bytes ingested by the Ingestion Kinesis Data Stream',
+      statistic: 'Sum',
+      period: Duration.minutes(5),
+      namespace: 'AWS/Kinesis',
+      dimensionsMap: { DeliveryStreamName: this.ingestionStreamName },
+      color: Color.ORANGE,
+      region: region,
+    });
+
+    const deliveryStreamIncomingBytes = new Metric({
+      metricName: 'IncomingBytes',
+      label: 'Amount of data in bytes ingested by the Delivery Kinesis Data Stream',
+      statistic: 'Sum',
+      period: Duration.minutes(5),
+      namespace: 'AWS/Kinesis',
+      dimensionsMap: { DeliveryStreamName: this.deliveryStreamName },
+      color: Color.ORANGE,
+      region: region,
+    });
+
     const kinesisFirehoseIncomingBytes = new Metric({
       metricName: 'IncomingBytes',
       label: 'Amount of data in bytes ingested by Kinesis Firehose',
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/Firehose',
-      dimensionsMap: { DeliveryStreamName: `${this.prefix}-kf-stream` },
+      dimensionsMap: { DeliveryStreamName: this.firehoseStreamName },
       color: Color.ORANGE,
       region: region,
     });
@@ -62,7 +93,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/Firehose',
-      dimensionsMap: { DeliveryStreamName: `${this.prefix}-kf-stream` },
+      dimensionsMap: { DeliveryStreamName: this.firehoseStreamName },
       color: Color.RED,
       region: region,
     });
@@ -71,7 +102,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       title: 'Ingestion Pipeline - Data Size',
       height: 9,
       width: 12,
-      left: [ingestionWorker, eventBridge, kinesisFirehoseIncomingBytes, kinesisFirehoseDeliveryToS3],
+      left: [ingestionWorker, eventBridge, ingestionStreamIncomingBytes, deliveryStreamIncomingBytes, kinesisFirehoseIncomingBytes, kinesisFirehoseDeliveryToS3],
       stacked: false,
     });
     this.pipelineWidget.position(0, 0);
