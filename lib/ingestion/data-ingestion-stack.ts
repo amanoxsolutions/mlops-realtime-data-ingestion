@@ -127,13 +127,8 @@ export class RealtimeDataIngestionStack extends Stack {
       resources: [inputTable.table.tableArn],
     });
     lambda.function.addToRolePolicy(dynamodbPolicyStatement);
-    // Add the PutRecord permissions on the Kinesis Data Stream to the Lambda function's policy
-    const kinesisPolicyStatement = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: ['kinesis:PutRecord'],
-      resources: [deliveryStream.kinesisStream.streamArn],
-    });
-    lambda.function.addToRolePolicy(kinesisPolicyStatement);
+    // Add the permissions on the Kinesis Data Stream to the Lambda function's policy
+    deliveryStream.kinesisStream.grantWrite(lambda.function);
 
     // Create the EventBridge to Kinesis Firehose to S3 construct
     // const inputStream = new EventbridgeToKinesisFirehoseToS3(this, 'InputStream', {

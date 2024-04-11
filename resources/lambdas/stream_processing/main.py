@@ -1,14 +1,12 @@
 import base64
-import io
 import json
 import os
 import time
-
-from datetime import timedelta
-
 import boto3
-from aws_lambda_powertools import Logger, Metrics, Tracer
+from datetime import timedelta
+from aws_lambda_powertools import Logger, Tracer
 from boto3.dynamodb.conditions import Attr
+from botocore.exceptions import ClientError
 
 logger = Logger()
 tracer = Tracer()
@@ -17,9 +15,11 @@ DYNAMODB_SEEN_TABLE_NAME = os.environ.get("DYNAMODB_SEEN_TABLE_NAME")
 HASH_KEY_NAME = os.environ.get("HASH_KEY_NAME")
 TTL_ATTRIBUTE_NAME = os.environ.get("TTL_ATTRIBUTE_NAME")
 DDB_ITEM_TTL_HOURS = int(os.environ.get("DDB_ITEM_TTL_HOURS"))
+KINESIS_DATASTREAM_NAME = os.environ.get("KINESIS_DATASTREAM_NAME")
 
 # TODO introduce boto3 session retry-config
 dynamodb_resource = boto3.resource("dynamodb")
+kinesis = boto3.client("kinesis")
 
 table_of_seen_items = dynamodb_resource.Table(DYNAMODB_SEEN_TABLE_NAME)
 """ :type: pyboto3.dynamodb.resources.Table """
@@ -29,12 +29,11 @@ table_of_seen_items = dynamodb_resource.Table(DYNAMODB_SEEN_TABLE_NAME)
 # from the tracer. Refer to https://github.com/awslabs/aws-lambda-powertools-python/issues/476
 @tracer.capture_lambda_handler(capture_response=False)
 def lambda_handler(event, context):
-    record_results = []
-    for raw_record in event["records"]:
-        raw_data = raw_record["data"]
+    for raw_record in event["Records"]:
+        raw_data = raw_record['kinesis']["data"]
         # base64 decode the data and load the JSON data
         record = json.loads(base64.b64decode(raw_data))
-        transactions_to_store = []
+        transactions_to_keep = []
         logger.info(f"Processing block of {len(record['detail']['txs'])} transactions.")
         for transaction in record["detail"]["txs"]:
             transaction_hash = transaction[HASH_KEY_NAME]
@@ -59,11 +58,18 @@ def lambda_handler(event, context):
             except dynamodb_resource.meta.client.exceptions.ConditionalCheckFailedException:
                 logger.info(f"been there seen that: {transaction_hash}")
             else:
-                transactions_to_store.append(transaction)
-        logger.info(f"Added  {len(transactions_to_store)} transactions out of {len(record['detail']['txs'])} from the stream block payload.")
-        record_results.append({
-            "recordId": raw_record["recordId"],
-            "result": "Ok",
-            "data": base64.b64encode(json.dumps(transactions_to_store).encode("utf-8"))
-        })
-    return { "records": record_results}  # TODO validate needed record_results format
+                # Prepare the records for the Kinesis Data Stream
+                transactions_to_keep.append({
+                    "Data": json.dumps(transaction),
+                    "PartitionKey": transaction_hash
+                })
+        logger.info(f"Added {len(transactions_to_keep)} transactions out of {len(record['detail']['txs'])} from the stream block payload.")
+        # send the processed records to the Kinesis Data Stream
+        try:
+            kinesis.put_records(
+                StreamName=KINESIS_DATASTREAM_NAME,
+                Records=transactions_to_keep
+            )
+        except ClientError as e:
+            logger.exception("Failed to put records to Kinesis Data Stream.")
+            logger.exception({"records": transactions_to_keep})
