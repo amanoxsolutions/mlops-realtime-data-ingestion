@@ -62,6 +62,17 @@ export class RDIIngestionPipelineDashboard extends Construct {
       region: region,
     });
 
+    const firehoseStreamDataReadBytes = new Metric({
+      metricName: 'DataReadFromKinesisStream.Bytes',
+      label: 'Amount of data in bytes read by the Firehose Stream from the Kinesis Data Stream',
+      statistic: 'Sum',
+      period: Duration.minutes(5),
+      namespace: 'AWS/Firehose',
+      dimensionsMap: { DeliveryStreamName: this.firehoseStreamName },
+      color: Color.ORANGE,
+      region: region,
+    });
+
     const firehoseStreamDeliveryToS3 = new Metric({
       metricName: 'DeliveryToS3.Bytes',
       label: 'Amount of data in bytes delivered by the Firehose Stream to S3',
@@ -77,7 +88,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       title: 'Ingestion Pipeline - Data Size',
       height: 9,
       width: 12,
-      left: [ingestionWorker, eventBridge, ingestionStreamIncomingBytes, firehoseStreamDeliveryToS3],
+      left: [ingestionWorker, eventBridge, ingestionStreamIncomingBytes, firehoseStreamDataReadBytes, firehoseStreamDeliveryToS3],
       stacked: false,
     });
     this.pipelineWidget.position(0, 0);
