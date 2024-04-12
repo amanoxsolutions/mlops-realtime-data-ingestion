@@ -58,7 +58,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       period: Duration.minutes(5),
       namespace: 'AWS/Kinesis',
       dimensionsMap: { DeliveryStreamName: this.ingestionStreamName },
-      color: Color.ORANGE,
+      color: Color.PURPLE,
       region: region,
     });
 
