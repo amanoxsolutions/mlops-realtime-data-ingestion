@@ -24,7 +24,9 @@ new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
 > [!TIP]
 > If your AWS CLI is using a named profile instead of the default profile,  specify this profile when issuing AWS CLI & CDK commands using the `--profile <your profile name>` option or the AWS_PROFILE environment variable.
 
-Bootsrap the CDK (documentation [here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap))
+1. Start the Docker Desktop application.
+
+2. Bootsrap the CDK (documentation [here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap))
 ```
 cdk bootstrap aws://<account number>/<aws region>
 ```
@@ -35,17 +37,17 @@ cdk bootstrap aws://123456789012/eu-west-1
 ```
 
 
-Install the Node.js modules defined in the package.json file
+3. Install the Node.js modules defined in the package.json file
 ```
 npm install
 ```
 
-Verify the stack before deploment
+4. Verify the stack before deploment
 ```
 cdk synth
 ```
 
-Deploy the stack from the current Git branch
+5. Deploy the stack from the current Git branch
 ```
 cdk deploy
 ```
