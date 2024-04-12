@@ -9,6 +9,7 @@ import { EventbridgeToKinesisFirehoseToS3 } from '@aws-solutions-constructs/aws-
 import { StreamMode } from 'aws-cdk-lib/aws-kinesis';
 import { EventbridgeToKinesisStreams } from '@aws-solutions-constructs/aws-eventbridge-kinesisstreams';
 import { KinesisStreamsToKinesisFirehoseToS3  } from '@aws-solutions-constructs/aws-kinesisstreams-kinesisfirehose-s3';
+import { KinesisStreamsToLambda } from '@aws-solutions-constructs/aws-kinesisstreams-lambda';
 import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Policy, PolicyDocument, PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
@@ -127,8 +128,14 @@ export class RealtimeDataIngestionStack extends Stack {
       resources: [inputTable.table.tableArn],
     });
     lambda.function.addToRolePolicy(dynamodbPolicyStatement);
-    // Add the permissions on the Kinesis Data Stream to the Lambda function's policy
-    deliveryStream.kinesisStream.grantWrite(lambda.function);
+    // Add the permissions to the Lambda function's policy to write into the delivery Kinesis Data Stream
+    deliveryStream.kinesisStream.grantWrite(lambda.function.grantPrincipal);
+    // Use the AWS Solutions Construct to create the Kinesis Data Stream to Lambda link
+    const kinesisStreamToLambda = new KinesisStreamsToLambda(this, 'KinesisStreamToLambda', {
+      existingStreamObj: ingestionStream.kinesisStream,
+      existingLambdaObj: lambda.function,
+    });
+
 
     // Create the EventBridge to Kinesis Firehose to S3 construct
     // const inputStream = new EventbridgeToKinesisFirehoseToS3(this, 'InputStream', {
