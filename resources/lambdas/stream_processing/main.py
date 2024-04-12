@@ -61,6 +61,9 @@ def lambda_handler(event, context):
                 "PartitionKey": transaction_hash
             })
     logger.info(f"Added {len(transactions_to_keep)} transactions out of {nb_transactions} from the stream block payload.")
+    if len(transactions_to_keep) == 0:
+        logger.info("No new transactions to process. Exiting.")
+        return
     # send the processed records to the Kinesis Data Stream
     try:
         kinesis.put_records(

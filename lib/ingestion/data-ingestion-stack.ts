@@ -43,7 +43,8 @@ export class RealtimeDataIngestionStack extends Stack {
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     const dataBucketName = `${this.prefix}-input-bucket-${this.s3Suffix}`;
-    const kinesisFirhoseName = `${this.prefix}-kf-stream`;
+    const firehoseStreamName = `${this.prefix}-kf-stream`;
+    const ingestionStreamName = `${this.prefix}-kd-ingestion-stream`;
 
     //
     // EventBridge Ingestion & Processing
@@ -72,7 +73,7 @@ export class RealtimeDataIngestionStack extends Stack {
         HASH_KEY_NAME: inputTable.partitionKey,
         TTL_ATTRIBUTE_NAME: inputTable.timeToLiveAttribute,
         DDB_ITEM_TTL_HOURS: '3',
-        KINESIS_DATASTREAM_NAME: kinesisFirhoseName,
+        KINESIS_DATASTREAM_NAME: ingestionStreamName,
       }
     });
     // Add the PutItem permissions on the DynamoDB table to the Lambda function's policy
@@ -104,11 +105,11 @@ export class RealtimeDataIngestionStack extends Stack {
     // The Lambda function will write the filtered data to the second Kinesis Data Stream
     const ingestionStream = new KinesisStreamsToKinesisFirehoseToS3(this, 'IngestionStreamToFirehoseToS3', {
       kinesisStreamProps: {
-        streamName: `${this.prefix}-kd-ingestion-stream`,
+        streamName: ingestionStreamName,
         streamMode: StreamMode.ON_DEMAND,
       },
       kinesisFirehoseProps: { 
-        deliveryStreamName : kinesisFirhoseName,
+        deliveryStreamName : firehoseStreamName,
       },
       bucketProps: { 
         bucketName: dataBucketName,
@@ -181,7 +182,7 @@ export class RealtimeDataIngestionStack extends Stack {
     const customDashboard = new RDIIngestionPipelineDashboard(this, 'IngestionPipelineDashboard', {
       prefix: this.prefix,
       ingestionStreamName: ingestionStream.kinesisStream.streamName,
-      firehoseStreamName: ingestionStream.kinesisFirehose.deliveryStreamName || kinesisFirhoseName,
+      firehoseStreamName: ingestionStream.kinesisFirehose.deliveryStreamName || firehoseStreamName,
     });
     this.dashboard = customDashboard.dashboard;
     this.pipelineWidget = customDashboard.pipelineWidget;
