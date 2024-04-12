@@ -62,17 +62,6 @@ export class RDIIngestionPipelineDashboard extends Construct {
       region: region,
     });
 
-    const firehoseStreamIncomingBytes = new Metric({
-      metricName: 'IncomingBytes',
-      label: 'Amount of data in bytes ingested by the Firehose Stream',
-      statistic: 'Sum',
-      period: Duration.minutes(5),
-      namespace: 'AWS/Firehose',
-      dimensionsMap: { DeliveryStreamName: this.firehoseStreamName },
-      color: Color.ORANGE,
-      region: region,
-    });
-
     const firehoseStreamDeliveryToS3 = new Metric({
       metricName: 'DeliveryToS3.Bytes',
       label: 'Amount of data in bytes delivered by the Firehose Stream to S3',
@@ -88,7 +77,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       title: 'Ingestion Pipeline - Data Size',
       height: 9,
       width: 12,
-      left: [ingestionWorker, eventBridge, ingestionStreamIncomingBytes, firehoseStreamIncomingBytes, firehoseStreamDeliveryToS3],
+      left: [ingestionWorker, eventBridge, ingestionStreamIncomingBytes, firehoseStreamDeliveryToS3],
       stacked: false,
     });
     this.pipelineWidget.position(0, 0);
