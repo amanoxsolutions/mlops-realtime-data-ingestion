@@ -63,7 +63,7 @@ export class DataIngestionPipelineStack extends Stack {
         commands: [`git checkout ${props.fullBranchName}`, 'cat .git/HEAD', 'npm ci', 'npm run build', 'npx cdk synth --no-previous-parameters']
       }),
       dockerEnabledForSynth: true,
-      cliVersion: '2.100.0',
+      cliVersion: '2.133.0',
       assetPublishingCodeBuildDefaults: {
         buildEnvironment: {
           buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
