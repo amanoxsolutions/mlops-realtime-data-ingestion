@@ -155,7 +155,7 @@ export class RealtimeDataIngestionStack extends Stack {
       eventBusName: eventBusName,
       eventDetailType: eventDetailType,
       ingestionDataStreamArn: ingestionStream.kinesisStream.streamArn,
-      ingestionIntervalMSec: 1000, // 1 second
+      ingestionIntervalMSec: 2000, // 2 second
     });
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     this.vpc = ingestionWorker.vpc;
