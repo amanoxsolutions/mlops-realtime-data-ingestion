@@ -49,11 +49,11 @@ export class SagemakerStack extends Stack {
     }).stringValue
 
     const ingestionDataStreamArn = StringParameter.fromStringParameterAttributes(this, 'IngestionStreamArnSSMParameter', {
-      parameterName: 'rdi-mlops/stack-parameters/ingestion-data-stream-arn',
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-data-stream-arn',
     }).stringValue
 
     const ingestionDataStreamName = StringParameter.fromStringParameterAttributes(this, 'IngestionStreamNameSSMParameter', {
-      parameterName: 'rdi-mlops/stack-parameters/ingestion-data-stream-name',
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-data-stream-name',
     }).stringValue
 
     const dataBucketArn = StringParameter.fromStringParameterAttributes(this, 'DataBucketSSMParameter', {
