@@ -4,12 +4,13 @@ import { ManagedPolicy, Role, ServicePrincipal, Policy, PolicyStatement, PolicyD
 import { LogGroup, RetentionDays, LogStream } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
-import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
+import { Application, IApplication, ApplicationCode, Runtime as FlinkRuntime } from '@aws-cdk/aws-kinesisanalytics-flink-alpha';
 import { RDILambda } from '../lambda';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime as LambdaRuntime } from 'aws-cdk-lib/aws-lambda';
 import * as fgConfig from '../../resources/sagemaker/featurestore/agg-fg-schema.json';
-import * as sourceSchema from '../../resources/sagemaker/featurestore/source-schema.json';
 import { RDIStartKinesisAnalytics } from './start-kinesis';
+import { StreamMode } from 'aws-cdk-lib/aws-kinesis';
+import { KinesisStreamsToLambda } from '@aws-solutions-constructs/aws-kinesisstreams-lambda';
 import { CfnTrigger, CfnJob } from 'aws-cdk-lib/aws-glue';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 
@@ -27,8 +28,9 @@ interface RDIFeatureStoreProps {
   readonly prefix: string;
   readonly s3Suffix: string;
   readonly removalPolicy?: RemovalPolicy;
-  readonly firehoseStreamArn: string;
-  readonly runtime: Runtime;
+  readonly ingestionDataStreamArn: string;
+  readonly ingestionDataStreamName: string;
+  readonly runtime: LambdaRuntime;
   readonly customResourceLayerArn: string;
   readonly dataAccessPolicy: Policy;
 }
@@ -36,11 +38,11 @@ interface RDIFeatureStoreProps {
 export class RDIFeatureStore extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
-  public readonly runtime: Runtime;
+  public readonly runtime: LambdaRuntime;
   public readonly featureGroupName: string;
   public readonly bucket: IBucket;
-  public readonly analyticsStream: CfnApplication;
-  public readonly analyticsAppName: string;
+  public readonly flinkApp: IApplication;
+  public readonly flinkAppName: string;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
     super(scope, id);
@@ -136,16 +138,14 @@ export class RDIFeatureStore extends Construct {
     });
 
     //
-    // Realtime ingestion with Kinesis Data Analytics
+    // Kinesis Data Stream Sink for Apache Flink Application
     //
-    this.analyticsAppName = `${this.prefix}-analytics`;
-
     // Lambda Function to ingest aggregated data into SageMaker Feature Store
-    // Create the Lambda function used by Kinesis Firehose to pre-process the data
+    // Create the Lambda function used by the delivery Kinesis Data Stream to pre-process the data
     const lambda = new RDILambda(this, 'IngestIntoFetureStore', {
       prefix: this.prefix,
-      name: 'analytics-to-featurestore',
-      codePath: 'resources/lambdas/analytics_to_featurestore',
+      name: 'delivery-stream-to-featurestore',
+      codePath: 'resources/lambdas/delivery_stream_to_featurestore',
       runtime: this.runtime,
       memorySize: 512,
       timeout: Duration.seconds(60),
@@ -163,9 +163,22 @@ export class RDIFeatureStore extends Construct {
     });
     lambda.function.addToRolePolicy(lambdaPolicyStatement);
 
-    // IAM Role for Kinesis Data Analytics
-    const analyticsRole = new Role(this, 'AnalyticsRole', {
-      roleName: `${this.prefix}-analytics-role`,
+    // Create the Kinesis Data Stream Sink for the Apache Flink Application with the Lambda function as the consumer
+    const deliveryStream = new KinesisStreamsToLambda(this, 'DeliveryStream', {
+      existingLambdaObj: lambda.function,
+      kinesisStreamProps: {
+        streamName: `${this.prefix}-kd-delivery-stream`,
+        streamMode: StreamMode.ON_DEMAND,
+      },
+    });
+
+    //
+    // Realtime ingestion with Kinesis Data Analytics
+    //
+    this.flinkAppName = `${this.prefix}-flink-app`;
+    // IAM Role for Managed Service for Apache Flink
+    const flinkAppRole = new Role(this, 'MsafRole', {
+      roleName: `${this.prefix}-flink-role`,
       assumedBy: new ServicePrincipal('kinesisanalytics.amazonaws.com'),
       inlinePolicies: {
         AnalyticsRolePolicy: new PolicyDocument({
@@ -181,29 +194,11 @@ export class RDIFeatureStore extends Construct {
               ] 
             }),
             new PolicyStatement({
-              sid: 'AllowAccessToSourceStream',
+              sid: 'ReadInputStream',
               resources: [
-                props.firehoseStreamArn
+                props.ingestionDataStreamArn
               ],
-              actions: [
-                'firehose:DescribeDeliveryStream',
-                'firehose:Get*'
-              ] 
-            }),
-            new PolicyStatement({
-              sid: 'ReadEncryptedInputKinesisFirehose',
-              resources: ['*'], // TODO: Put the ARN of the encryption key
-              actions: [
-                'kms:Decrypt'
-              ],
-              conditions: {
-                StringEquals: {
-                  'kms:ViaService': 'firehose.us-east-1.amazonaws.com'
-                },
-                StringLike: {
-                  'kms:EncryptionContext:aws:firehose:arn': props.firehoseStreamArn
-                }
-              }
+              actions: ['kinesis:*']
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
@@ -221,125 +216,124 @@ export class RDIFeatureStore extends Construct {
       }
     });
 
-    // Kinesis Data Analytics Application
-    this.analyticsStream = new CfnApplication(this, 'Analytics', {
-      applicationName: this.analyticsAppName,
-      applicationCode: fs.readFileSync(path.join(__dirname, '../../resources/kinesis/analytics.sql')).toString(),
-      inputs: [
-        {
-          namePrefix: "SOURCE_SQL_STREAM",
-          kinesisFirehoseInput: {
-            resourceArn: props.firehoseStreamArn,
-            roleArn: analyticsRole.roleArn,
-          },
-          inputParallelism: { count: 1 },
-          inputSchema: {
-            recordFormat: {
-              recordFormatType: "JSON",
-              mappingParameters: { jsonMappingParameters: { recordRowPath: "$" } }
-            },
-            recordEncoding: "UTF-8",
-            recordColumns: sourceSchema.columns
-          },
-        }
-      ],
-    });
+    // Managed Service for Apache Flink Application
+    // this.flinkApp = new Application(this, 'FlinkApp', {
+    //   applicationName: this.flinkAppName,
+    //   code: ApplicationCode.fromAsset(path.join(__dirname, '../../resources/kinesis/flink.jar')),
+    //   runtime: FlinkRuntime.FLINK_1_18,
+    //   role: flinkAppRole,
+    //   propertyGroups: {
+    //     'kinesis.analytics.flink.run.options': {
+    //       python: 'man.py',
+    //       jarfile: 'lib/flink-sql-connector-kafka_2.11-1.11.2.jar'
+    //     },
+    //     'consumer.config.0': {
+    //       'input.stream.name': props.ingestionDataStreamName,
+    //       'aws.region': region,
+    //       'flink.stream.initpos': 'TRIM_HORIZON',
+    //     },
+    //     'sink.config.0': {
+    //       'output.stream.name': deliveryStream.kinesisStream.streamName,
+    //       'aws.region': region,
+    //     }
+    //   },
+    // });
 
-    const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
-      prefix: this.prefix,
-      runtime: this.runtime,
-      kinesis_analytics_name: this.analyticsAppName,
-      customResourceLayerArn: props.customResourceLayerArn,
-    });
-    startKinesisAnalytics.node.addDependency(this.analyticsStream)
+    // const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
+    //   prefix: this.prefix,
+    //   runtime: this.runtime,
+    //   kinesis_analytics_name: this.analyticsAppName,
+    //   customResourceLayerArn: props.customResourceLayerArn,
+    // });
+    // startKinesisAnalytics.node.addDependency(this.analyticsStream)
 
-    const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
-      applicationName: this.analyticsAppName,
-      output: {
-        destinationSchema: {
-          recordFormatType: 'JSON'
-        },
-        lambdaOutput: {
-          resourceArn: lambda.function.functionArn,
-          roleArn: analyticsRole.roleArn,
-        },
-        name: 'DESTINATION_SQL_STREAM',
-      }
-    });
-    analyticsOutput.node.addDependency(this.analyticsStream);
+    // const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
+    //   applicationName: this.analyticsAppName,
+    //   output: {
+    //     destinationSchema: {
+    //       recordFormatType: 'JSON'
+    //     },
+    //     lambdaOutput: {
+    //       resourceArn: lambda.function.functionArn,
+    //       roleArn: flinkAppRole.roleArn,
+    //     },
+    //     name: 'DESTINATION_SQL_STREAM',
+    //   }
+    // });
+    // analyticsOutput.node.addDependency(this.analyticsStream);
 
-    const glueAssetsBucket = new Bucket(this, 'GlueAssetsBucket', {
-      bucketName: `${this.prefix}-glue-assets-${props.s3Suffix}`,
-      accessControl: BucketAccessControl.PRIVATE,
-      encryption: BucketEncryption.S3_MANAGED,
-      removalPolicy: this.removalPolicy,
-      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
-    });
+    // const glueAssetsBucket = new Bucket(this, 'GlueAssetsBucket', {
+    //   bucketName: `${this.prefix}-glue-assets-${props.s3Suffix}`,
+    //   accessControl: BucketAccessControl.PRIVATE,
+    //   encryption: BucketEncryption.S3_MANAGED,
+    //   removalPolicy: this.removalPolicy,
+    //   autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
+    // });
 
-    const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
-      sources: [Source.asset('./resources/glue')], 
-      destinationBucket: glueAssetsBucket,
-      destinationKeyPrefix: 'scripts',
-    });
+    // const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
+    //   sources: [Source.asset('./resources/glue')], 
+    //   destinationBucket: glueAssetsBucket,
+    //   destinationKeyPrefix: 'scripts',
+    // });
 
-    const glueRole = new Role(this, 'GlueRole', {
-      roleName: `${this.prefix}-glue-role`,
-      assumedBy:  new ServicePrincipal("glue.amazonaws.com"),
-    });
-    glueRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
-      policyName: `${this.prefix}-glue-job-s3-bucket-access`,
-      document: new PolicyDocument({
-        statements: [
-          new PolicyStatement({
-            effect: Effect.ALLOW,
-            resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
-            actions: [
-              "s3:PutObject",
-              "s3:GetObject",
-              "s3:ListBucket",
-              "s3:DeleteObject"
-            ] 
-          }),
-          new PolicyStatement({
-            effect: Effect.ALLOW,
-            resources: [glueAssetsBucket.bucketArn, `${glueAssetsBucket.bucketArn}/*`],
-            actions: [
-              "s3:GetObject",
-              "s3:ListBucket"
-            ] 
-          })
-        ]
-      })
-    }));
+    // const glueRole = new Role(this, 'GlueRole', {
+    //   roleName: `${this.prefix}-glue-role`,
+    //   assumedBy:  new ServicePrincipal("glue.amazonaws.com"),
+    // });
+    // glueRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
+    //   policyName: `${this.prefix}-glue-job-s3-bucket-access`,
+    //   document: new PolicyDocument({
+    //     statements: [
+    //       new PolicyStatement({
+    //         effect: Effect.ALLOW,
+    //         resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
+    //         actions: [
+    //           "s3:PutObject",
+    //           "s3:GetObject",
+    //           "s3:ListBucket",
+    //           "s3:DeleteObject"
+    //         ] 
+    //       }),
+    //       new PolicyStatement({
+    //         effect: Effect.ALLOW,
+    //         resources: [glueAssetsBucket.bucketArn, `${glueAssetsBucket.bucketArn}/*`],
+    //         actions: [
+    //           "s3:GetObject",
+    //           "s3:ListBucket"
+    //         ] 
+    //       })
+    //     ]
+    //   })
+    // }));
 
-    const glueJob = new CfnJob(this, 'GlueJob', {
-      name: `${this.prefix}-glue-job`,
-      command: {
-        name: 'glueetl',
-        pythonVersion: '3',
-        scriptLocation: `s3://${glueAssetsBucket.bucketName}/scripts/FeatureStoreAggregateParquet.py`, 
-      },
-      role: glueRole.roleName,
-      glueVersion: '4.0',
-      timeout: 60,
-      defaultArguments: {
-        "--s3_bucket_name": this.bucket.bucketName,
-        "--prefix": `${account}/sagemaker/${region}/offline-store/`,
-        "--target_file_size_in_bytes": 536870912,
-      }
-    });
-    glueJob.node.addDependency(glueDeployment)
+    // const glueJob = new CfnJob(this, 'GlueJob', {
+    //   name: `${this.prefix}-glue-job`,
+    //   command: {
+    //     name: 'glueetl',
+    //     pythonVersion: '3',
+    //     scriptLocation: `s3://${glueAssetsBucket.bucketName}/scripts/FeatureStoreAggregateParquet.py`, 
+    //   },
+    //   role: glueRole.roleName,
+    //   glueVersion: '4.0',
+    //   timeout: 60,
+    //   defaultArguments: {
+    //     "--s3_bucket_name": this.bucket.bucketName,
+    //     "--prefix": `${account}/sagemaker/${region}/offline-store/`,
+    //     "--target_file_size_in_bytes": 536870912,
+    //   }
+    // });
+    // glueJob.node.addDependency(glueDeployment)
 
-    const glueTrigger = new CfnTrigger(this, "GlueTrigger", {
-      name: `${this.prefix}-glue-trigger`,
-      actions: [{
-        jobName: glueJob.name,
-        timeout: 60,
-      }],
-      type: 'SCHEDULED',
-      schedule: 'cron(0 0/1 * * ? *)',
-      description: 'Aggregate parquet files in SageMaker Feature Store',
-      startOnCreation: true,
-    });
+    // const glueTrigger = new CfnTrigger(this, "GlueTrigger", {
+    //   name: `${this.prefix}-glue-trigger`,
+    //   actions: [{
+    //     jobName: glueJob.name,
+    //     timeout: 60,
+    //   }],
+    //   type: 'SCHEDULED',
+    //   schedule: 'cron(0 0/1 * * ? *)',
+    //   description: 'Aggregate parquet files in SageMaker Feature Store',
+    //   startOnCreation: true,
+    // });
   }
 }

@@ -5,64 +5,60 @@ import { Construct } from 'constructs';
 export interface RDIIngestionPipelineDashboardProps {
   readonly prefix: string;
   readonly dashboard: Dashboard;
-  readonly pipelineWidget: GraphWidget;
-  readonly analyticsAppName: string;
+  readonly flinkAppName: string;
 }
 
 export class RDIIngestionPipelineDashboard extends Construct {
   public readonly prefix: string;
   public readonly dashboard: Dashboard;
-  public readonly pipelineWidget: GraphWidget;
+  public readonly flinkAppWidget: GraphWidget;
 
   constructor(scope: Construct, id: string, props: RDIIngestionPipelineDashboardProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
     this.dashboard = props.dashboard;
-    this.pipelineWidget = props.pipelineWidget;
     const region = Stack.of(this).region;
 
-    // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard
-    const kinesisAnalyticsInput = new Metric({
-      metricName: 'Bytes',
-      label: 'Amount of data inngested by Kinesys Analytics application',
+    // Add the Managed Service for Apache Flink input metric to the ingestion pipeline dashboard
+    const flinkAppInput = new Metric({
+      metricName: 'numRecordsIn',
+      label: 'Number of records inngested by the Apache Flink Application',
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/KinesisAnalytics',
       dimensionsMap: { 
         Id: '1.1',
-        Application: props.analyticsAppName,
+        Application: props.flinkAppName,
         Flow: 'Input', 
       },
-      color: Color.PURPLE,
+      color: Color.BLUE,
       region: region,
     });
 
-    this.pipelineWidget.addLeftMetric(kinesisAnalyticsInput);
-
-    // Create a new widget for the output of the Kinesis Analytics application
-    const kinesisAnalyticsOutput = new Metric({
-      metricName: 'Bytes',
-      label: 'Amount of data produced by Kinesys Analytics application',
+    // Create a new widget for the output of the Managed Service for Apache Flink
+    const flinkAppOutput = new Metric({
+      metricName: 'numRecordsOut',
+      label: 'Number of records produced by the Apache Flink Application',
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/KinesisAnalytics',
       dimensionsMap: { 
         Id: '2.1',
-        Application: props.analyticsAppName,
+        Application: props.flinkAppName,
         Flow: 'Output', 
       },
-      color: Color.PURPLE,
+      color: Color.ORANGE,
       region: region,
     });
-    const analyticsWidget = new GraphWidget({
-      title: 'Ingestion Pipeline - Kinesis Analytics Output Data Size',
+    this.flinkAppWidget = new GraphWidget({
+      title: 'Ingestion Pipeline - Apache Flink Application Input/Output Records Count',
       height: 9,
       width: 12,
-      left: [kinesisAnalyticsOutput],
+      left: [flinkAppInput, flinkAppOutput],
       stacked: false,
     });
-    this.dashboard.addWidgets(analyticsWidget);
-    analyticsWidget.position(12, 0);
+    this.dashboard.addWidgets(this.flinkAppWidget);
+    this.flinkAppWidget.position(12, 0);
   }
 }

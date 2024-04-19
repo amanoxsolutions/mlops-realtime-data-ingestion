@@ -160,10 +160,16 @@ export class RealtimeDataIngestionStack extends Stack {
     ingestionWorker.node.addDependency(ingestionWorkerImage);
     this.vpc = ingestionWorker.vpc;
 
-    new StringParameter(this, 'IngestionStreamSSMParameter', {
+    new StringParameter(this, 'IngestionStreamArnSSMParameter', {
       parameterName: '/rdi-mlops/stack-parameters/ingestion-data-stream-arn',
       stringValue: ingestionStream.kinesisStream.streamArn,
       description: 'ARN of the ingestion Kinesis Data Stream',
+    });
+
+    new StringParameter(this, 'IngestionStreamNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/ingestion-data-stream-name',
+      stringValue: ingestionStream.kinesisStream.streamName,
+      description: 'Name of the ingestion Kinesis Data Stream',
     });
 
     new StringParameter(this, 'FirehoseStreamSSMParameter', {
