@@ -1,4 +1,4 @@
-from pyflink.table import EnvironmentSettings, StreamTableEnvironment, StatementSet
+from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 import os
 import json
 
@@ -25,7 +25,7 @@ def create_table_input(table_name, stream_name, region, initpos):
                 'stream' = '{1}',
                 'aws.region' = '{2}',
                 'scan.stream.initpos' = '{3}',
-                'format' = 'raw',
+                'format' = 'json',
                 'json.timestamp-format.standard' = 'ISO-8601'
               ) """.format(table_name, stream_name, region, initpos)
 
@@ -43,9 +43,9 @@ def create_table_output(table_name, stream_name, region):
                 'sink.partitioner-field-delimiter' = ';',
                 'format' = 'json',
                 'json.timestamp-format.standard' = 'ISO-8601'
-              ) """.format(table_name, stream_name, region, initpos)
+              ) """.format(table_name, stream_name, region)
 
-def insert_stream_s3(insert_from, insert_into):
+def insert_stream(insert_from, insert_into):
     return """INSERT INTO {1}
               SELECT 
                 FLOOR(JSON_VALUE(detail, '$.txs[0:].time') TO MINUTE) AS tx_minute,
@@ -91,9 +91,9 @@ def main():
 
     table_env.execute_sql(create_table_input(input_table, input_stream, region, initial_position))
 
-    table_env.execute_sql(create_table_output3(output_table, output_table, region))
+    table_env.execute_sql(create_table_output(output_table, output_stream, region))
 
-    statement_set.add_insert_sql(insert_stream_s3(input_table, output_table))
+    statement_set.add_insert_sql(insert_stream(input_table, output_table))
 
     statement_set.execute()
 
