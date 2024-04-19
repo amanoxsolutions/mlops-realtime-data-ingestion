@@ -43,6 +43,7 @@ export class RDIFeatureStore extends Construct {
   public readonly bucket: IBucket;
   public readonly flinkApp: IApplication;
   public readonly flinkAppName: string;
+  public readonly deliveryStreamName: string;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
     super(scope, id);
@@ -77,6 +78,7 @@ export class RDIFeatureStore extends Construct {
       destinationKeyPrefix: 'flink-app',
       extract: false,
     });
+    const flinkAssetObejctKey = flinkAppAsset.objectKeys[0];
 
     //
     // SageMaker Feature Store
@@ -188,10 +190,11 @@ export class RDIFeatureStore extends Construct {
     lambda.function.addToRolePolicy(lambdaPolicyStatement);
 
     // Create the Kinesis Data Stream Sink for the Apache Flink Application with the Lambda function as the consumer
+    this.deliveryStreamName = `${this.prefix}-kd-delivery-stream`;
     const deliveryStream = new KinesisStreamsToLambda(this, 'DeliveryStream', {
       existingLambdaObj: lambda.function,
       kinesisStreamProps: {
-        streamName: `${this.prefix}-kd-delivery-stream`,
+        streamName: this.deliveryStreamName,
         streamMode: StreamMode.PROVISIONED,
         shardCount: 1,
       },
@@ -244,12 +247,13 @@ export class RDIFeatureStore extends Construct {
     // Managed Service for Apache Flink Application
     // this.flinkApp = new Application(this, 'FlinkApp', {
     //   applicationName: this.flinkAppName,
-    //   code: ApplicationCode.fromBucket(codeAssetsBucket, 'flink-app/flink.zip'),
+    //   code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey}`),
     //   runtime: FlinkRuntime.FLINK_1_18,
     //   role: flinkAppRole,
+    //   snapshotsEnabled: false,
     //   propertyGroups: {
     //     'kinesis.analytics.flink.run.options': {
-    //       python: 'man.py',
+    //       python: 'main.py',
     //       jarfile: 'lib/flink-sql-connector-kafka_2.11-1.11.6.jar'
     //     },
     //     'consumer.config.0': {

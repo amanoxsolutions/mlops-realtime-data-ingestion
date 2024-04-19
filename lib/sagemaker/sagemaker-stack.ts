@@ -196,11 +196,12 @@ export class SagemakerStack extends Stack {
     // });
 
     // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard
-    // new RDIIngestionPipelineDashboard(this, 'IngestionPipelineDashboard', {
-    //   prefix: this.prefix,
-    //   dashboard: this.ingestionPipelineDashboard,
-    //   flinkAppName: this.featureStore.flinkAppName,
-    // });
+    new RDIIngestionPipelineDashboard(this, 'IngestionPipelineDashboard', {
+      prefix: this.prefix,
+      dashboard: this.ingestionPipelineDashboard,
+      flinkAppName: this.featureStore.flinkAppName,
+      deliveryStreamName: this.featureStore.deliveryStreamName,
+    });
 
     // Store SageMaker environment values in SSM Parameter Store.
     // We need to store 

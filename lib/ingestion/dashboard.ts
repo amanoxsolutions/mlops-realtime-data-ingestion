@@ -87,7 +87,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
     this.pipelineWidget = new GraphWidget({
       title: 'Ingestion Pipeline - Data Size',
       height: 9,
-      width: 12,
+      width: 18,
       left: [ingestionWorker, eventBridge, ingestionStreamIncomingBytes, firehoseStreamDataReadBytes, firehoseStreamDeliveryToS3],
       stacked: false,
     });
