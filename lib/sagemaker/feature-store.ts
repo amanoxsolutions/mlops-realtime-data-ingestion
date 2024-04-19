@@ -192,7 +192,8 @@ export class RDIFeatureStore extends Construct {
       existingLambdaObj: lambda.function,
       kinesisStreamProps: {
         streamName: `${this.prefix}-kd-delivery-stream`,
-        streamMode: StreamMode.ON_DEMAND,
+        streamMode: StreamMode.PROVISIONED,
+        shardCount: 1,
       },
     });
 
