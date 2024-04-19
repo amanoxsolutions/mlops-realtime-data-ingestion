@@ -6,9 +6,9 @@ authors = ["Raphael Eymann <raphael.eymann@amanox.ch>"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-boto3 = "^1.34.52"
+boto3 = "^1.34.86"
 crhelper = "^2.0.11"
-aws-lambda-powertools = "^2.34.2"
+aws-lambda-powertools = "^2.37.0"
 
 [tool.poetry.dev-dependencies]
 
