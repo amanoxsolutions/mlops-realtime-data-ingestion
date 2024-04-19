@@ -55,6 +55,30 @@ export class RDIFeatureStore extends Construct {
     const account = Stack.of(this).account;
 
     //
+    // S3 Bucket to store application (Glue, Flink) code assets
+    //
+    const codeAssetsBucket = new Bucket(this, 'codeAssetsBucket', {
+      bucketName: `${this.prefix}-app-code-assets-${props.s3Suffix}`,
+      accessControl: BucketAccessControl.PRIVATE,
+      encryption: BucketEncryption.S3_MANAGED,
+      removalPolicy: this.removalPolicy,
+      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
+    });
+    // Deploy the Glue script to the code assets bucket
+    const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
+      sources: [Source.asset('./resources/glue')], 
+      destinationBucket: codeAssetsBucket,
+      destinationKeyPrefix: 'glue-scripts',
+    });
+    // ZIP the Flink code and deploy it to the code assets bucket
+    const flinkAppAsset = new BucketDeployment(this, 'FlinkCodeAsset', {
+      sources: [Source.asset('./resources/flink')],
+      destinationBucket: codeAssetsBucket,
+      destinationKeyPrefix: 'flink-app',
+      extract: false,
+    });
+
+    //
     // SageMaker Feature Store
     //
     // Create an S3 Bucket for the Offline Feature Store
@@ -219,13 +243,13 @@ export class RDIFeatureStore extends Construct {
     // Managed Service for Apache Flink Application
     // this.flinkApp = new Application(this, 'FlinkApp', {
     //   applicationName: this.flinkAppName,
-    //   code: ApplicationCode.fromAsset(path.join(__dirname, '../../resources/kinesis/flink.jar')),
+    //   code: ApplicationCode.fromBucket(codeAssetsBucket, 'flink-app/flink.zip'),
     //   runtime: FlinkRuntime.FLINK_1_18,
     //   role: flinkAppRole,
     //   propertyGroups: {
     //     'kinesis.analytics.flink.run.options': {
     //       python: 'man.py',
-    //       jarfile: 'lib/flink-sql-connector-kafka_2.11-1.11.2.jar'
+    //       jarfile: 'lib/flink-sql-connector-kafka_2.11-1.11.6.jar'
     //     },
     //     'consumer.config.0': {
     //       'input.stream.name': props.ingestionDataStreamName,
@@ -234,7 +258,6 @@ export class RDIFeatureStore extends Construct {
     //     },
     //     'sink.config.0': {
     //       'output.stream.name': deliveryStream.kinesisStream.streamName,
-    //       'aws.region': region,
     //     }
     //   },
     // });
@@ -262,20 +285,6 @@ export class RDIFeatureStore extends Construct {
     // });
     // analyticsOutput.node.addDependency(this.analyticsStream);
 
-    // const glueAssetsBucket = new Bucket(this, 'GlueAssetsBucket', {
-    //   bucketName: `${this.prefix}-glue-assets-${props.s3Suffix}`,
-    //   accessControl: BucketAccessControl.PRIVATE,
-    //   encryption: BucketEncryption.S3_MANAGED,
-    //   removalPolicy: this.removalPolicy,
-    //   autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
-    // });
-
-    // const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
-    //   sources: [Source.asset('./resources/glue')], 
-    //   destinationBucket: glueAssetsBucket,
-    //   destinationKeyPrefix: 'scripts',
-    // });
-
     // const glueRole = new Role(this, 'GlueRole', {
     //   roleName: `${this.prefix}-glue-role`,
     //   assumedBy:  new ServicePrincipal("glue.amazonaws.com"),
@@ -296,7 +305,7 @@ export class RDIFeatureStore extends Construct {
     //       }),
     //       new PolicyStatement({
     //         effect: Effect.ALLOW,
-    //         resources: [glueAssetsBucket.bucketArn, `${glueAssetsBucket.bucketArn}/*`],
+    //         resources: [codeAssetsBucket.bucketArn, `${codeAssetsBucket.bucketArn}/*`],
     //         actions: [
     //           "s3:GetObject",
     //           "s3:ListBucket"
@@ -311,7 +320,7 @@ export class RDIFeatureStore extends Construct {
     //   command: {
     //     name: 'glueetl',
     //     pythonVersion: '3',
-    //     scriptLocation: `s3://${glueAssetsBucket.bucketName}/scripts/FeatureStoreAggregateParquet.py`, 
+    //     scriptLocation: `s3://${codeAssetsBucket.bucketName}/glue-scripts/FeatureStoreAggregateParquet.py`, 
     //   },
     //   role: glueRole.roleName,
     //   glueVersion: '4.0',
