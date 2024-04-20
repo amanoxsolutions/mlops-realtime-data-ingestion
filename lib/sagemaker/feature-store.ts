@@ -204,6 +204,12 @@ export class RDIFeatureStore extends Construct {
     // Realtime ingestion with Kinesis Data Analytics
     //
     this.flinkAppName = `${this.prefix}-flink-app`;
+    // Setup the CloudWatch Log Group
+    const flinkAppLogGroup = new LogGroup(this, 'LogGroup', {
+      logGroupName: `/aws/kinesis-analytics/${this.flinkAppName}`,
+      retention: RetentionDays.ONE_WEEK,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
     // IAM Role for Managed Service for Apache Flink
     const flinkAppRole = new Role(this, 'MsafRole', {
       roleName: `${this.prefix}-flink-role`,
@@ -230,7 +236,7 @@ export class RDIFeatureStore extends Construct {
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
-              resources: ['*'],
+              resources: [flinkAppLogGroup.logGroupArn],
               actions: [
                 'logs:PutLogEvents', 
                 'logs:CreateLogGroup',
@@ -250,6 +256,7 @@ export class RDIFeatureStore extends Construct {
     //   code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey}`),
     //   runtime: FlinkRuntime.FLINK_1_18,
     //   role: flinkAppRole,
+    //   logGroup: flinkAppLogGroup,
     //   snapshotsEnabled: false,
     //   propertyGroups: {
     //     'kinesis.analytics.flink.run.options': {
