@@ -239,7 +239,6 @@ export class RDIFeatureStore extends Construct {
               resources: [flinkAppLogGroup.logGroupArn],
               actions: [
                 'logs:PutLogEvents', 
-                'logs:CreateLogGroup',
                 'logs:CreateLogStream',
                 'logs:DescribeLogGroups',
                 'logs:DescribeLogStreams'
@@ -261,15 +260,17 @@ export class RDIFeatureStore extends Construct {
     //   propertyGroups: {
     //     'kinesis.analytics.flink.run.options': {
     //       python: 'main.py',
-    //       jarfile: 'lib/flink-sql-connector-kafka_2.11-1.11.6.jar'
+    //       jarfile: 'lib/flink-sql-connector-kinesis-4.2.0-1.18.jar'
     //     },
     //     'consumer.config.0': {
     //       'input.stream.name': props.ingestionDataStreamName,
     //       'aws.region': region,
-    //       'flink.stream.initpos': 'TRIM_HORIZON',
+    //       'scan.stream.initpos': 'TRIM_HORIZON',
     //     },
-    //     'sink.config.0': {
+    //     'producer.config.0': {
     //       'output.stream.name': deliveryStream.kinesisStream.streamName,
+    //       'shard.count': '1',
+    //       'aws.region': region,
     //     }
     //   },
     // });
