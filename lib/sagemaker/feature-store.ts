@@ -13,10 +13,34 @@ import { StreamMode } from 'aws-cdk-lib/aws-kinesis';
 import { KinesisStreamsToLambda } from '@aws-solutions-constructs/aws-kinesisstreams-lambda';
 import { CfnTrigger, CfnJob } from 'aws-cdk-lib/aws-glue';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
+import { Hash, createHash } from 'crypto';
+import { readdirSync, statSync, readFileSync } from 'fs';
+import { join } from 'path';
 
-
-const fs = require('fs');
-const path = require('path');
+// Create a function to compute the hash of all the files in a directory.
+// This will be used to conditionally deploy the Flink application when the code changes.
+// from: https://stackoverflow.com/questions/68074935/hash-of-folders-in-nodejs
+export function computeDirectoryHash(paths: string[], inputHash?:Hash): string {
+  const hash = inputHash ? inputHash : createHash("sha1");
+  for (const path of paths) {
+    const statInfo = statSync(path);
+    if (statInfo.isDirectory()) {
+      const directoryEntries = readdirSync(path, { withFileTypes: true });
+      const fullPaths = directoryEntries.map((e) => join(path, e.name));
+      // recursively walk sub-folders
+      computeDirectoryHash(fullPaths, hash);
+    } else {
+      // Compute the hash string of the file
+      const content = readFileSync(path);
+      hash.update(content);
+    }
+  }
+  // if not being called recursively, get the digest and return it as the hash result
+  if (!inputHash) {
+    return hash.digest().toString("base64");
+  }
+  return '';
+}
 
 enum FeatureStoreTypes {
   DOUBLE  = 'Fractional',
@@ -80,6 +104,8 @@ export class RDIFeatureStore extends Construct {
       extract: false,
     });
     const flinkAssetObejctKey = Fn.select(0, flinkAppAsset.objectKeys);
+    // Create a hash of the Flink code asset to use as the version
+    const flinkAssetHash = computeDirectoryHash([`./resources/flink`]);
 
     //
     // SageMaker Feature Store
@@ -271,6 +297,10 @@ export class RDIFeatureStore extends Construct {
         'producer.config.0': {
           'input.stream.name': deliveryStream.kinesisStream.streamName,
           'aws.region': region,
+        },
+        meta: {
+          // force to update the resoruce when code is modified in the ./resources/flink directory
+          hash: flinkAssetHash,
         }
       },
     });
