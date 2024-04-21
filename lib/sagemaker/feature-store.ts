@@ -298,64 +298,64 @@ export class RDIFeatureStore extends Construct {
     // });
     // analyticsOutput.node.addDependency(this.analyticsStream);
 
-    // const glueRole = new Role(this, 'GlueRole', {
-    //   roleName: `${this.prefix}-glue-role`,
-    //   assumedBy:  new ServicePrincipal("glue.amazonaws.com"),
-    // });
-    // glueRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
-    //   policyName: `${this.prefix}-glue-job-s3-bucket-access`,
-    //   document: new PolicyDocument({
-    //     statements: [
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
-    //         actions: [
-    //           "s3:PutObject",
-    //           "s3:GetObject",
-    //           "s3:ListBucket",
-    //           "s3:DeleteObject"
-    //         ] 
-    //       }),
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         resources: [codeAssetsBucket.bucketArn, `${codeAssetsBucket.bucketArn}/*`],
-    //         actions: [
-    //           "s3:GetObject",
-    //           "s3:ListBucket"
-    //         ] 
-    //       })
-    //     ]
-    //   })
-    // }));
+    const glueRole = new Role(this, 'GlueRole', {
+      roleName: `${this.prefix}-glue-role`,
+      assumedBy:  new ServicePrincipal("glue.amazonaws.com"),
+    });
+    glueRole.attachInlinePolicy(new Policy(this, 'GluePolicy', {
+      policyName: `${this.prefix}-glue-job-s3-bucket-access`,
+      document: new PolicyDocument({
+        statements: [
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
+            actions: [
+              "s3:PutObject",
+              "s3:GetObject",
+              "s3:ListBucket",
+              "s3:DeleteObject"
+            ] 
+          }),
+          new PolicyStatement({
+            effect: Effect.ALLOW,
+            resources: [codeAssetsBucket.bucketArn, `${codeAssetsBucket.bucketArn}/*`],
+            actions: [
+              "s3:GetObject",
+              "s3:ListBucket"
+            ] 
+          })
+        ]
+      })
+    }));
 
-    // const glueJob = new CfnJob(this, 'GlueJob', {
-    //   name: `${this.prefix}-glue-job`,
-    //   command: {
-    //     name: 'glueetl',
-    //     pythonVersion: '3',
-    //     scriptLocation: `s3://${codeAssetsBucket.bucketName}/glue-scripts/FeatureStoreAggregateParquet.py`, 
-    //   },
-    //   role: glueRole.roleName,
-    //   glueVersion: '4.0',
-    //   timeout: 60,
-    //   defaultArguments: {
-    //     "--s3_bucket_name": this.bucket.bucketName,
-    //     "--prefix": `${account}/sagemaker/${region}/offline-store/`,
-    //     "--target_file_size_in_bytes": 536870912,
-    //   }
-    // });
-    // glueJob.node.addDependency(glueDeployment)
+    const glueJob = new CfnJob(this, 'GlueJob', {
+      name: `${this.prefix}-glue-job`,
+      command: {
+        name: 'glueetl',
+        pythonVersion: '3',
+        scriptLocation: `s3://${codeAssetsBucket.bucketName}/glue-scripts/FeatureStoreAggregateParquet.py`, 
+      },
+      role: glueRole.roleName,
+      glueVersion: '4.0',
+      timeout: 60,
+      defaultArguments: {
+        "--s3_bucket_name": this.bucket.bucketName,
+        "--prefix": `${account}/sagemaker/${region}/offline-store/`,
+        "--target_file_size_in_bytes": 536870912,
+      }
+    });
+    glueJob.node.addDependency(glueDeployment)
 
-    // const glueTrigger = new CfnTrigger(this, "GlueTrigger", {
-    //   name: `${this.prefix}-glue-trigger`,
-    //   actions: [{
-    //     jobName: glueJob.name,
-    //     timeout: 60,
-    //   }],
-    //   type: 'SCHEDULED',
-    //   schedule: 'cron(0 0/1 * * ? *)',
-    //   description: 'Aggregate parquet files in SageMaker Feature Store',
-    //   startOnCreation: true,
-    // });
+    const glueTrigger = new CfnTrigger(this, "GlueTrigger", {
+      name: `${this.prefix}-glue-trigger`,
+      actions: [{
+        jobName: glueJob.name,
+        timeout: 60,
+      }],
+      type: 'SCHEDULED',
+      schedule: 'cron(0 0/1 * * ? *)',
+      description: 'Aggregate parquet files in SageMaker Feature Store',
+      startOnCreation: true,
+    });
   }
 }
