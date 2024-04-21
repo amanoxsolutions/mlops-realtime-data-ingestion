@@ -8,7 +8,7 @@ import { Application, IApplication, ApplicationCode, Runtime as FlinkRuntime } f
 import { RDILambda } from '../lambda';
 import { Runtime as LambdaRuntime } from 'aws-cdk-lib/aws-lambda';
 import * as fgConfig from '../../resources/sagemaker/featurestore/agg-fg-schema.json';
-import { RDIStartKinesisAnalytics } from './start-kinesis';
+import { RDIStartFlinkApplication } from './start-kinesis';
 import { StreamMode } from 'aws-cdk-lib/aws-kinesis';
 import { KinesisStreamsToLambda } from '@aws-solutions-constructs/aws-kinesisstreams-lambda';
 import { CfnTrigger, CfnJob } from 'aws-cdk-lib/aws-glue';
@@ -305,28 +305,14 @@ export class RDIFeatureStore extends Construct {
       },
     });
 
-    // const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
-    //   prefix: this.prefix,
-    //   runtime: this.runtime,
-    //   kinesis_analytics_name: this.analyticsAppName,
-    //   customResourceLayerArn: props.customResourceLayerArn,
-    // });
-    // startKinesisAnalytics.node.addDependency(this.analyticsStream)
+    const startFlinkApplication = new RDIStartFlinkApplication(this, 'StartKinesisAnalytics', {
+      prefix: this.prefix,
+      runtime: this.runtime,
+      flink_application_name: this.flinkAppName,
+      customResourceLayerArn: props.customResourceLayerArn,
+    });
+    startFlinkApplication.node.addDependency(this.flinkApp)
 
-    // const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
-    //   applicationName: this.analyticsAppName,
-    //   output: {
-    //     destinationSchema: {
-    //       recordFormatType: 'JSON'
-    //     },
-    //     lambdaOutput: {
-    //       resourceArn: lambda.function.functionArn,
-    //       roleArn: flinkAppRole.roleArn,
-    //     },
-    //     name: 'DESTINATION_SQL_STREAM',
-    //   }
-    // });
-    // analyticsOutput.node.addDependency(this.analyticsStream);
 
     const glueRole = new Role(this, 'GlueRole', {
       roleName: `${this.prefix}-glue-role`,
