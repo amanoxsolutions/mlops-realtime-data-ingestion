@@ -9,7 +9,7 @@ import { RDILambda } from '../lambda';
 import { Runtime as LambdaRuntime } from 'aws-cdk-lib/aws-lambda';
 import * as fgConfig from '../../resources/sagemaker/featurestore/agg-fg-schema.json';
 import { RDIStartFlinkApplication } from './start-kinesis';
-import { StreamMode } from 'aws-cdk-lib/aws-kinesis';
+import { StreamMode, IStream } from 'aws-cdk-lib/aws-kinesis';
 import { KinesisStreamsToLambda } from '@aws-solutions-constructs/aws-kinesisstreams-lambda';
 import { CfnTrigger, CfnJob } from 'aws-cdk-lib/aws-glue';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
@@ -67,6 +67,7 @@ export class RDIFeatureStore extends Construct {
   public readonly bucket: IBucket;
   public readonly flinkApp: IApplication;
   public readonly flinkAppName: string;
+  public readonly deliveryStream: IStream;
   public readonly deliveryStreamName: string;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
@@ -227,6 +228,7 @@ export class RDIFeatureStore extends Construct {
       },
       deploySqsDlqQueue: false,
     });
+    this.deliveryStream = deliveryStream.kinesisStream;
 
     //
     // Realtime ingestion with Kinesis Data Analytics
@@ -316,11 +318,9 @@ export class RDIFeatureStore extends Construct {
     const startFlinkApplication = new RDIStartFlinkApplication(this, 'StartFlinkApp', {
       prefix: this.prefix,
       runtime: this.runtime,
-      flink_application_name: this.flinkAppName,
+      flink_application_name: this.flinkApp.applicationName,
       customResourceLayerArn: props.customResourceLayerArn,
     });
-    startFlinkApplication.node.addDependency(this.flinkApp)
-
 
     const glueRole = new Role(this, 'GlueRole', {
       roleName: `${this.prefix}-glue-role`,

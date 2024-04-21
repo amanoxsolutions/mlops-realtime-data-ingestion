@@ -211,6 +211,30 @@ export class SagemakerStack extends Stack {
     // - the SageMaker Feature Group Name
     // - the SageMaker feature Store bucket name and ARN
     // - the SageMaker execution role ARN
+    new StringParameter(this, 'FlinkAppArnSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/flink-application-arn',
+      stringValue: this.featureStore.flinkApp.applicationArn,
+      description: 'ARN of the Apache Flink Application in the ingestion pipeline',
+    });
+
+    new StringParameter(this, 'FlinkAppNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/flink-application-name',
+      stringValue: this.featureStore.flinkAppName,
+      description: 'Name of the Apache Flink Application in the ingestion pipeline',
+    });
+
+    new StringParameter(this, 'DeliveryStreamArnSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/delivery-data-stream-arn',
+      stringValue: this.featureStore.deliveryStream.streamArn,
+      description: 'ARN of the delivery Kinesis Data Stream',
+    });
+
+    new StringParameter(this, 'DeliveryStreamNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/delivery-data-stream-name',
+      stringValue: this.featureStore.deliveryStreamName,
+      description: 'Name of the delivery Kinesis Data Stream',
+    });
+
     // new StringParameter(this, 'SagemakerProjectNameSSMParameter', {
     //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-name',
     //   stringValue: this.project.projectName,
