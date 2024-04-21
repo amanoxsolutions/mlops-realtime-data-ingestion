@@ -297,12 +297,12 @@ export class RDIFeatureStore extends Construct {
           jarfile: 'lib/flink-sql-connector-kinesis-4.2.0-1.18.jar'
         },
         'consumer.config.0': {
-          'output.stream.name': props.ingestionDataStreamName,
+          'input.stream.name': props.ingestionDataStreamName,
           'aws.region': region,
           'scan.stream.initpos': 'TRIM_HORIZON',
         },
         'producer.config.0': {
-          'input.stream.name': deliveryStream.kinesisStream.streamName,
+          'output.stream.name': deliveryStream.kinesisStream.streamName,
           'aws.region': region,
         },
         meta: {
