@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Stack, RemovalPolicy, Duration } from 'aws-cdk-lib';
+import { Stack, RemovalPolicy, Duration, Fn } from 'aws-cdk-lib';
 import { ManagedPolicy, Role, ServicePrincipal, Policy, PolicyStatement, PolicyDocument, Effect } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays, LogStream } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
@@ -79,7 +79,7 @@ export class RDIFeatureStore extends Construct {
       memoryLimit: 512,
       extract: false,
     });
-    const flinkAssetObejctKey = flinkAppAsset.objectKeys[0];
+    const flinkAssetObejctKey = Fn.select(0, flinkAppAsset.objectKeys);
 
     //
     // SageMaker Feature Store
@@ -253,7 +253,7 @@ export class RDIFeatureStore extends Construct {
     //Managed Service for Apache Flink Application
     this.flinkApp = new Application(this, 'FlinkApp', {
       applicationName: this.flinkAppName,
-      code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey}`),
+      code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey[0]}`),
       runtime: FlinkRuntime.FLINK_1_18,
       role: flinkAppRole,
       logGroup: flinkAppLogGroup,
