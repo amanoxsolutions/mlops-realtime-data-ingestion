@@ -61,7 +61,7 @@ def create_input_table(table_name, stream_name, region, initpos):
                 tx_index BIGINT,
                 double_spend BOOLEAN,
                 `time` BIGINT,
-                tx_time AS TO_TIMESTAMP_LTZ(`time`, 3),
+                tx_time AS TO_TIMESTAMP(FROM_UNIXTIME(`time`)),
                 block_index BIGINT,
                 block_height BIGINT,
                 inputs STRING,
