@@ -279,7 +279,7 @@ export class RDIFeatureStore extends Construct {
     //Managed Service for Apache Flink Application
     this.flinkApp = new Application(this, 'FlinkApp', {
       applicationName: this.flinkAppName,
-      code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey[0]}`),
+      code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey}`),
       runtime: FlinkRuntime.FLINK_1_18,
       role: flinkAppRole,
       logGroup: flinkAppLogGroup,
