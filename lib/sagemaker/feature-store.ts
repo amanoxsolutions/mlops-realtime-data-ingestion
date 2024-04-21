@@ -244,22 +244,29 @@ export class RDIFeatureStore extends Construct {
       inlinePolicies: {
         AnalyticsRolePolicy: new PolicyDocument({
           statements: [
-            new PolicyStatement({
-              sid: 'LambdaPermissions',
-              resources: [
-                lambda.function.functionArn
-              ],
-              actions: [
-                'lambda:InvokeFunction',
-                'lambda:GetFunctionConfiguration'
-              ] 
-            }),
+            // https://docs.aws.amazon.com/kinesisanalytics/latest/dev/iam-role.html
             new PolicyStatement({
               sid: 'ReadInputStream',
               resources: [
-                props.ingestionDataStreamArn
+                props.ingestionDataStreamArn,
               ],
-              actions: ['kinesis:*']
+              actions: [
+                'kinesis:DescribeStream',
+                'kinesis:GetRecords',
+                'kinesis:GetShardIterator',
+                'kinesis:ListShards',
+              ]
+            }),
+            new PolicyStatement({
+              sid: 'WriteOutputStream',
+              resources: [
+                deliveryStream.kinesisStream.streamArn
+              ],
+              actions: [
+                'kinesis:DescribeStream',
+                'kinesis:PutRecord',
+                'kinesis:PutRecords',
+              ]
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
