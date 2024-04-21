@@ -201,6 +201,7 @@ export class CleanupSagemakerDomainUser extends Construct {
 
     const policyDocument = new PolicyDocument({
       statements: [
+        // IAM Policies for SageMaker Studio
         new PolicyStatement({
           effect: Effect.ALLOW,
           actions: [
@@ -223,6 +224,16 @@ export class CleanupSagemakerDomainUser extends Construct {
             'sagemaker:DeleteSpace',
           ],
           resources: [`arn:aws:sagemaker:${region}:${account}:space/*`],
+        }),
+        // IAM policy for CloudWatch Logs
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
         }),
       ],
     });

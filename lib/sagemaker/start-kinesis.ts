@@ -31,10 +31,24 @@ export class RDIStartFlinkApplication extends Construct {
 
     const policyDocument = new PolicyDocument({
       statements: [
+        // IAM policy to start the Flink Application
         new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['kinesisanalytics:DescribeApplication', 'kinesisanalytics:StartApplication'],
+          actions: [
+            'kinesisanalytics:DescribeApplication', 
+            'kinesisanalytics:StartApplication'
+          ],
           resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.flink_application_name}`],
+        }),
+        // IAM policy for CloudWatch Logs
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
         }),
       ],
     });

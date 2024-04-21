@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { Duration, CustomResource } from 'aws-cdk-lib';
+import { Duration, CustomResource, Stack } from 'aws-cdk-lib';
 import { Effect, PolicyStatement, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
@@ -20,13 +20,26 @@ export class CodestarConnection extends Construct {
 
     this.prefix = props.prefix;
     const lambdaPurpose = 'CustomResourceToGetCodeStarConnectionArn';
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
 
     const policyDocument = new PolicyDocument({
       statements: [
+        // IAM Policy for CodeStar Connections
         new PolicyStatement({
           effect: Effect.ALLOW,
           actions: ['codestar-connections:ListConnections'],
           resources: ['*'],
+        }),
+        // IAM policy for CloudWatch Logs
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
         }),
       ],
     });
