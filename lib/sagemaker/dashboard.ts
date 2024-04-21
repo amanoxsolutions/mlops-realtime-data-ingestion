@@ -27,8 +27,8 @@ export class RDIIngestionPipelineDashboard extends Construct {
     //
     // Get the input and output metrics of the Managed Service for Apache Flink application
     const flinkAppInput = new Metric({
-      metricName: 'numRecordsIn',
-      label: 'Number of records inngested by the Apache Flink Application',
+      metricName: 'numRecordsInPerSecond',
+      label: 'Number of records ingested by the Apache Flink Application producer',
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/KinesisAnalytics',
@@ -37,8 +37,8 @@ export class RDIIngestionPipelineDashboard extends Construct {
       region: region,
     });
     const flinkAppOutput = new Metric({
-      metricName: 'numRecordsOut',
-      label: 'Number of records produced by the Apache Flink Application',
+      metricName: 'numRecordsOutPerSecond',
+      label: 'Number of records output by the Apache Flink Application consumer',
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/KinesisAnalytics',
