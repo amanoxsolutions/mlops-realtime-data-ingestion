@@ -250,30 +250,30 @@ export class RDIFeatureStore extends Construct {
       }
     });
 
-    // Managed Service for Apache Flink Application
-    // this.flinkApp = new Application(this, 'FlinkApp', {
-    //   applicationName: this.flinkAppName,
-    //   code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey}`),
-    //   runtime: FlinkRuntime.FLINK_1_18,
-    //   role: flinkAppRole,
-    //   logGroup: flinkAppLogGroup,
-    //   snapshotsEnabled: false,
-    //   propertyGroups: {
-    //     'kinesis.analytics.flink.run.options': {
-    //       python: 'main.py',
-    //       jarfile: 'lib/flink-sql-connector-kinesis-4.2.0-1.18.jar'
-    //     },
-    //     'producer.config.0': {
-    //       'output.stream.name': props.ingestionDataStreamName,
-    //       'aws.region': region,
-    //     },
-    //     'consumer.config.0': {
-    //       'input.stream.name': deliveryStream.kinesisStream.streamName,
-    //       'aws.region': region,
-    //       'scan.stream.initpos': 'TRIM_HORIZON',
-    //     }
-    //   },
-    // });
+    //Managed Service for Apache Flink Application
+    this.flinkApp = new Application(this, 'FlinkApp', {
+      applicationName: this.flinkAppName,
+      code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey}`),
+      runtime: FlinkRuntime.FLINK_1_18,
+      role: flinkAppRole,
+      logGroup: flinkAppLogGroup,
+      snapshotsEnabled: false,
+      propertyGroups: {
+        'kinesis.analytics.flink.run.options': {
+          python: 'main.py',
+          jarfile: 'lib/flink-sql-connector-kinesis-4.2.0-1.18.jar'
+        },
+        'consumer.config.0': {
+          'output.stream.name': props.ingestionDataStreamName,
+          'aws.region': region,
+          'scan.stream.initpos': 'TRIM_HORIZON',
+        },
+        'producer.config.0': {
+          'input.stream.name': deliveryStream.kinesisStream.streamName,
+          'aws.region': region,
+        }
+      },
+    });
 
     // const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
     //   prefix: this.prefix,
