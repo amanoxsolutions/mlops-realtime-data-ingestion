@@ -119,47 +119,47 @@ table_env.create_temporary_system_function("to_string", to_string)
 
 def main():
     # Application Property Keys
-    input_property_group_key = "consumer.config.0"
-    producer_property_group_key = "producer.config.0"
+    INPUT_PROPERTY_GROUP_KEY = "consumer.config.0"
+    PRODUCER_PROPERTY_GROUP_KEY = "producer.config.0"
 
-    input_stream_key = "input.stream.name"
-    input_region_key = "aws.region"
-    input_starting_position_key = "scan.stream.initpos"
+    INPUT_STREAM_KEY = "input.stream.name"
+    INPUT_REGION_KEY = "aws.region"
+    INPUT_STARTING_POSITION_KEY = "scan.stream.initpos"
 
-    output_stream_key = "output.stream.name"
-    output_region_key = "aws.region"
+    OUTPUT_STREAM_KEY = "output.stream.name"
+    OUTPUT_REGION_KEY = "aws.region"
 
     # tables
-    input_table_name = "input_table"
-    output_table_name = "output_table"
+    INPUT_TABLE_NAME = "input_table"
+    OUTPUT_TABLE_NAME = "output_table"
 
     # get application properties
     props = get_application_properties()
 
-    input_property_map = property_map(props, input_property_group_key)
-    output_property_map = property_map(props, producer_property_group_key)
+    input_property_map = property_map(props, INPUT_PROPERTY_GROUP_KEY)
+    output_property_map = property_map(props, PRODUCER_PROPERTY_GROUP_KEY)
 
-    input_stream = input_property_map[input_stream_key]
-    input_region = input_property_map[input_region_key]
-    stream_initpos = input_property_map[input_starting_position_key]
+    input_stream = input_property_map[INPUT_STREAM_KEY]
+    input_region = input_property_map[INPUT_REGION_KEY]
+    stream_initpos = input_property_map[INPUT_STARTING_POSITION_KEY]
 
-    output_stream = output_property_map[output_stream_key]
-    output_region = output_property_map[output_region_key]
+    output_stream = output_property_map[OUTPUT_STREAM_KEY]
+    output_region = output_property_map[OUTPUT_REGION_KEY]
 
     # 2. Creates a source table from a Kinesis Data Stream
-    table_env.execute_sql(create_input_table(input_table_name, input_stream, input_region, stream_initpos))
+    table_env.execute_sql(create_input_table(INPUT_TABLE_NAME, input_stream, input_region, stream_initpos))
 
     # 3. Creates a sink table writing to a Kinesis Data Stream
-    table_env.execute_sql(create_output_table(output_table_name, output_stream, output_region))
+    table_env.execute_sql(create_output_table(OUTPUT_TABLE_NAME, output_stream, output_region))
 
     # 4. Queries from the Source Table and creates a tumbling window over 1 minute to calculate the 
     # aggregated metrics over the window.
-    tumbling_window_table = perform_tumbling_window_aggregation(input_table_name)
+    tumbling_window_table = perform_tumbling_window_aggregation(INPUT_TABLE_NAME)
     table_env.create_temporary_view("tumbling_window_table", tumbling_window_table)
 
     # 5. These tumbling windows are inserted into the sink table
     table_env.execute_sql("INSERT INTO {0} SELECT * FROM {1}"
-                          .format(output_table_name, "tumbling_window_table"))
+                          .format(OUTPUT_TABLE_NAME, "tumbling_window_table"))
 
 if __name__ == '__main__':
     main()
