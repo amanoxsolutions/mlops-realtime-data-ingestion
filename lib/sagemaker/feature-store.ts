@@ -18,7 +18,7 @@ import { readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 // Create a function to compute the hash of all the files in a directory.
-// This will be used to conditionally deploy the Flink application when the code changes.
+// This will be used to conditionally update the Flink application when the code changes.
 // from: https://stackoverflow.com/questions/68074935/hash-of-folders-in-nodejs
 export function computeDirectoryHash(paths: string[], inputHash?:Hash): string {
   const hash = inputHash ? inputHash : createHash("sha1");
