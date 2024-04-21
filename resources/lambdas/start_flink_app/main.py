@@ -28,7 +28,7 @@ def create(_, __):
         ApplicationName=application_name,
         RunConfiguration={
             "ApplicationRestoreConfiguration": {
-                "ApplicationRestoreType": "SKIP_RESTORE_FROM_SNAPSHOT"
+                "ApplicationRestoreType": "RESTORE_FROM_LATEST_SNAPSHOT"
             }
         }
     )
