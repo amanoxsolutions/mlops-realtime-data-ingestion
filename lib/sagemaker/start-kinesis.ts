@@ -79,7 +79,7 @@ export class RDIStartFlinkApplication extends Construct {
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
 
-    const startKinesisAnalytics = new CustomResource(this, 'Cr', {
+    const startKinesisAnalytics = new CustomResource(this, 'Resource', {
       serviceToken: customResourceHandler.functionArn,
     });
   }
