@@ -312,7 +312,7 @@ export class RDIFeatureStore extends Construct {
       },
     });
 
-    const startFlinkApplication = new RDIStartFlinkApplication(this, 'StartKinesisAnalytics', {
+    const startFlinkApplication = new RDIStartFlinkApplication(this, 'StartFlinkApp', {
       prefix: this.prefix,
       runtime: this.runtime,
       flink_application_name: this.flinkAppName,
