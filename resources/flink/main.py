@@ -26,6 +26,12 @@ import json
 # 1. Creates a Table Environment
 env_settings = EnvironmentSettings.in_streaming_mode()
 table_env = TableEnvironment.create(environment_settings=env_settings)
+# access flink configuration after table environment instantiation
+table_config = table_env.get_config()
+# set the Flink Watermaker IDLE strategy
+# Documentation: https://nightlies.apache.org/flink/flink-docs-release-1.19/docs/dev/datastream/event-time/generating_watermarks/#dealing-with-idle-sources
+# Article: https://medium.com/@ipolyzos_/understanding-watermarks-in-apache-flink-c8793a50fbb8
+table_config.set("table.exec.source.idle-timeout", "20000")
 
 APPLICATION_PROPERTIES_FILE_PATH = "/etc/flink/application_properties.json"
 
