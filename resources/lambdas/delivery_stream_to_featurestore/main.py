@@ -26,12 +26,13 @@ except:
 @logger.inject_lambda_context(log_event=True)
 @tracer.capture_lambda_handler()
 def lambda_handler(event, context):
-    records = event["records"]
+    records = event.get("Records")
     logger.info(f"Processing {len(records)} records")
     
     agg_records = []
+    # Read the records from Kinesis Data Stream
     for rec in records:
-        data = rec['data']
+        data = rec.get("kinesis").get("data")
         agg_data_str = base64.b64decode(data) 
         agg_data = json.loads(agg_data_str)
         
@@ -42,11 +43,6 @@ def lambda_handler(event, context):
 
         logger.info(f"Aggregated transaction data over the minute {tx_minute}, total_nb_trx_1min: {total_nb_trx_1min}, total_fee_1min: {total_fee_1min}, avg_fee_1min: {avg_fee_1min}")
         update_agg(AGG_FEATURE_GROUP_NAME, tx_minute, total_nb_trx_1min, total_fee_1min, avg_fee_1min)
-        
-        # Flag each record as being "Ok", so that Kinesis won't try to re-send 
-        agg_records.append({'recordId': rec['recordId'],
-                            'result': 'Ok'})
-    return {'records': agg_records}
 
 def update_agg(fg_name, tx_minute, total_nb_trx_1min, total_fee_1min, avg_fee_1min):
     record = [{'FeatureName':'tx_minute', 'ValueAsString': tx_minute},
