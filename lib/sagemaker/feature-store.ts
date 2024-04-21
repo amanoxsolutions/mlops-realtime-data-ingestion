@@ -225,6 +225,7 @@ export class RDIFeatureStore extends Construct {
         streamMode: StreamMode.PROVISIONED,
         shardCount: 1,
       },
+      deploySqsDlqQueue: false,
     });
 
     //
