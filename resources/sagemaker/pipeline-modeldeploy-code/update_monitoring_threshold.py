@@ -9,20 +9,25 @@ sm_client = boto3.client("sagemaker")
 s3_client = boto3.client("s3")
 ssm_client = boto3.client("ssm")
 
+def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
+    """Update the model validation threshold in the SSM Parameter Store if the threshold is lower
+    than the current threshold stored in the SSM Parameter Store.
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--sagemaker-project-id", type=str, required=True)
-    parser.add_argument("--sagemaker-project-name", type=str, required=True)
-    args, _ = parser.parse_known_args()
-
-    model_pipeline_name = f"{args.sagemaker_project_name}-{args.sagemaker_project_id}"
+    Args:
+        model_pipeline_name (str): the name of the SageMaker Model Building Pipeline
+        bucket (str): the name of the S3 bucket where the evaluation output is stored
+    """
     # Get the last execution ID of the SageMaker Model Building Pipeline
     try:
         response = sm_client.list_pipeline_executions(
             PipelineName=model_pipeline_name,
             SortOrder="Descending",
         )
+        # If there are no executions, exit the function
+        # In this case we keep the default threshold value in the SSM Parameter Store
+        if not response.get("PipelineExecutionSummaries"):
+            logger.info(f"No executions found for the pipeline: {model_pipeline_name}")
+            return
         last_execution_id = response["PipelineExecutionSummaries"][0]["PipelineExecutionArn"].split("/")[-1]
         logger.info(f"Last execution ID: {last_execution_id}")
     except ClientError as e:
@@ -31,7 +36,6 @@ if __name__ == "__main__":
     try:
         # Read the Evaluation output from the SageMaker Model Building Pipeline
         # Of the last execution ID which is stored in S3
-        bucket = f"sagemaker-project-{args.sagemaker_project_id}"
         object_key = f"{model_pipeline_name}/{last_execution_id}/EvaluateModel/output/evaluation/evaluation.json"
         response = s3_client.get_object(Bucket=bucket, Key=object_key)
         evaluation_output = json.loads(response["Body"].read())
@@ -44,7 +48,7 @@ if __name__ == "__main__":
             Recursive=False,
             WithDecryption=False,
         )
-        for param in response["Parameters"]:
+        for param in response.get("Parameters"):
             model_validation_thresholds[param["Name"].split("/")[-1]] = float(param["Value"])
         # Update the threshold stored in the SSM Parameter Store if the threshold is lower
         if weighted_quantile_loss_value < model_validation_thresholds["weighted_quantile_loss"]:
@@ -60,3 +64,12 @@ if __name__ == "__main__":
         logger.error(f"An error occurred: {e}")
         raise e
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sagemaker-project-id", type=str, required=True)
+    parser.add_argument("--sagemaker-project-name", type=str, required=True)
+    args, _ = parser.parse_known_args()
+
+    model_pipeline_name = f"{args.sagemaker_project_name}-{args.sagemaker_project_id}"
+    bucket = f"sagemaker-project-{args.sagemaker_project_id}"
+    update_model_threshold(model_pipeline_name, bucket)
