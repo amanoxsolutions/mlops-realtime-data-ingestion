@@ -5,64 +5,80 @@ import { Construct } from 'constructs';
 export interface RDIIngestionPipelineDashboardProps {
   readonly prefix: string;
   readonly dashboard: Dashboard;
-  readonly pipelineWidget: GraphWidget;
-  readonly analyticsAppName: string;
+  readonly flinkAppName: string;
+  readonly deliveryStreamName: string;
 }
 
 export class RDIIngestionPipelineDashboard extends Construct {
   public readonly prefix: string;
   public readonly dashboard: Dashboard;
-  public readonly pipelineWidget: GraphWidget;
+  public readonly flinkAppWidget: GraphWidget;
+  public readonly deliveryStreamWidget: GraphWidget;
 
   constructor(scope: Construct, id: string, props: RDIIngestionPipelineDashboardProps) {
     super(scope, id);
 
     this.prefix = props.prefix;
     this.dashboard = props.dashboard;
-    this.pipelineWidget = props.pipelineWidget;
     const region = Stack.of(this).region;
 
-    // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard
-    const kinesisAnalyticsInput = new Metric({
-      metricName: 'Bytes',
-      label: 'Amount of data inngested by Kinesys Analytics application',
+    //
+    // Apache Flink Application dashboard
+    //
+    // Get the input and output metrics of the Managed Service for Apache Flink application
+    const flinkAppInput = new Metric({
+      metricName: 'numRecordsInPerSecond',
+      label: 'Number of records ingested by the Apache Flink Application producer',
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/KinesisAnalytics',
-      dimensionsMap: { 
-        Id: '1.1',
-        Application: props.analyticsAppName,
-        Flow: 'Input', 
-      },
-      color: Color.PURPLE,
+      dimensionsMap: { Application: props.flinkAppName },
+      color: Color.BLUE,
       region: region,
     });
-
-    this.pipelineWidget.addLeftMetric(kinesisAnalyticsInput);
-
-    // Create a new widget for the output of the Kinesis Analytics application
-    const kinesisAnalyticsOutput = new Metric({
-      metricName: 'Bytes',
-      label: 'Amount of data produced by Kinesys Analytics application',
+    const flinkAppOutput = new Metric({
+      metricName: 'numRecordsOutPerSecond',
+      label: 'Number of records output by the Apache Flink Application consumer',
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'AWS/KinesisAnalytics',
-      dimensionsMap: { 
-        Id: '2.1',
-        Application: props.analyticsAppName,
-        Flow: 'Output', 
-      },
-      color: Color.PURPLE,
+      dimensionsMap: { Application: props.flinkAppName },
+      color: Color.ORANGE,
       region: region,
     });
-    const analyticsWidget = new GraphWidget({
-      title: 'Ingestion Pipeline - Kinesis Analytics Output Data Size',
+     // Create a new widget for the metrics of the Managed Service for Apache Flink application
+    this.flinkAppWidget = new GraphWidget({
+      title: 'Ingestion Pipeline - Apache Flink Application Input/Output Records Count',
       height: 9,
-      width: 12,
-      left: [kinesisAnalyticsOutput],
+      width: 18,
+      left: [flinkAppInput, flinkAppOutput],
       stacked: false,
     });
-    this.dashboard.addWidgets(analyticsWidget);
-    analyticsWidget.position(12, 0);
+    this.dashboard.addWidgets(this.flinkAppWidget);
+    this.flinkAppWidget.position(0, 9);
+
+    //
+    // Delivery Stream dashboard
+    //
+    // Get the input metric of the Kinesis Data Firehose delivery stream
+    const deliveryStreamInput = new Metric({
+      metricName: 'IncomingBytes',
+      label: 'Amount of data in bytes ingested by the delivery Kinesis Data Stream',
+      statistic: 'Sum',
+      period: Duration.minutes(5),
+      namespace: 'AWS/Kinesis',
+      dimensionsMap: { StreamName: props.deliveryStreamName },
+      color: Color.BLUE,
+      region: region,
+    });
+    this.deliveryStreamWidget = new GraphWidget({
+      title: 'Ingestion Pipeline - Delivery Stream Data Size',
+      height: 9,
+      width: 18,
+      left: [deliveryStreamInput],
+      stacked: false,
+    });
+    this.dashboard.addWidgets(this.deliveryStreamWidget);
+    this.flinkAppWidget.position(0, 18);
   }
 }

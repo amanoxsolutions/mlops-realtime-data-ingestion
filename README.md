@@ -10,9 +10,6 @@ It captures in near real-time blockchain transactions data and by default comput
 Although it might be irrelevant, data are aggregated and predicted using a 1 minute window in order to quickly gather enough data, get results and quickls see the the MLOps pipeline automation in action.
 Once enough data have been captured and a first model trained, you will be able to see the model being deployed being a SageMaker API endpoint and resources being provisioned to monitor the model. If the model performance alarm threshold is breached, you will see alarms in the dashboard and the model training pipeline being automatically triggered to retrain a new model based on the lastest ingested data, thus, fully atuomating the training, deployment and monitoring lifecycle of the model. 
 
-## To Dos & Improvements
-* __Amazon Kinesis Data Analytics__ is legacy and should be replaced by a combination of __Amazon Kinesis Data Stream__ & __Amazon Managed Service for Apache Flink__
-
 ## The Data
 For this project, we decided to ingest blockchain transactions from the blockchain.com API (see documentation [here](https://www.blockchain.com/explorer/api)). 
 We focus on 3 simple metrics:
@@ -25,16 +22,16 @@ transactions, it allows us to quickly gather a lot of data points in a short per
 for too long which has an impact on the AWS billing.
 ## Architecture
 ### The Full Architecture
-![](./doc/images/mlops-realtime-data-ingestion.jpg)
+![](./doc/images/full-architecture.jpg)
 ### Near Real Time Data Ingestion Architecture
 At a high level, the data are ingested as follow:
-1. A container running on AWS Fargate polls the data and writes them to EventBridge
-2. EventBridge sends the data to Kinesis Data Firehose
-3. Kinesis Data Firehose streams the data to Kinesis Data Analytics
-4. Kinesis Data Analytics computes the chosen metrics per minute and writes them to SageMaker Feature Store
+1. A container running on AWS Fargate polls the data and writes them to EventBridge.
+2. EventBridge sends the data to a Lambda Function which writes filtered data into a Kinesis Data Stream.
+3. A Managed Service for Apache Flink reads the data from the Kinesis Data Stream and aggregates the data using a 1 minute tumbling window and puts the results into a delivery Kinesis Data Stream.
+4. A Lambda Funtion reads the aggregated data from the delivery Kinesis Data Stream and writes them into FageMaker Feature Store.
 
 See [this documentation](./doc/INGESTION.md) for more details.
-![](./doc/images/mlops-realtime-data-ingestion-ingestion-overview.jpg)
+![](./doc/images/data-ingestion-overview.jpg)
 ### MLOps Architecture
 The MLOps project contains 3 CodeCommit repositories with their own CodePipeline pipelines to train, deploy and monitor the model.
 1. The __Model Build__ pipeline creates a SageMaker Pipeline orchestrating all the steps to train a model and, if it passes the validation threshold, register the model, which then has to be manually approved.
@@ -45,7 +42,7 @@ The MLOps project contains 3 CodeCommit repositories with their own CodePipeline
    * AWS does not support monitoring for custom metrics (like the [weighted quantile loss](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html) we use for the DeepAR model) and,
    * AWS does not provide any built-in mechanism to capture the alarms raised by the SageMaker Monitoring service when a model performance is breached, in order to perform automatic retraining of the model.
 6. If our custom metric is breached, the CloudWatch Alarm will trigger a Lambda Function, which will trigger the __Model Build__ pipeline, retraining a new model, looping back automatically to the step one of this MLOps pipeline.
-![](./doc/images/mlops-realtime-data-ingestion-mlops-overview.jpg)
+![](./doc/images/mlops-overview.jpg)
 ## What are the Prerequisites?
 The list below is for _Windows_ environment
 * The AWS CLI ([documentation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))  
@@ -61,6 +58,6 @@ You do not have much to configure and can directly play with the application and
 * [The MLOps Pipeline](./doc/MLOPS.md)
 * [Delete the Entire Project](./doc/DELETION.md)
 ## Cost
-This demo deploys many services (e.g. Fargate, DynamoDB, Kinesis Firehose, Kinesis Analytics, SageMaker endpoints...) and must be run for 
+This demo deploys many services (e.g. Fargate, DynamoDB, 2xKinesis Data Streams, Kinesis Firehose, Managed Service for Apache Flink, SageMaker endpoints...) and must be run for 
 several days to collect enough data to be able to start training a model and see the model being retrained. This demo do generate costs which could be 
 expensive, depending on your budget. The full demo costs about $850 per month in the Ireland region.

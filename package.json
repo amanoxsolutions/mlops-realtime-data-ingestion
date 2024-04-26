@@ -21,8 +21,11 @@
     "typescript": "~5.2.2"
   },
   "dependencies": {
+    "@aws-cdk/aws-kinesisanalytics-flink-alpha": "^2.138.0-alpha.0",
     "@aws-cdk/aws-lambda-python-alpha": "^2.133.0-alpha.0",
-    "@aws-solutions-constructs/aws-eventbridge-kinesisfirehose-s3": "^2.44.0",
+    "@aws-solutions-constructs/aws-eventbridge-lambda": "^2.54.1",
+    "@aws-solutions-constructs/aws-kinesisstreams-kinesisfirehose-s3": "^2.54.1",
+    "@aws-solutions-constructs/aws-kinesisstreams-lambda": "^2.55.0",
     "@aws-solutions-constructs/core": "^2.44.0",
     "@types/object-hash": "^3.0.4",
     "aws-cdk-lib": "^2.133.0",

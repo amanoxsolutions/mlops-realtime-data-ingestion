@@ -36,12 +36,12 @@ export class RealtimeDataIngestionStage extends Stage {
     // from an existing VPC by using the fromLookup function, passing it constants like the VPC ID
     // It can't be created using tokens which value is unknown at CLI run time
     // see: https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ec2.Vpc.html#static-fromwbrlookupscope-id-options
-    const sagemakerProperties = properties;
-    new SagemakerStack(this, "SagemakerStack", {
-      ...sagemakerProperties,
+    const sagemakerStack = new SagemakerStack(this, "SagemakerStack", {
+      ...properties,
       vpc: ingestionStack.vpc,
       ingestionPipelineDashboard: ingestionStack.dashboard,
       ingestionPipelineWidget: ingestionStack.pipelineWidget,
-    });    
+    });
+    sagemakerStack.node.addDependency(ingestionStack);
   }
 }

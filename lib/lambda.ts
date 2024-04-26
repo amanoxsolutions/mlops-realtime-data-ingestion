@@ -13,7 +13,6 @@ import {
   Code,
   Function,
   IAlias,
-  IFunction,
   ILayerVersion,
   Runtime,
   Architecture,
@@ -54,7 +53,7 @@ interface RDILambdaProps {
 }
 
 export class RDILambda extends Construct {
-  public readonly function: IFunction;
+  public readonly function: Function;
   public readonly alias: IAlias;
   public readonly logGroup: ILogGroup;
   public readonly prefix: string;

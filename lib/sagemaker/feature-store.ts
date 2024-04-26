@@ -1,21 +1,46 @@
 import { Construct } from 'constructs';
-import { Stack, RemovalPolicy, Duration } from 'aws-cdk-lib';
+import { Stack, RemovalPolicy, Duration, Fn } from 'aws-cdk-lib';
 import { ManagedPolicy, Role, ServicePrincipal, Policy, PolicyStatement, PolicyDocument, Effect } from 'aws-cdk-lib/aws-iam';
-import { LogGroup, RetentionDays, LogStream } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Bucket, BucketAccessControl, BucketEncryption, IBucket } from 'aws-cdk-lib/aws-s3';
 import { CfnFeatureGroup } from 'aws-cdk-lib/aws-sagemaker';
-import { CfnApplication, CfnApplicationOutput } from 'aws-cdk-lib/aws-kinesisanalytics';
+import { Application, IApplication, ApplicationCode, Runtime as FlinkRuntime } from '@aws-cdk/aws-kinesisanalytics-flink-alpha';
 import { RDILambda } from '../lambda';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime as LambdaRuntime } from 'aws-cdk-lib/aws-lambda';
 import * as fgConfig from '../../resources/sagemaker/featurestore/agg-fg-schema.json';
-import * as sourceSchema from '../../resources/sagemaker/featurestore/source-schema.json';
-import { RDIStartKinesisAnalytics } from './start-kinesis';
+import { RDIStartFlinkApplication } from './start-kinesis';
+import { StreamMode, IStream } from 'aws-cdk-lib/aws-kinesis';
+import { KinesisStreamsToLambda } from '@aws-solutions-constructs/aws-kinesisstreams-lambda';
 import { CfnTrigger, CfnJob } from 'aws-cdk-lib/aws-glue';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
+import { Hash, createHash } from 'crypto';
+import { readdirSync, statSync, readFileSync } from 'fs';
+import { join } from 'path';
 
-
-const fs = require('fs');
-const path = require('path');
+// Create a function to compute the hash of all the files in a directory.
+// This will be used to conditionally update the Flink application when the code changes.
+// from: https://stackoverflow.com/questions/68074935/hash-of-folders-in-nodejs
+export function computeDirectoryHash(paths: string[], inputHash?:Hash): string {
+  const hash = inputHash ? inputHash : createHash("sha1");
+  for (const path of paths) {
+    const statInfo = statSync(path);
+    if (statInfo.isDirectory()) {
+      const directoryEntries = readdirSync(path, { withFileTypes: true });
+      const fullPaths = directoryEntries.map((e) => join(path, e.name));
+      // recursively walk sub-folders
+      computeDirectoryHash(fullPaths, hash);
+    } else {
+      // Compute the hash string of the file
+      const content = readFileSync(path);
+      hash.update(content);
+    }
+  }
+  // if not being called recursively, get the digest and return it as the hash result
+  if (!inputHash) {
+    return hash.digest().toString("base64");
+  }
+  return '';
+}
 
 enum FeatureStoreTypes {
   DOUBLE  = 'Fractional',
@@ -27,8 +52,9 @@ interface RDIFeatureStoreProps {
   readonly prefix: string;
   readonly s3Suffix: string;
   readonly removalPolicy?: RemovalPolicy;
-  readonly firehoseStreamArn: string;
-  readonly runtime: Runtime;
+  readonly ingestionDataStreamArn: string;
+  readonly ingestionDataStreamName: string;
+  readonly runtime: LambdaRuntime;
   readonly customResourceLayerArn: string;
   readonly dataAccessPolicy: Policy;
 }
@@ -36,11 +62,13 @@ interface RDIFeatureStoreProps {
 export class RDIFeatureStore extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
-  public readonly runtime: Runtime;
+  public readonly runtime: LambdaRuntime;
   public readonly featureGroupName: string;
   public readonly bucket: IBucket;
-  public readonly analyticsStream: CfnApplication;
-  public readonly analyticsAppName: string;
+  public readonly flinkApp: IApplication;
+  public readonly flinkAppName: string;
+  public readonly deliveryStream: IStream;
+  public readonly deliveryStreamName: string;
 
   constructor(scope: Construct, id: string, props: RDIFeatureStoreProps) {
     super(scope, id);
@@ -51,6 +79,34 @@ export class RDIFeatureStore extends Construct {
 
     const region = Stack.of(this).region;
     const account = Stack.of(this).account;
+
+    //
+    // S3 Bucket to store application (Glue, Flink) code assets
+    //
+    const codeAssetsBucket = new Bucket(this, 'codeAssetsBucket', {
+      bucketName: `${this.prefix}-app-code-assets-${props.s3Suffix}`,
+      accessControl: BucketAccessControl.PRIVATE,
+      encryption: BucketEncryption.S3_MANAGED,
+      removalPolicy: this.removalPolicy,
+      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
+    });
+    // Deploy the Glue script to the code assets bucket
+    const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
+      sources: [Source.asset('./resources/glue')], 
+      destinationBucket: codeAssetsBucket,
+      destinationKeyPrefix: 'glue-scripts',
+    });
+    // ZIP the Flink code and deploy it to the code assets bucket
+    const flinkAppAsset = new BucketDeployment(this, 'FlinkCodeAsset', {
+      sources: [Source.asset('./resources/flink')],
+      destinationBucket: codeAssetsBucket,
+      destinationKeyPrefix: 'flink-app',
+      memoryLimit: 512,
+      extract: false,
+    });
+    const flinkAssetObejctKey = Fn.select(0, flinkAppAsset.objectKeys);
+    // Create a hash of the Flink code asset to use as the version
+    const flinkAssetHash = computeDirectoryHash([`./resources/flink`]);
 
     //
     // SageMaker Feature Store
@@ -136,16 +192,14 @@ export class RDIFeatureStore extends Construct {
     });
 
     //
-    // Realtime ingestion with Kinesis Data Analytics
+    // Kinesis Data Stream Sink for Apache Flink Application
     //
-    this.analyticsAppName = `${this.prefix}-analytics`;
-
     // Lambda Function to ingest aggregated data into SageMaker Feature Store
-    // Create the Lambda function used by Kinesis Firehose to pre-process the data
+    // Create the Lambda function used by the delivery Kinesis Data Stream to pre-process the data
     const lambda = new RDILambda(this, 'IngestIntoFetureStore', {
       prefix: this.prefix,
-      name: 'analytics-to-featurestore',
-      codePath: 'resources/lambdas/analytics_to_featurestore',
+      name: 'delivery-stream-to-featurestore',
+      codePath: 'resources/lambdas/delivery_stream_to_featurestore',
       runtime: this.runtime,
       memorySize: 512,
       timeout: Duration.seconds(60),
@@ -163,54 +217,65 @@ export class RDIFeatureStore extends Construct {
     });
     lambda.function.addToRolePolicy(lambdaPolicyStatement);
 
-    // IAM Role for Kinesis Data Analytics
-    const analyticsRole = new Role(this, 'AnalyticsRole', {
-      roleName: `${this.prefix}-analytics-role`,
+    // Create the Kinesis Data Stream Sink for the Apache Flink Application with the Lambda function as the consumer
+    this.deliveryStreamName = `${this.prefix}-kd-delivery-stream`;
+    const deliveryStream = new KinesisStreamsToLambda(this, 'DeliveryStream', {
+      existingLambdaObj: lambda.function,
+      kinesisStreamProps: {
+        streamName: this.deliveryStreamName,
+        streamMode: StreamMode.PROVISIONED,
+        shardCount: 1,
+      },
+      deploySqsDlqQueue: false,
+    });
+    this.deliveryStream = deliveryStream.kinesisStream;
+
+    //
+    // Realtime ingestion with Kinesis Data Analytics
+    //
+    this.flinkAppName = `${this.prefix}-flink-app`;
+    // Setup the CloudWatch Log Group
+    const flinkAppLogGroup = new LogGroup(this, 'LogGroup', {
+      logGroupName: `/aws/kinesis-analytics/${this.flinkAppName}`,
+      retention: RetentionDays.ONE_WEEK,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+    // IAM Role for Managed Service for Apache Flink
+    const flinkAppRole = new Role(this, 'MsafRole', {
+      roleName: `${this.prefix}-flink-role`,
       assumedBy: new ServicePrincipal('kinesisanalytics.amazonaws.com'),
       inlinePolicies: {
         AnalyticsRolePolicy: new PolicyDocument({
           statements: [
+            // https://docs.aws.amazon.com/kinesisanalytics/latest/dev/iam-role.html
             new PolicyStatement({
-              sid: 'LambdaPermissions',
+              sid: 'ReadInputStream',
               resources: [
-                lambda.function.functionArn
+                props.ingestionDataStreamArn,
               ],
               actions: [
-                'lambda:InvokeFunction',
-                'lambda:GetFunctionConfiguration'
-              ] 
+                'kinesis:DescribeStream',
+                'kinesis:GetRecords',
+                'kinesis:GetShardIterator',
+                'kinesis:ListShards',
+              ]
             }),
             new PolicyStatement({
-              sid: 'AllowAccessToSourceStream',
+              sid: 'WriteOutputStream',
               resources: [
-                props.firehoseStreamArn
+                deliveryStream.kinesisStream.streamArn
               ],
               actions: [
-                'firehose:DescribeDeliveryStream',
-                'firehose:Get*'
-              ] 
-            }),
-            new PolicyStatement({
-              sid: 'ReadEncryptedInputKinesisFirehose',
-              resources: ['*'], // TODO: Put the ARN of the encryption key
-              actions: [
-                'kms:Decrypt'
-              ],
-              conditions: {
-                StringEquals: {
-                  'kms:ViaService': 'firehose.us-east-1.amazonaws.com'
-                },
-                StringLike: {
-                  'kms:EncryptionContext:aws:firehose:arn': props.firehoseStreamArn
-                }
-              }
+                'kinesis:DescribeStream',
+                'kinesis:PutRecord',
+                'kinesis:PutRecords',
+              ]
             }),
             new PolicyStatement({
               sid: 'AllowToPutCloudWatchLogEvents',
-              resources: ['*'],
+              resources: [flinkAppLogGroup.logGroupArn],
               actions: [
                 'logs:PutLogEvents', 
-                'logs:CreateLogGroup',
                 'logs:CreateLogStream',
                 'logs:DescribeLogGroups',
                 'logs:DescribeLogStreams'
@@ -221,65 +286,40 @@ export class RDIFeatureStore extends Construct {
       }
     });
 
-    // Kinesis Data Analytics Application
-    this.analyticsStream = new CfnApplication(this, 'Analytics', {
-      applicationName: this.analyticsAppName,
-      applicationCode: fs.readFileSync(path.join(__dirname, '../../resources/kinesis/analytics.sql')).toString(),
-      inputs: [
-        {
-          namePrefix: "SOURCE_SQL_STREAM",
-          kinesisFirehoseInput: {
-            resourceArn: props.firehoseStreamArn,
-            roleArn: analyticsRole.roleArn,
-          },
-          inputParallelism: { count: 1 },
-          inputSchema: {
-            recordFormat: {
-              recordFormatType: "JSON",
-              mappingParameters: { jsonMappingParameters: { recordRowPath: "$" } }
-            },
-            recordEncoding: "UTF-8",
-            recordColumns: sourceSchema.columns
-          },
+    //Managed Service for Apache Flink Application
+    this.flinkApp = new Application(this, 'FlinkApp', {
+      applicationName: this.flinkAppName,
+      code: ApplicationCode.fromBucket(codeAssetsBucket, `flink-app/${flinkAssetObejctKey}`),
+      runtime: FlinkRuntime.FLINK_1_18,
+      role: flinkAppRole,
+      logGroup: flinkAppLogGroup,
+      snapshotsEnabled: false,
+      propertyGroups: {
+        'kinesis.analytics.flink.run.options': {
+          python: 'main.py',
+          jarfile: 'lib/flink-sql-connector-kinesis-4.2.0-1.18.jar'
+        },
+        'consumer.config.0': {
+          'input.stream.name': props.ingestionDataStreamName,
+          'aws.region': region,
+          'scan.stream.initpos': 'TRIM_HORIZON',
+        },
+        'producer.config.0': {
+          'output.stream.name': deliveryStream.kinesisStream.streamName,
+          'aws.region': region,
+        },
+        meta: {
+          // force to update the resoruce when code is modified in the ./resources/flink directory
+          hash: flinkAssetHash,
         }
-      ],
+      },
     });
 
-    const startKinesisAnalytics = new RDIStartKinesisAnalytics(this, 'StartKinesisAnalytics', {
+    const startFlinkApplication = new RDIStartFlinkApplication(this, 'StartFlinkApp', {
       prefix: this.prefix,
       runtime: this.runtime,
-      kinesis_analytics_name: this.analyticsAppName,
+      flink_application_name: this.flinkApp.applicationName,
       customResourceLayerArn: props.customResourceLayerArn,
-    });
-    startKinesisAnalytics.node.addDependency(this.analyticsStream)
-
-    const analyticsOutput = new CfnApplicationOutput(this, 'AnalyticsOutputs', {
-      applicationName: this.analyticsAppName,
-      output: {
-        destinationSchema: {
-          recordFormatType: 'JSON'
-        },
-        lambdaOutput: {
-          resourceArn: lambda.function.functionArn,
-          roleArn: analyticsRole.roleArn,
-        },
-        name: 'DESTINATION_SQL_STREAM',
-      }
-    });
-    analyticsOutput.node.addDependency(this.analyticsStream);
-
-    const glueAssetsBucket = new Bucket(this, 'GlueAssetsBucket', {
-      bucketName: `${this.prefix}-glue-assets-${props.s3Suffix}`,
-      accessControl: BucketAccessControl.PRIVATE,
-      encryption: BucketEncryption.S3_MANAGED,
-      removalPolicy: this.removalPolicy,
-      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
-    });
-
-    const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
-      sources: [Source.asset('./resources/glue')], 
-      destinationBucket: glueAssetsBucket,
-      destinationKeyPrefix: 'scripts',
     });
 
     const glueRole = new Role(this, 'GlueRole', {
@@ -302,7 +342,7 @@ export class RDIFeatureStore extends Construct {
           }),
           new PolicyStatement({
             effect: Effect.ALLOW,
-            resources: [glueAssetsBucket.bucketArn, `${glueAssetsBucket.bucketArn}/*`],
+            resources: [codeAssetsBucket.bucketArn, `${codeAssetsBucket.bucketArn}/*`],
             actions: [
               "s3:GetObject",
               "s3:ListBucket"
@@ -317,7 +357,7 @@ export class RDIFeatureStore extends Construct {
       command: {
         name: 'glueetl',
         pythonVersion: '3',
-        scriptLocation: `s3://${glueAssetsBucket.bucketName}/scripts/FeatureStoreAggregateParquet.py`, 
+        scriptLocation: `s3://${codeAssetsBucket.bucketName}/glue-scripts/FeatureStoreAggregateParquet.py`, 
       },
       role: glueRole.roleName,
       glueVersion: '4.0',

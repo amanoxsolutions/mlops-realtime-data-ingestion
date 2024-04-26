@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { Construct } from 'constructs';
-import { Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { Effect, PolicyStatement, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Duration, CustomResource, RemovalPolicy, Stack } from 'aws-cdk-lib';
+import { Effect, PolicyStatement, Role, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Repository, TagMutability, IRepository } from 'aws-cdk-lib/aws-ecr';
@@ -33,15 +33,31 @@ export class cleanupEcrRepo extends Construct {
     this.ecrRepositoryName = props.ecrRepositoryName;
     this.ecrRepositoryArn = props.ecrRepositoryArn;
     this.customResourceLayerArn = props.customResourceLayerArn;
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
 
     const lambdaPurpose = 'CustomResourceToCleanupEcrImages'
 
     const policyDocument = new PolicyDocument({
       statements: [
+        // IAM policy for ECR
         new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['ecr:ListImages', 'ecr:BatchDeleteImage'],
+          actions: [
+            'ecr:ListImages', 
+            'ecr:BatchDeleteImage'
+          ],
           resources: [this.ecrRepositoryArn],
+        }),
+        // IAM policy for CloudWatch Logs
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
         }),
       ],
     });
