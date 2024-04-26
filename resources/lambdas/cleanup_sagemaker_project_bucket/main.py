@@ -9,6 +9,15 @@ s3 = boto3.client("s3")
 def lambda_handler(event, context):
     # Get the SageMaker project bucket name from SSM parameter store
     bucket_name = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/sagemaker-project-bucket-name").get("Parameter").get("Value")
+    # Check if the S3 bucket exists
+    try:
+        s3.head_bucket(Bucket=bucket_name)
+    except s3.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            logger.info(f"Bucket {bucket_name} not found. Nothing to delete.")
+            return {}
+        else:
+            raise
     # Create a list of the objects in the bucket and delete them in batches
     paginator = s3.get_paginator("list_objects_v2")
     object_list = []
