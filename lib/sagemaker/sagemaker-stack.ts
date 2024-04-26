@@ -161,18 +161,18 @@ export class SagemakerStack extends Stack {
       document: monitoringJobDocument,
     });
 
-    // this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
-    //   prefix: this.prefix,
-    //   removalPolicy: this.removalPolicy,
-    //   runtime: this.runtime,
-    //   dataBucketArn: dataBucketArn,
-    //   experimentBucketArn: this.experimentBucket.bucketArn,
-    //   dataAccessPolicy: dataAccessPolicy,
-    //   monitoringJobPolicy: monitoringJobPolicy,
-    //   vpcId: props.vpc.vpcId,
-    //   subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
-    //   customResourceLayerArn: customResourceLayerArn,
-    // });
+    this.domain = new RDISagemakerStudio(this, 'sagemakerStudio', {
+      prefix: this.prefix,
+      removalPolicy: this.removalPolicy,
+      runtime: this.runtime,
+      dataBucketArn: dataBucketArn,
+      experimentBucketArn: this.experimentBucket.bucketArn,
+      dataAccessPolicy: dataAccessPolicy,
+      monitoringJobPolicy: monitoringJobPolicy,
+      vpcId: props.vpc.vpcId,
+      subnetIds: props.vpc.selectSubnets({ subnetType: SubnetType.PUBLIC }).subnetIds,
+      customResourceLayerArn: customResourceLayerArn,
+    });
 
     this.featureStore = new RDIFeatureStore(this, 'featureStore', {
       prefix: this.prefix,
@@ -185,15 +185,15 @@ export class SagemakerStack extends Stack {
       dataAccessPolicy: dataAccessPolicy,
     });
 
-    // this.project = new RDISagemakerProject(this, 'sagemakerProject', {
-    //   prefix: this.prefix,
-    //   removalPolicy: this.removalPolicy,
-    //   runtime: this.runtime,
-    //   customResourceLayerArn: customResourceLayerArn,
-    //   portfolioId: this.domain.portfolioId,
-    //   domainExecutionRole: this.domain.executionRole,
-    //   dataAccessPolicy: dataAccessPolicy,
-    // });
+    this.project = new RDISagemakerProject(this, 'sagemakerProject', {
+      prefix: this.prefix,
+      removalPolicy: this.removalPolicy,
+      runtime: this.runtime,
+      customResourceLayerArn: customResourceLayerArn,
+      portfolioId: this.domain.portfolioId,
+      domainExecutionRole: this.domain.executionRole,
+      dataAccessPolicy: dataAccessPolicy,
+    });
 
     // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard
     new RDIIngestionPipelineDashboard(this, 'IngestionPipelineDashboard', {
@@ -235,53 +235,53 @@ export class SagemakerStack extends Stack {
       description: 'Name of the delivery Kinesis Data Stream',
     });
 
-    // new StringParameter(this, 'SagemakerProjectNameSSMParameter', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-name',
-    //   stringValue: this.project.projectName,
-    //   description: 'SageMaker Project Name',
-    // });
-    // new StringParameter(this, 'SagemakerProjectIdSSMParameter', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-id',
-    //   stringValue: this.project.projectId,
-    //   description: 'SageMaker Project ID',
-    // });
-    // new StringParameter(this, 'SagemakerProjectBucketNameSSMParameter', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-name',
-    //   stringValue: `sagemaker-project-${this.project.projectId}`,	
-    //   description: 'SageMaker Project Bucket Name',
-    // });
-    // new StringParameter(this, 'SagemakerProjectBucketArnSSMParameter', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-arn',
-    //   stringValue: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,	
-    //   description: 'SageMaker Project Bucket ARN',
-    // });
-    // new StringParameter(this, 'SagemakerFeatureGroupNameSSMParameter', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-group-name',
-    //   stringValue: this.featureStore.featureGroupName,	
-    //   description: 'SageMaker Feature Group Name',
-    // });
-    // new StringParameter(this, 'SagemakerFeatureStoreBucketNameSSMParameter', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-name',
-    //   stringValue: this.featureStore.bucket.bucketName,	
-    //   description: 'SageMaker Feature Store Bucket Name',
-    // });
-    // new StringParameter(this, 'SagemakerFeatureStoreBucketArnSSMParameter', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-arn',
-    //   stringValue: this.featureStore.bucket.bucketArn,	
-    //   description: 'SageMaker Feature Store Bucket ARN',
-    // });
-    // new StringParameter(this, 'SagemakerExecutionRoleARN', {
-    //   parameterName: '/rdi-mlops/stack-parameters/sagemaker-execution-role-arn',
-    //   stringValue: this.domain.executionRole.roleArn,
-    //   description: 'SageMaker Execution Role ARN',
-    // });
+    new StringParameter(this, 'SagemakerProjectNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-name',
+      stringValue: this.project.projectName,
+      description: 'SageMaker Project Name',
+    });
+    new StringParameter(this, 'SagemakerProjectIdSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-id',
+      stringValue: this.project.projectId,
+      description: 'SageMaker Project ID',
+    });
+    new StringParameter(this, 'SagemakerProjectBucketNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-name',
+      stringValue: `sagemaker-project-${this.project.projectId}`,	
+      description: 'SageMaker Project Bucket Name',
+    });
+    new StringParameter(this, 'SagemakerProjectBucketArnSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-arn',
+      stringValue: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,	
+      description: 'SageMaker Project Bucket ARN',
+    });
+    new StringParameter(this, 'SagemakerFeatureGroupNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-group-name',
+      stringValue: this.featureStore.featureGroupName,	
+      description: 'SageMaker Feature Group Name',
+    });
+    new StringParameter(this, 'SagemakerFeatureStoreBucketNameSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-name',
+      stringValue: this.featureStore.bucket.bucketName,	
+      description: 'SageMaker Feature Store Bucket Name',
+    });
+    new StringParameter(this, 'SagemakerFeatureStoreBucketArnSSMParameter', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-arn',
+      stringValue: this.featureStore.bucket.bucketArn,	
+      description: 'SageMaker Feature Store Bucket ARN',
+    });
+    new StringParameter(this, 'SagemakerExecutionRoleARN', {
+      parameterName: '/rdi-mlops/stack-parameters/sagemaker-execution-role-arn',
+      stringValue: this.domain.executionRole.roleArn,
+      description: 'SageMaker Execution Role ARN',
+    });
 
     // Create a Step Function to cleanup the SageMaker resources
-    // new RDICleanupStepFunction(this, 'CleanupSagemakerProject', {
-    //   prefix: this.prefix,
-    //   removalPolicy: this.removalPolicy,
-    //   runtime: this.runtime,
-    //   sagemakerProjectBucketArn: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,
-    // });
+    new RDICleanupStepFunction(this, 'CleanupSagemakerProject', {
+      prefix: this.prefix,
+      removalPolicy: this.removalPolicy,
+      runtime: this.runtime,
+      sagemakerProjectBucketArn: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,
+    });
   }
 }
