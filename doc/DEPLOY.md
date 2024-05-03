@@ -63,9 +63,17 @@ It will
 2. package the code assets for the different stacks' deployment.
 3. deploy the stacks in sequential orders using CloudFormation.
 ## 5. Deploy the MLOps Pipelines
+#### Minimum Data Requirements
 > [!IMPORTANT]  
 > Note that the __DeepAR model requires at least 300 observations to train a model__. As the ingestion pipeline aggregates the data per minute, it means that you need to ingest data for at least 5 hours before you can train your first model. If you deploy the __Model Build__ pipeline before you have enough observations, the SageMaker pipeline __TrainModel__ stage will fail with the following error: `ClientError: ClientError: Very low number of time observations (found 50 observations in 1 time series). DeepAR requires at least 300 observations., exit code: 2`
 
+You can check the amount of observations stored in SageMaker Feature Store using Athena.
+1. In the Athena console, select the `sagemaker_featurestore` database
+2. Run the following query 
+```
+SELECT count(*) FROM "sagemaker_featurestore"."mlops_********_agg_feature_group_********";
+```
+#### Deployment
 Deploying the CDK project will deploy 3 CloudFormation stacks 
 * Common 
 * Data Ingestion 
