@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import { Stack, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { RDILambda } from '../lambda';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import { StateMachine, StateMachineType, IStateMachine, Choice, Condition } from 'aws-cdk-lib/aws-stepfunctions';
+import { StateMachine, StateMachineType, IStateMachine, Choice, Condition, DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import {
@@ -266,8 +266,8 @@ export class RDICleanupStepFunction extends Construct {
       );
 
     this.stateMachine = new StateMachine(this, 'StateMachine', {
-      definition,
       stateMachineName: stepFunctionName,
+      definitionBody: DefinitionBody.fromChainable(definition),
       role: stateMachineRole,
       timeout: Duration.minutes(20),
       stateMachineType: StateMachineType.STANDARD,
