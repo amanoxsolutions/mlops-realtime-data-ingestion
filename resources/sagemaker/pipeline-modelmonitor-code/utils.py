@@ -348,7 +348,6 @@ def extend_config(
             "ModelExplainabilityConfigS3Uri", baselines.get("Explainability", {}).get("ConfigFile", "Empty")
         ),
         "GroundTruthInput": f"s3://{monitor_outputs_bucket}/ground-truth-{stage_config['Parameters']['StageName']}/{args.sagemaker_project_name}-{stage_config['Parameters']['StageName']}",
-        "RecordPreprocessorSourceUri": f"s3://{monitor_outputs_bucket}/code-artifacts/monitoring-data-collection/{timestamp}/preprocessor.py",
         "ModelMonitorImageUri": monitor_image_uri,
         "ClarifyImageUri": clarify_image_uri,
         "DataQualityMonitoringOutputS3Uri": f"s3://{monitor_outputs_bucket}/monitor-output/data-quality",
