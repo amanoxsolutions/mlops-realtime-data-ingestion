@@ -138,7 +138,7 @@ if __name__ == "__main__":
     logger.info("Computing the mean weighted quantile loss.")
     weighted_quantile_loss = []
     for q in [1, 5, 9]:
-        df_aggregate[f"quantile_loss_{q}"] = 0
+        df_aggregate[f"quantile_loss_{q}"] = 0.0
         df_aggregate.loc[df_aggregate[f"quantile{q}"] > df_aggregate["target"], f"quantile_loss_{q}"] = (1-(q/10)) * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
         df_aggregate.loc[df_aggregate[f"quantile{q}"] <= df_aggregate["target"], f"quantile_loss_{q}"] = q/10 * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
         weighted_quantile_loss.append(2 * df_aggregate[f"quantile_loss_{q}"].sum() / abs(df_aggregate["target"]).sum())
