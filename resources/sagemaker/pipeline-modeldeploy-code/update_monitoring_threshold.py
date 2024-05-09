@@ -9,6 +9,29 @@ sm_client = boto3.client("sagemaker")
 s3_client = boto3.client("s3")
 ssm_client = boto3.client("ssm")
 
+def get_ssm_parameters(param_path: str) -> Dict[str, str]:
+    parameters = {}
+    try:
+        response = ssm_client.get_parameters_by_path(
+                Path=param_path,
+                Recursive=False,
+                WithDecryption=False
+            )
+        for param in response["Parameters"]:
+            parameters[param["Name"].split("/")[-1]] = param["Value"]
+        while next_token := response.get("NextToken"):
+            response = ssm_client.get_parameters_by_path(
+                Path=param_path,
+                Recursive=False,
+                WithDecryption=False,
+                NextToken=next_token
+            )
+            for param in response["Parameters"]:
+                parameters[param["Name"].split("/")[-1]] = param["Value"]
+    except Exception as e:
+        print(f"An error occurred reading the SSM stack parameters: {e}")
+    return parameters
+
 def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
     """Update the model validation threshold in the SSM Parameter Store if the threshold is lower
     than the current threshold stored in the SSM Parameter Store.
@@ -42,14 +65,7 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         logger.info(f"Model evaluation output: {evaluation_output}")
         weighted_quantile_loss_value = evaluation_output["deepar_metrics"]["weighted_quantile_loss"]["value"]
         # Read the SSM Parameters storing the model validation thresholds by the parameters path
-        model_validation_thresholds = {}
-        response = ssm_client.get_parameters_by_path(
-            Path="/rdi-mlops/sagemaker/model-build/validation-threshold",
-            Recursive=False,
-            WithDecryption=False,
-        )
-        for param in response.get("Parameters"):
-            model_validation_thresholds[param["Name"].split("/")[-1]] = float(param["Value"])
+        model_validation_thresholds = get_ssm_parameters("/rdi-mlops/sagemaker/model-build/validation-threshold")
         # Update the threshold stored in the SSM Parameter Store if the threshold is lower
         if weighted_quantile_loss_value < model_validation_thresholds["weighted_quantile_loss"]:
             ssm_client.put_parameter(

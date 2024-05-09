@@ -1,10 +1,12 @@
 import json
 import sagemaker
 import boto3
+import botocore
 import pandas as pd
 import numpy as np
 from typing import List, TypedDict
 from sagemaker.serializers import IdentitySerializer
+from typing import Dict
 
 class DeepARData(TypedDict):
     start: str
@@ -136,3 +138,35 @@ def write_dicts_to_file(path: str, data: List[DeepARData]) -> None:
         for d in data:
             fp.write(json.dumps(d).encode("utf-8"))
             fp.write("\n".encode("utf-8"))
+
+def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str, str]:
+    """Retrieves the SSM parameters from the specified path
+
+    Args:
+        ssm_client (botocore.client): The SSM client
+        param_path (str): The path to the SSM parameters
+
+    Returns:
+        Dict[str, str]: The SSM parameters
+    """
+    parameters = {}
+    try:
+        response = ssm_client.get_parameters_by_path(
+                Path=param_path,
+                Recursive=False,
+                WithDecryption=False
+            )
+        for param in response["Parameters"]:
+            parameters[param["Name"].split("/")[-1]] = param["Value"]
+        while next_token := response.get("NextToken"):
+            response = ssm_client.get_parameters_by_path(
+                Path=param_path,
+                Recursive=False,
+                WithDecryption=False,
+                NextToken=next_token
+            )
+            for param in response["Parameters"]:
+                parameters[param["Name"].split("/")[-1]] = param["Value"]
+    except Exception as e:
+        print(f"An error occurred reading the SSM stack parameters: {e}")
+    return parameters

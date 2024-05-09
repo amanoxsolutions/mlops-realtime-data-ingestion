@@ -18,6 +18,7 @@ import json
 
 import boto3
 import sagemaker
+import botocore
 import sagemaker.session
 
 from sagemaker.estimator import Estimator
@@ -27,8 +28,7 @@ from sagemaker.transformer import Transformer
 
 from sagemaker.model_metrics import (
     MetricsSource,
-    ModelMetrics,
-    FileSource
+    ModelMetrics
 )
 from sagemaker.drift_check_baselines import DriftCheckBaselines
 from sagemaker.processing import (
@@ -36,7 +36,6 @@ from sagemaker.processing import (
     ProcessingOutput,
     ScriptProcessor
 )
-from sagemaker.sklearn.processing import SKLearnProcessor
 from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
@@ -175,6 +174,37 @@ def get_pipeline_custom_tags(new_tags, region, sagemaker_project_name=None):
         print(f"Error getting project tags: {e}")
     return new_tags
 
+def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str, str]:
+    """Retrieves the SSM parameters from the specified path
+
+    Args:
+        ssm_client (botocore.client): The SSM client
+        param_path (str): The path to the SSM parameters
+
+    Returns:
+        Dict[str, str]: The SSM parameters
+    """
+    parameters = {}
+    try:
+        response = ssm_client.get_parameters_by_path(
+                Path=param_path,
+                Recursive=False,
+                WithDecryption=False
+            )
+        for param in response["Parameters"]:
+            parameters[param["Name"].split("/")[-1]] = param["Value"]
+        while next_token := response.get("NextToken"):
+            response = ssm_client.get_parameters_by_path(
+                Path=param_path,
+                Recursive=False,
+                WithDecryption=False,
+                NextToken=next_token
+            )
+            for param in response["Parameters"]:
+                parameters[param["Name"].split("/")[-1]] = param["Value"]
+    except Exception as e:
+        print(f"An error occurred reading the SSM stack parameters: {e}")
+    return parameters
 
 def get_pipeline(
     region,
@@ -241,43 +271,11 @@ def get_pipeline(
         Name="/rdi-mlops/stack-parameters/sagemaker-feature-group-name"
     )["Parameter"]["Value"]
     # Read the SSM Paramters for the model prediction target
-    model_target_parameters = {}
-    try:
-        response = ssm_client.get_parameters_by_path(
-            Path="/rdi-mlops/sagemaker/model-build/target",
-            Recursive=False,
-            WithDecryption=False,
-        )
-        for param in response["Parameters"]:
-            model_target_parameters[param["Name"].split("/")[-1]] = param["Value"]
-    except Exception as e:
-        print(f"An error occurred reading the model target parameters: {e}")
-
+    model_target_parameters = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/target")
     # Read the SSM Parameters storing the model training hyperparamters
-    model_training_hyperparameters = {}
-    try:
-        response = ssm_client.get_parameters_by_path(
-            Path="/rdi-mlops/sagemaker/model-build/training-hyperparameters",
-            Recursive=False,
-            WithDecryption=False,
-        )
-        for param in response["Parameters"]:
-            model_training_hyperparameters[param["Name"].split("/")[-1]] = param["Value"]
-    except Exception as e:
-        print(f"An error occurred reading the model training hyperparameters: {e}")
-
+    model_training_hyperparameters = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/training-hyperparameters")
     # Read the SSM Parameters storing the model validation thresholds by the parameters path
-    model_validation_thresholds = {}
-    try:
-        response = ssm_client.get_parameters_by_path(
-            Path="/rdi-mlops/sagemaker/model-build/validation-threshold",
-            Recursive=False,
-            WithDecryption=False,
-        )
-        for param in response["Parameters"]:
-            model_validation_thresholds[param["Name"].split("/")[-1]] = float(param["Value"])
-    except Exception as e:
-        print(f"An error occurred reading the model validation thresholds: {e}")
+    model_validation_thresholds = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold")
 
     #
     # Step 1: Data Preprocessing

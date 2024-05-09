@@ -18,7 +18,7 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any, TypeAlias
 from sagemaker.feature_store.feature_group import FeatureGroup
-from utils import DeepARPredictor, DeepARData, get_session, write_dicts_to_file
+from utils import DeepARPredictor, DeepARData, get_session, write_dicts_to_file, get_ssm_parameters
 
 
 # create clients
@@ -33,50 +33,18 @@ s3_client = boto3.resource("s3", config=boto3_config)
 cw_client = boto3.client("cloudwatch", config=boto3_config)
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--local-data-folder", type=str, required=True)
     args = parser.parse_args()
     local_data_folder = args.local_data_folder
     # Read the SSM Paramters for the stack
-    stack_parameters = {}
-    try:
-        response = ssm_client.get_parameters_by_path(
-            Path="/rdi-mlops/stack-parameters",
-            Recursive=False,
-            WithDecryption=False,
-        )
-        for param in response["Parameters"]:
-            stack_parameters[param["Name"].split("/")[-1]] = param["Value"]
-    except Exception as e:
-        print(f"An error occurred reading the SSM stack parameters: {e}")
+    stack_parameters = get_ssm_parameters(ssm_client, "/rdi-mlops/stack-parameters")
     # Read the SSM Paramters for the model prediction target
-    model_target_parameters = {}
-    try:
-        response = ssm_client.get_parameters_by_path(
-            Path="/rdi-mlops/sagemaker/model-build/target",
-            Recursive=False,
-            WithDecryption=False,
-        )
-        for param in response["Parameters"]:
-            model_target_parameters[param["Name"].split("/")[-1]] = param["Value"]
-    except Exception as e:
-        print(f"An error occurred reading the SSM model target parameters: {e}")
+    model_target_parameters = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/target")
     # Read the SSM Parameters storing the model validation thresholds by the parameters path
-    model_validation_thresholds = {}
-    try:
-        response = ssm_client.get_parameters_by_path(
-            Path="/rdi-mlops/sagemaker/model-build/validation-threshold",
-            Recursive=False,
-            WithDecryption=False,
-        )
-        for param in response["Parameters"]:
-            model_validation_thresholds[param["Name"].split("/")[-1]] = float(param["Value"])
-    except Exception as e:
-        print(f"An error occurred reading the model validation thresholds: {e}")
+    model_validation_thresholds = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold")
 
-        
     # Set some Buckets variables
     model_artifacts_bucket = f"{stack_parameters['project-prefix']}-sagemaker-experiment-{stack_parameters['bucket-suffix']}"
 
