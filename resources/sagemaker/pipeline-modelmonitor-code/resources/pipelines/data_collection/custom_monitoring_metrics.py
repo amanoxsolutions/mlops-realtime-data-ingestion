@@ -142,7 +142,7 @@ if __name__ == "__main__":
         df_aggregate.loc[df_aggregate[f"quantile{q}"] > df_aggregate["target"], f"quantile_loss_{q}"] = (1-(q/10)) * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
         df_aggregate.loc[df_aggregate[f"quantile{q}"] <= df_aggregate["target"], f"quantile_loss_{q}"] = q/10 * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
         weighted_quantile_loss.append(2 * df_aggregate[f"quantile_loss_{q}"].sum() / abs(df_aggregate["target"]).sum())
-    weighted_quantile_loss = sum(weighted_quantile_loss) / len(weighted_quantile_loss)
+    mean_weighted_quantile_loss = sum(weighted_quantile_loss) / len(weighted_quantile_loss)
 
     report_dict = {
         "deepar_metrics": {
@@ -151,7 +151,7 @@ if __name__ == "__main__":
                 "standard_deviation": "NaN"
             },
             "weighted_quantile_loss": {
-                "value": weighted_quantile_loss,
+                "value": mean_weighted_quantile_loss,
                 "standard_deviation": "NaN"
             }
         },
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                     }
                 ],
                 "Unit": "None",
-                "Value": weighted_quantile_loss
+                "Value": mean_weighted_quantile_loss
             },
         ],
         Namespace="CustomModelMonitoring"
@@ -186,7 +186,7 @@ if __name__ == "__main__":
                     }
                 ],
                 "Unit": "None",
-                "Value": model_validation_thresholds['weighted_quantile_loss']
+                "Value": float(model_validation_thresholds['weighted_quantile_loss'])
             },
         ],
         Namespace="CustomModelMonitoring"
