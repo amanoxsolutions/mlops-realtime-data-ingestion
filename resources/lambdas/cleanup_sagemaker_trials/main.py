@@ -48,9 +48,9 @@ def delete_trials(trial: Dict):
     trial_components = sm.list_trial_components(TrialName=trial_name).get("TrialComponentSummaries")
     for trial_component in trial_components:
         trial_component_name = trial_component.get("TrialComponentName")
-        # First dissaciate the trial component from the trial
+        # First disassociate the trial component from the trial
         sm.disassociate_trial_component(TrialComponentName=trial_component_name, TrialName=trial_name)
-        logger.info(f"Dissaciated trial {trial_name} component {trial_component_name}")
+        logger.info(f"Disassociated trial {trial_name} component {trial_component_name}")
         # Then delete the trial component
         sm.delete_trial_component(TrialComponentName=trial_component_name)
         logger.info(f"Deleted trial {trial_name} component {trial_component_name}")
