@@ -807,30 +807,33 @@ Resources:
             - Ref: StageName
             - -model-monitoring-dashboard
       DashboardBody: 
-        Fn::Sub: |
-          {
-            "widgets": [
-                {
-                    "type": "metric",
-                    "x": 0,
-                    "y": 0,
-                    "width": 24,
-                    "height": 9,
-                    "properties": {
-                        "view": "timeSeries",
-                        "stacked": false,
-                        "metrics": [
-                            [ "CustomModelMonitoring", "weighted_quantile_loss_threshold", "StageName", "staging", { "region": "${AWS::Region}" } ],
-                            [ ".", "weighted_quantile_loss", ".", ".", { "region": "${AWS::Region}" } ],
-                            [ "AWS/Lambda", "Invocations", "FunctionName", "${SageMakerProjectName}-staging-trigger-modelbuild", { "region": "${AWS::Region}", "stat": "Sum" } ]
-                        ],
-                        "region": "${AWS::Region}",
-                        "period": 3600,
-                        "stat": "Maximum"
-                    }
-                }
-            ]
-          }
+        Fn::Sub: 
+          - |
+            {
+              "widgets": [
+                  {
+                      "type": "metric",
+                      "x": 0,
+                      "y": 0,
+                      "width": 24,
+                      "height": 9,
+                      "properties": {
+                          "view": "timeSeries",
+                          "stacked": false,
+                          "metrics": [
+                              [ "CustomModelMonitoring", "weighted_quantile_loss_threshold", "StageName", "${StageName}", { "region": "${AWS::Region}" } ],
+                              [ ".", "weighted_quantile_loss", ".", ".", { "region": "${AWS::Region}" } ],
+                              [ "AWS/Lambda", "Invocations", "FunctionName", "${SageMakerProjectName}-${StageName}-trigger-modelbuild", { "region": "${AWS::Region}", "stat": "Sum" } ]
+                          ],
+                          "region": "${AWS::Region}",
+                          "period": 3600,
+                          "stat": "Maximum"
+                      }
+                  }
+              ]
+            }
+          - StageName: 
+              Ref: StageName
 Outputs:
   MonitorSageMakerProjectName:
     Value:
