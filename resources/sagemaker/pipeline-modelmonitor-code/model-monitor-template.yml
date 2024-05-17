@@ -775,6 +775,8 @@ Resources:
         Fn::Join:
           - ''
           - - Ref: SageMakerProjectName
+            - '-'
+            - Ref: StageName
             - -custom-alarm
       AlarmDescription: 'Custom CloudWatch Alarm for model monitoring'
       AlarmActions:
