@@ -100,7 +100,7 @@ pip install git-remote-codecommit
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 ```
-9. Then follow [these instructions](https://docs.aws.amazon.com/sagemaker/latest/dg/code-editor-use-clone-a-repository.html) to clone each of the model pipeline repositories using the HTTPS link you copied in step [1]
+9. Then follow [these instructions](https://docs.aws.amazon.com/sagemaker/latest/dg/code-editor-use-clone-a-repository.html) to clone each of the model pipeline repositories using the __HTTPS (GRC)__  link you copied in step [1]
 10. For each clone repository (build, deploy & monitor):
     1. In Code Editor open the repository folder
     2. Delete the entire content of each repository
