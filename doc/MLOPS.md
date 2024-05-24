@@ -51,3 +51,9 @@ Once the model is registered in SageMaker, it must be manually approved in order
 ## SageMaker Model Evaluation
 ## Custom Model Evaluation
 ## Triggering Automatic  Model Retraining
+## Challenges 
+### Using a SageMaker Project
+The use of the SageMaker Project provided through AWS Service Catalog, was of great help to quickly build the overall framework for our fully automated MLOps pipeline. However it comes with a constraint: the model build, deploy and monitor pipelines are fixed by that AWS Service Catalog product and might not exactly fit your need. In this demo for example, in order set and update the model accuracy threshold stored in SSM parameters we CoudeBuild phase of the different pipelines to update that threshold (Build phase of the “Model Deploy” pipeline) or read it to create the alarm metrics. This is not necessarily the best way and place to do that, but it is the best solution we found given that fixed framework.
+
+As we every built-in framework, you can save time and move faster by benefiting from a pre-built solution, but you lose in flexibility.
+### Custom Metrics
