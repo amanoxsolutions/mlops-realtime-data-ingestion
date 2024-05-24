@@ -26,7 +26,7 @@ The architecture is based on AWS provided SageMaker project for MLOps (provision
 
 ![Architecture](./images/mlops-overview.jpg)
 
-1. The “Model Build” repository and pipeline deploy a SageMaker pipeline to train the forecasting model. The build phase of that pipeline also creates SSM Parameters holding the parameters for the model training and to evaluate the model accuracy.
+1. The “Model Build” repository and pipeline deploy a SageMaker pipeline to train the forecasting model. The build phase of that pipeline also creates SSM Parameters (if they do not exist) holding the parameters for the model training and to evaluate the model accuracy.
 2. The approval of a trained model automatically triggers the “Model Deploy” pipeline.
 3. The “Model Deploy” pipeline deploys in the staging environment (and later on in the production environment if approved) of the model behind an Amazon SageMaker API Endpoint.
 4. Once the endpoint is in service, this automatically triggers the deployment of the “Model Monitoring” pipeline to monitor the new model.
