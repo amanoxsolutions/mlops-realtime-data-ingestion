@@ -1,4 +1,4 @@
-import lib from './lib';
+const lib = require('./lib.js');
 
 // Health check function
 async function healthCheck() {

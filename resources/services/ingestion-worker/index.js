@@ -1,4 +1,4 @@
-import lib from './lib';
+const lib = require('./lib.js');
 
 const detailType = process.env.EVENT_DETAIL_TYPE || 'Incoming Data'
 
