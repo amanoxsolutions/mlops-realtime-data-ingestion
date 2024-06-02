@@ -1,6 +1,6 @@
-const axios = require('axios');
-const { EventBridgeClient, PutEventsCommand } = require("@aws-sdk/client-eventbridge");
-const { CloudWatchClient, PutMetricDataCommand  } = require("@aws-sdk/client-cloudwatch");
+import axios from 'axios';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
+import { CloudWatchClient, PutMetricDataCommand  } from '@aws-sdk/client-cloudwatch';
 
 const ebClient = new EventBridgeClient({
   region: process.env.AWS_REGION,
@@ -35,7 +35,7 @@ function getEntrySize(entry) {
 // Function to pull data from the public API
 async function ingestData(throwError = false) {
   try {
-    latestblockResponse = await axios.get('https://blockchain.info/unconfirmed-transactions?format=json');
+    let latestblockResponse = await axios.get('https://blockchain.info/unconfirmed-transactions?format=json');
     const transactions = latestblockResponse.data;
     if (transactions) {
       console.log(`Pulled ${transactions.txs.length} data points from the public API`);
@@ -54,7 +54,7 @@ async function pushEntryOnEventBus(entry, throwError = false) {
     Entries: [entry],
   }; 
   try {
-    ebResponse = await ebClient.send(new PutEventsCommand(params));
+    await ebClient.send(new PutEventsCommand(params));
     console.log(`-- Pushed data points on the eventBus ${entry.EventBusName}`);
   } catch (error) {
     console.log(error);
@@ -133,7 +133,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
       const tempEntrySize = getEntrySize(entry);
       //if there is only one transaction in the entry and it is superior to the 256KB limit
       // discard that event for the time being
-      if (currentEntrySize > 256000 && entryTransactions.length == 1) {
+      if (currentEntrySize > 256000 && entryTransactions.length === 1) {
         //if there is only one transaction in the entry and it is superior to the 256KB limit
         // discard that entry for the time being
         console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${tempEntrySize} bytes superior to the limit of 256KB`);
@@ -165,7 +165,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
       pushEntryOnEventBus(Object.assign({}, entry), throwError);
       ingestedDataSize += currentEntrySize;
     } else {
-      console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${tempEntrySize} bytes superior to the limit of 256KB`);
+      console.log(`-- Discarding entry ${numberOfEntries} containing 1 transaction of size ${currentEntrySize} bytes superior to the limit of 256KB`);
     }
   } else {
     ingestedDataSize = entrySize;
