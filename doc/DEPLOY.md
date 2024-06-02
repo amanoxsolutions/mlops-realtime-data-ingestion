@@ -20,9 +20,19 @@ new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
   codestarConnectionName: 'mlops-realtime-data-ingestion',
 });
 ```
-## 4. Deploy the Environment
+## 4. CodeBuild Service Quotas
+The fourth step of the project deployment pipeline creates 30 Assets using CodeBuild.
+In the AWS Quotas console, make sure that the CodeBuild service quotas are set to at least 30. 
+If not, request a quota increase. Otherwise, the deployment will fail with the following error:
+```
+Cannot have more than X builds in queue for the account.
+```
+An alternative is to click on the `Retry failed actions` button in the CodePipeline console to restart the build for
+the failed assets.
+## 5. Deploy the Environment
 > [!TIP]
-> If your AWS CLI is using a named profile instead of the default profile,  specify this profile when issuing AWS CLI & CDK commands using the `--profile <your profile name>` option or the AWS_PROFILE environment variable.
+> If your AWS CLI is using a named profile instead of the default profile,  specify this profile when issuing 
+> AWS CLI & CDK commands using the `--profile <your profile name>` option or the AWS_PROFILE environment variable.
 
 1. Start the Docker Desktop application.
 
@@ -57,15 +67,20 @@ To deploy the stack of a specific branch
 cdk deploy --context branchToDeploy=feature/myFeatureBranch
 ```
 
-This will deploy a self-mutating CI/CD pipeline. When you push code into you repository, the pipeline will be automatically triggered.
+This will deploy a self-mutating CI/CD pipeline. When you push code into you repository, the pipeline will be 
+automatically triggered.
 It will 
 1. update itself if new stages have been added in the CI/CD pipeline.
 2. package the code assets for the different stacks' deployment.
 3. deploy the stacks in sequential orders using CloudFormation.
-## 5. Deploy the MLOps Pipelines
+## 6. Deploy the MLOps Pipelines
 #### Minimum Data Requirements
 > [!IMPORTANT]  
-> Note that the __DeepAR model requires at least 300 observations to train a model__. As the ingestion pipeline aggregates the data per minute, it means that you need to ingest data for at least 5 hours before you can train your first model. If you deploy the __Model Build__ pipeline before you have enough observations, the SageMaker pipeline __TrainModel__ stage will fail with the following error: `ClientError: ClientError: Very low number of time observations (found 50 observations in 1 time series). DeepAR requires at least 300 observations., exit code: 2`
+> Note that the __DeepAR model requires at least 300 observations to train a model__. As the ingestion pipeline 
+> aggregates the data per minute, it means that you need to ingest data for at least 5 hours before you can train 
+> your first model. If you deploy the __Model Build__ pipeline before you have enough observations, the SageMaker 
+> pipeline __TrainModel__ stage will fail with the following error: `ClientError: ClientError: Very low number of 
+> time observations (found 50 observations in 1 time series). DeepAR requires at least 300 observations., exit code: 2`
 
 You can check the amount of observations stored in SageMaker Feature Store using Athena.
 1. In the Athena console, select the `sagemaker_featurestore` database
@@ -79,12 +94,20 @@ Deploying the CDK project will deploy 3 CloudFormation stacks
 * Data Ingestion 
 * SageMaker
 
-The last one, through the use of Service Catalog will deploy a 4th CloudFormation stack for the MLOps SageMaker project. As [described in the overall architecture](../README.md), this will deploy 3 CodeCommit repositories, each with a corresponding CodePipeline pipeline.
-At first all those pipelines will fail; __this is normal__ since the code contained in those pipelines does not fit the project and how could the __Model Deploy__ pipeline deploy a model and the __Model Monitor__ pipeline deploy the resources to monitor a model, when none has been trained yet?
+The last one, through the use of Service Catalog will deploy a 4th CloudFormation stack for the MLOps SageMaker project.
+As [described in the overall architecture](../README.md), this will deploy 3 CodeCommit repositories, each with a corresponding 
+CodePipeline pipeline.
 
-The code for each pipeline is provided to you in the `\resources\sagemaker` folder. You will have to clone each of the CodeCommit repositories, replace the entire content with the one provided for each pipeline and commit the project code for each repository. 
+At first all those pipelines will fail; __this is normal__ since the code contained in those pipelines does not fit the 
+project and how could the __Model Deploy__ pipeline deploy a model and the __Model Monitor__ pipeline deploy the 
+resources to monitor a model, when none has been trained yet?
 
-The project provides you a SageMaker development environment with all the necessary credentials already granted, which will simplify performing the operation. In the AWS Console,
+The code for each pipeline is provided to you in the `\resources\sagemaker` folder. You will have to clone each of the 
+CodeCommit repositories, replace the entire content with the one provided for each pipeline and commit the project code 
+for each repository. 
+
+The project provides you a SageMaker development environment with all the necessary credentials already granted, which 
+will simplify performing the operation. In the AWS Console,
 1. Go to the __CodeCommit__ and copy the __HTTPS (GRC)__ link to clone each of the __Model Build__, __Model Deploy__ and __Model Monitor__ pipelines
 2. Then go the the __SageMaker__ service
 3. On the left panel, go to __Admin configurations > Domains__
@@ -107,5 +130,8 @@ git config --global user.name "Your Name"
     2. Upload the code from the `\resources\sagemaker` folder from your computer (pay attention to copy the right repository code)
     3. Commit & push all the changes for each repository
 
-The __Model Build__ pipeline will start right away, provision and running the SageMaker pipeline to train a model. But note that the __Model Deploy__ and __Model Monitor__ pipelines will also run and fail. At this stage this is normal since no model has been trained yet. Once the __Model Build__ pipeline completes and a model is waiting for your approval to be deployed, the __Model Deploy__ pipeline will be triggered automatically.
+The __Model Build__ pipeline will start right away, provision and running the SageMaker pipeline to train a model. 
+But note that the __Model Deploy__ and __Model Monitor__ pipelines will also run and fail. At this stage this is normal 
+since no model has been trained yet. Once the __Model Build__ pipeline completes and a model is waiting for your 
+approval to be deployed, the __Model Deploy__ pipeline will be triggered automatically.
 See the [The MLOps Pipeline](./MLOPS.md) documentation for more details.
