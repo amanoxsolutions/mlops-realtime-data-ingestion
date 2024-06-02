@@ -16,10 +16,15 @@ In the [`bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-r
 ```
 new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
   [...]
-  repoName: 'amanoxsolutions/mlops-realtime-data-ingestion',
-  codestarConnectionName: 'mlops-realtime-data-ingestion',
+  repoName: '<your GitHub user>/mlops-realtime-data-ingestion',
+  codestarConnectionName: '<your CodeStar connection name>',
 });
 ```
+> [!IMPORTANT]
+> You must push the above changes to your repository fork before deploying the stack. The CodePipeline pipeline is a
+> self-mutating pipeline. It updates itself with the latest changes from the repository. If you do not push the changes
+> to the repository, the pipeline will fail as it will try to use the wrong CodeStar connection and download the
+> code from the wrong repository.
 ## 4. CodeBuild Service Quotas
 The fourth step of the project deployment pipeline creates 30 Assets using CodeBuild.
 In the AWS Quotas console, make sure that the CodeBuild service quotas are set to at least 30. 
