@@ -143,7 +143,7 @@ export class RDIIngestionWorker extends Construct {
       },
       logging: LogDrivers.awsLogs({ 
         logGroup: this.fargateLogGroup,
-        streamPrefix: `${props.prefix}-ingestion-worker-`,
+        streamPrefix: `${props.prefix}-ingestion-worker`,
       })
     });
     
