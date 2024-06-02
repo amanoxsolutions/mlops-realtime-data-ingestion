@@ -1,4 +1,3 @@
-import hash = require('object-hash');
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy  } from 'aws-cdk-lib';
 import {
@@ -65,7 +64,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
       assumedBy: new ServicePrincipal('scheduler.amazonaws.com'),
     });
     // Create the inline policy separatly to avoid circular dependencies
-    const eventBridgeSchedulerPolicy = new Policy(this, 'EventBridgeSchedulerPolicy', {
+    new Policy(this, 'EventBridgeSchedulerPolicy', {
       policyName: 'eventbridge-scheduler-policy',
       document: eventBridgeDocument,
       roles: [this.eventBridgeSchedulerRole],

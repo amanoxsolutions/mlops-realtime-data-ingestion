@@ -150,9 +150,6 @@ export class RDISagemakerProject extends Construct {
   constructor(scope: Construct, id: string, props: RDISagemakerProjectProps) {
     super(scope, id);
 
-    const region = Stack.of(this).region;
-    const account = Stack.of(this).account;
-
     this.prefix = props.prefix;
     this.portfolioId = props.portfolioId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;

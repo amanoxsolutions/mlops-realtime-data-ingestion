@@ -1,7 +1,7 @@
 import murmurhash = require('murmurhash'); 
  
- const fs = require('fs');
- const path = require('path');
+ import fs = require('fs');
+ import path = require('path');
 
  export function nthIndexOf(s: string, c: string, n: number): number {
     // Get the index of the nth occurence of a charachter in a string
@@ -30,7 +30,7 @@ export function getCurrentBranchName(p = process.cwd()): string | undefined {
         }
     }
     return branchName;
-};
+}
 
 export function getShortHashFromString(strToConvert: string, hashLength: number = 6): string {
   // Use murmur hash to generate a hash from the string and extract the first characters as a string

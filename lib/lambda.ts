@@ -11,8 +11,7 @@ import {
 } from 'aws-cdk-lib/aws-iam';
 import {
   Code,
-  Function,
-  IAlias,
+  Function as LambdaFunction,
   ILayerVersion,
   Runtime,
   Architecture,
@@ -53,8 +52,7 @@ interface RDILambdaProps {
 }
 
 export class RDILambda extends Construct {
-  public readonly function: Function;
-  public readonly alias: IAlias;
+  public readonly function: LambdaFunction;
   public readonly logGroup: ILogGroup;
   public readonly prefix: string;
   public readonly name: string;
@@ -125,7 +123,7 @@ export class RDILambda extends Construct {
       ];
     }
 
-    const lambda = new Function(this, 'function', {
+    const lambda = new LambdaFunction(this, 'function', {
       ...this.properties,
       layers: layers,
     });

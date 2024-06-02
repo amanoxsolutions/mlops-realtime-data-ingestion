@@ -315,7 +315,7 @@ export class RDIFeatureStore extends Construct {
       },
     });
 
-    const startFlinkApplication = new RDIStartFlinkApplication(this, 'StartFlinkApp', {
+    new RDIStartFlinkApplication(this, 'StartFlinkApp', {
       prefix: this.prefix,
       runtime: this.runtime,
       flink_application_name: this.flinkApp.applicationName,
@@ -370,7 +370,7 @@ export class RDIFeatureStore extends Construct {
     });
     glueJob.node.addDependency(glueDeployment)
 
-    const glueTrigger = new CfnTrigger(this, "GlueTrigger", {
+    new CfnTrigger(this, "GlueTrigger", {
       name: `${this.prefix}-glue-trigger`,
       actions: [{
         jobName: glueJob.name,

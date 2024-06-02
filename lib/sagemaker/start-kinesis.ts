@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { CustomResource, Duration, Stack } from 'aws-cdk-lib';
-import { Effect, PolicyStatement, Role, Policy, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { Effect, PolicyStatement, Role, PolicyDocument, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 
@@ -79,7 +79,7 @@ export class RDIStartFlinkApplication extends Construct {
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
 
-    const startKinesisAnalytics = new CustomResource(this, 'Resource', {
+    new CustomResource(this, 'Resource', {
       serviceToken: customResourceHandler.functionArn,
     });
   }
