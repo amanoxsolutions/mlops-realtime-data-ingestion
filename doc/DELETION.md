@@ -4,14 +4,14 @@ This project contains 3 main parts:
 * The SageMaker MLOps Project deployed using the Service Catalog through the CDK 
 * The different SageMaker resources deployed throughout the life of the MLOps pipeline (e.g. model endpoints, model monitoring resources, etc.)
 
-These resources have to be deleted following the below steps.
+These resources must be deleted following the below steps.
 ## 1. Stop SageMaker Studio App
 In your SageMaker Studio domain, make sure you stopped any running Code Editor and/or JupyterLab spaces.
 Otherwise the deletion of the SageMaker stack will fail.
-## 2. Delete the SageMaker MLOps ddeploy & monitor stacks
-The CDK SageMaker project uses AWS Service Catalog to deploy a the SageMaker MLOps project. Service Catalog uses CloudFormation in the background to deploy 4 stacks (2 for staging and 2 for prod) as shown in the screen capture below for the 2 staging stacks.
+## 2. Delete the SageMaker MLOps deploy & monitor stacks
+The CDK SageMaker project uses AWS Service Catalog to deploy the SageMaker MLOps project. Service Catalog uses CloudFormation in the background to deploy 4 stacks (2 for staging and 2 for prod) as shown in the screen capture below for the 2 staging stacks.
 ![](./images/sagemaker-project-cloudformation-stacks.jpg)
-In the CloudFormation console, delete each of these 4 stacks manually from top to bottom. The project stack will be deleted when deleting the CDK Sagemaker stack.
+In the CloudFormation console, delete each of these 4 stacks manually from top to bottom. The project stack will be deleted when deleting the CDK SageMaker stack.
 ## 3. Delete the SageMaker project stack
 In the CloudFormation console delete the SageMaker project stack (looking similar to the 3rd stack in the above screen capture).
 ## 4. Delete the SageMaker resources

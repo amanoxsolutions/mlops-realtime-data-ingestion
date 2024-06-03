@@ -41,7 +41,7 @@ the failed assets.
 
 1. Start the Docker Desktop application.
 
-2. Bootsrap the CDK (documentation [here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap))
+2. Bootstrap the CDK (documentation [here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_bootstrap))
 ```
 cdk bootstrap aws://<account number>/<aws region>
 ```
@@ -57,7 +57,7 @@ cdk bootstrap aws://123456789012/eu-west-1
 npm install
 ```
 
-4. Verify the stack before deploment
+4. Verify the stack before deployment
 ```
 cdk synth
 ```
@@ -72,7 +72,7 @@ To deploy the stack of a specific branch
 cdk deploy --context branchToDeploy=feature/myFeatureBranch
 ```
 
-This will deploy a self-mutating CI/CD pipeline. When you push code into you repository, the pipeline will be 
+This will deploy a self-mutating CI/CD pipeline. When you push code into your repository, the pipeline will be 
 automatically triggered.
 It will 
 1. update itself if new stages have been added in the CI/CD pipeline.
@@ -137,6 +137,6 @@ git config --global user.name "Your Name"
 
 The __Model Build__ pipeline will start right away, provision and running the SageMaker pipeline to train a model. 
 But note that the __Model Deploy__ and __Model Monitor__ pipelines will also run and fail. At this stage this is normal 
-since no model has been trained yet. Once the __Model Build__ pipeline completes and a model is waiting for your 
+since no model has been trained yet. Once the __Model Build__ pipeline completes, and a model is waiting for your 
 approval to be deployed, the __Model Deploy__ pipeline will be triggered automatically.
 See the [The MLOps Pipeline](./MLOPS.md) documentation for more details.
