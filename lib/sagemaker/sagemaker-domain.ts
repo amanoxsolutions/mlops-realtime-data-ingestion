@@ -14,6 +14,117 @@ import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { CfnUserProfile } from 'aws-cdk-lib/aws-sagemaker';
 
+
+interface RDISagemakerServiceCataloRolesProps {
+  readonly prefix: string;
+  readonly removalPolicy: RemovalPolicy;
+  readonly runtime: Runtime;
+  readonly customResourceLayerArn: string;
+}
+
+export class RDISagemakerServiceCataloRoles extends Construct {
+  public readonly prefix: string;
+  public readonly removalPolicy: RemovalPolicy;
+  public readonly runtime: Runtime;
+  public readonly customResource: CustomResource;
+  public readonly customResourceLayerArn: string;
+  public readonly serviceCatalagProductsLaunchRoleName: string;
+  public readonly serviceCatalogProductsUseRoleName: string;
+  public readonly serviceCatalagProductsExecutionRoleName: string;
+
+  constructor(scope: Construct, id: string, props: RDISagemakerServiceCataloRolesProps) {
+    super(scope, id);
+
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
+    const lambdaPurpose = 'CustomResourceToCreateUpdateDeleteSagemakerDomain'
+
+    this.prefix = props.prefix;
+    this.runtime = props.runtime;
+    this.removalPolicy = props.removalPolicy;
+    this.customResourceLayerArn = props.customResourceLayerArn;
+
+    const iamPolicyDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:GetRole',
+            'iam:CreateRole',
+            'iam:UpdateRole',
+            'iam:CreateServiceLinkedRole',
+            'iam:UpdateServiceLinkedRole',
+            'iam:PutRolePolicy',
+            'iam:DeleteRolePolicy',
+            'iam:AttachRolePolicy'
+          ],
+          resources: [`arn:aws:iam::${account}:role/*`],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:CreatePolicy',
+            'iam:UpdatePolicy',
+            'iam:DeletePolicy',
+          ],
+          resources: [`arn:aws:iam::${account}:policy/${this.prefix}*`],
+        }),
+        // IAM policy for CloudWatch Logs
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [`arn:aws:logs:${region}:${account}:*`	],
+        }),
+      ],
+    });
+
+    // Create the role for the custom resource Lambda
+    // We do this manually to be able to give it a human readable name
+    const singeltonRole = new Role(this, 'SingeltonRole', {
+      roleName: `${this.prefix}-cr-sagemaker-service-catalog-role`,
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+    });
+    // Create the inline policy separatly to avoid circular dependencies
+    const singeltonPolicy = new Policy(this, 'SingeltonPolicy', {
+      policyName: 'lambda-cr-sagemaker-service-catalog-policy',
+      document: iamPolicyDocument,
+      roles: [singeltonRole],
+    });
+
+    const customResourceLambda = new SingletonFunction(this, 'Singleton', {
+      functionName: `${this.prefix}-cr-sagemaker-service-catalog-roles`,
+      lambdaPurpose: lambdaPurpose,
+      uuid: '7a9e8df1-faa7-4b63-9e74-62a99d443267',
+      role: singeltonRole,
+      code: Code.fromAsset('resources/lambdas/service_catalog_roles'),
+      handler: 'main.lambda_handler',
+      timeout: Duration.minutes(1),
+      runtime: this.runtime,
+      logRetention: RetentionDays.ONE_WEEK,
+      layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
+    });
+
+    this.customResource = new CustomResource(this, 'Resource', {
+      serviceToken: customResourceLambda.functionArn,
+      properties: {
+        Account: account,
+        StackPrefix: this.prefix,
+      }
+    });
+    // The policy must be created and attached to the role before creating the custom resource
+    // otherwise the custom resource will fail to create
+    this.customResource.node.addDependency(singeltonPolicy);
+    // Get the ARNs of the roles from the custom resource output
+    this.serviceCatalagProductsLaunchRoleName = this.customResource.getAttString('ServiceCatalogProductsLaunchRoleName');
+    this.serviceCatalogProductsUseRoleName = this.customResource.getAttString('ServiceCatalogProductsUseRoleName');
+    this.serviceCatalagProductsExecutionRoleName = this.customResource.getAttString('ServiceCatalogProductsExecutionRoleName');
+  }
+}
+
 interface RDISagemakerDomainCustomResourceProps {
   readonly prefix: string;
   readonly sagemakerStudioDomainName: string;
@@ -112,14 +223,37 @@ export class RDISagemakerDomainCustomResource extends Construct {
           ],
           resources: [`arn:aws:logs:${region}:${account}:*`	],
         }),
-        // IAM policy for IAM 
+        // IAM policy for IAM
         new PolicyStatement({
           effect: Effect.ALLOW,
           actions: [
             'iam:GetRole',
             'iam:PassRole',
           ],
-          resources: [ props.defaultUserSettingsExecutionRoleArn	],
+          resources: [ props.defaultUserSettingsExecutionRoleArn ],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:CreateServiceLinkedRole',
+            'iam:UpdateServiceLinkedRole',
+          ],
+          resources: [`arn:aws:iam::${account}:role/*`],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:AttachRolePolicy',
+            'iam:PutRolePolicy',
+          ],
+          resources: [`arn:aws:iam::${account}:role/*`],
+        }),
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:CreatePolicy',
+          ],
+          resources: [`arn:aws:iam::${account}:policy/${this.prefix}*`],
         }),
       ],
     });
@@ -144,7 +278,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
       role: singeltonRole,
       code: Code.fromAsset('resources/lambdas/sagemaker_domain'),
       handler: 'main.lambda_handler',
-      timeout: Duration.minutes(10),
+      timeout: Duration.minutes(15),
       runtime: this.runtime,
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
@@ -161,6 +295,8 @@ export class RDISagemakerDomainCustomResource extends Construct {
         VpcId: props.vpcId,
         SubnetIds: props.subnetIds,
         RemovalPolicy: this.removalPolicy,
+        Account: account,
+        StackPrefix: this.prefix,
       }
     });
     // The policy must be created and attached to the role before creating the custom resource
@@ -377,6 +513,16 @@ export class RDISagemakerStudio extends Construct {
     this.executionRole.attachInlinePolicy(codeCommitPolicy);
 
     //
+    // Create SageMaker Service Catalo Roles
+    //
+    const serviceCatalogRoles = new RDISagemakerServiceCataloRoles(this, 'ServiceCatalogRoles', {
+        prefix: this.prefix,
+        removalPolicy: this.removalPolicy,
+        runtime: this.runtime,
+        customResourceLayerArn: props.customResourceLayerArn,
+    });
+
+    //
     // Create SageMaker Studio Domain
     //
     // Create the SageMaker Studio Domain using the custom resource
@@ -390,6 +536,7 @@ export class RDISagemakerStudio extends Construct {
       runtime: this.runtime,
       customResourceLayerArn: props.customResourceLayerArn,
     });
+    domain.node.addDependency(serviceCatalogRoles);
     this.domainId = domain.domainId;
     this.portfolioId = domain.portfolioId;
 
@@ -406,11 +553,11 @@ export class RDISagemakerStudio extends Construct {
     if (this.removalPolicy === RemovalPolicy.DESTROY) {
       // IMPORTANT
       // In order to delete the SageMaker Domain User, we need to delete all the apps first
-      // However, deleting an app can take more than 15 minutes, the maximum timeout for a 
+      // However, deleting an app can take more than 15 minutes, the maximum timeout for a
       // Lambda Function custom resource. The problem is that WaitConditions do not support
       // delete operations, i.e. they do not wait to receive a signal when the resource is
       // deleted. So there is currently no mechanism available to wait for the apps to be
-      // deleted before deleting the user. So currently the deletion of the apps and 
+      // deleted before deleting the user. So currently the deletion of the apps and
       // waiting for the user to be deleted is inside the custom resource. The only thing
       // we can do is hope to get lucky and that the apps are deleted before the 15 minutes
       // timeout. If not, CloudFormation stack deletion with result in an error.
@@ -431,7 +578,7 @@ export class RDISagemakerStudio extends Construct {
       ],
       effect: Effect.ALLOW,
       resources: [
-        `arn:aws:iam::${account}:role/service-role/AmazonSageMakerServiceCatalogProductsExecutionRole`,
+         `arn:aws:iam::${account}:role/service-role/${serviceCatalogRoles.serviceCatalagProductsExecutionRoleName}`,
         `${domain.eventBridgeSchedulerRole.roleArn}`,
       ],
     })
@@ -440,8 +587,8 @@ export class RDISagemakerStudio extends Construct {
     // Attach the data access policy to the IAM service role AmazonSageMakerServiceCatalogProductsUseRole
     // This is the role that will be automatically used by the SageMaker project for the MLOps pipeline
     // actions and it needs to have access to the data buckets and Feature Store
-    const serviceCatalogProductsUseRole = Role.fromRoleArn(this, 'ServiceCatalogProductsUseRole', 
-      `arn:aws:iam::${account}:role/service-role/AmazonSageMakerServiceCatalogProductsUseRole`
+    const serviceCatalogProductsUseRole = Role.fromRoleName(this, 'ServiceCatalogProductsUseRole',
+      serviceCatalogRoles.serviceCatalogProductsUseRoleName
     );
     serviceCatalogProductsUseRole.attachInlinePolicy(props.dataAccessPolicy);
     serviceCatalogProductsUseRole.attachInlinePolicy(ssmParameterPolicy);
