@@ -26,7 +26,7 @@ new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
 > to the repository, the pipeline will fail as it will try to use the wrong CodeStar connection and download the
 > code from the wrong repository.
 ## 4. CodeBuild Service Quotas
-The fourth step of the project deployment pipeline creates 30 Assets using CodeBuild.
+The fourth step of the project deployment pipeline creates 31 assets using CodeBuild.
 In the AWS Quotas console, make sure that the CodeBuild service quotas are set to at least 30. 
 If not, request a quota increase. Otherwise, the deployment will fail with the following error:
 ```
