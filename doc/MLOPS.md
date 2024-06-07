@@ -48,9 +48,35 @@ Once the model is registered in SageMaker, it must be manually approved in order
 1. As the model has been approved, we take this new model accuracy as the new model threshold – if it is better (lower is better for our metric) than the existing one – and update the SSM parameter. You might not want to do that for your use case, as you might have fixed business/legal metric that you must match. But for this demo we decided to update the model accuracy as new models are retrained, hopefully building more and more accurate models as time passes.
 2. A first AWS CodeDeploy stage deploys the new model behind an Amazon SageMaker endpoint which can then be used to predict 30 data points in the future. 
 3. Once the model has been deployed behind the staging endpoint, the pipeline has a manual approval stage before deploying the new model in production. If approved, then a second AWS CodeDeploy stage deploys the new model behind a second Amazon SageMaker endpoint for production.
-## SageMaker Model Evaluation
-## Custom Model Evaluation
-## Triggering Automatic  Model Retraining
+## SageMaker Model Monitoring
+The SageMaker service includes a model monitoring functionality running on a schedule. At high level it simply compares predicted values from the model endpoints to ground truth values, computes an accuracy metric and raises an alarm if the accuracy is below the threshold you defined.
+### How is the Monitoring Metric Computed?
+As per AWS [documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor-model-quality.html):
+> Model quality monitoring jobs monitor the performance of a model by comparing the predictions that the model makes with the actual Ground Truth labels that the model attempts to predict. 
+> To do this, model quality monitoring merges data that is captured from real-time or batch inference with actual labels that you store in an Amazon S3 bucket, and then compares the predictions with the actual labels.
+#### How is the model accuracy threshold configured?
+When you trained your SageMaker model, the last step of the SageMaker pipeline stores in S3 the latest model baseline. When the "Model Monitor" CodePipeline pipeline is executed, it goes and reads those results to deploy the model monitoring with the latest model accuracy threshold.
+#### How are model predictions collected?
+By enabling [Data Capture](https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor-data-capture.html) on your model endpoint, you can get the SageMaker model endpoint to store the predictions into an S3 bucket.
+When the monitoring job is configured to monitor the model endpoint, it will use the endpoint data capture configuration to retrieve the rpedictions and use them to monitor the model accuracy.
+#### How are ground truth data collected?
+When you create your monitoring job you specify the S3 path where your ground truth label will be stored. You must ingest your ground truth label in that S3 bucket and assign them an `eventId` or `inferenceId` ([see documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor-model-quality-merge.html)) which will be used to match ground truth data with predictions. 
+
+Then on the defined scheduled the model monitoring will collect both your ground truth and predictions data
+### The Limitations of AWS Built-in Model Monitoring
+Currently:
+1. It is built for tabular datasets and models, but in our case we are dealing with time series and a forecasting model.
+2. It only computes classic [regression, classification or multiclass metrics](https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor-model-quality-metrics.html) like `MAE`, `RMSE`, `confusion matrix`, etc. but in this demo we chose the Mean Quantile Loss metric to evaluate our model. 
+3. It can only be ran on a schedule and cannot be triggered based on events. This is an issue in our case. As we are dealing with time series, instead of tabular data, we have to generate the monitoring data before the monitoring job runs.
+4. A model monitoring raising an Alarm if the model accuracy falls below the threshold does not generate an event in AWS EvntBridge. So it is not possible to directly trigger task automation. 
+
+To address these issues in the demo, we:
+1. create
+2. switched to the RMS (which is a valid metric for the DeepAR algorithm).
+3. estimated the amount of time it takes for our monitoring pipeline job to precompute the data for the monitoring job and scheduled it before the monitoring job which is run every hour.
+4. built our on custom metric and use AWS CloudWatch Alarm (see the section below).
+## Custom Model Monitoring
+## Triggering Automatic Model Retraining
 ## Challenges 
 ### Using a SageMaker Project
 The use of the SageMaker Project provided through AWS Service Catalog, was of great help to quickly build the overall framework for our fully automated MLOps pipeline. However it comes with a constraint: the model build, deploy and monitor pipelines are fixed by that AWS Service Catalog product and might not exactly fit your need. In this demo for example, in order set and update the model accuracy threshold stored in SSM parameters we CoudeBuild phase of the different pipelines to update that threshold (Build phase of the “Model Deploy” pipeline) or read it to create the alarm metrics. This is not necessarily the best way and place to do that, but it is the best solution we found given that fixed framework.
