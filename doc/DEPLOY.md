@@ -135,8 +135,8 @@ git config --global user.name "Your Name"
     2. Upload the code from the `\resources\sagemaker` folder from your computer (pay attention to copy the right repository code)
     3. Commit & push all the changes for each repository
 
-The __Model Build__ pipeline will start right away, provision and running the SageMaker pipeline to train a model. 
+The __Model Build__ pipeline will start right away, provisioning and running the SageMaker pipeline to train a model. 
 But note that the __Model Deploy__ and __Model Monitor__ pipelines will also run and fail. At this stage this is normal 
-since no model has been trained yet. Once the __Model Build__ pipeline completes, and a model is waiting for your 
-approval to be deployed, the __Model Deploy__ pipeline will be triggered automatically.
+since no model has been trained yet. Once the __Model Build__ pipeline completes, a model is waiting for your 
+approval to be deployed. If you approve it the __Model Deploy__ pipeline will be triggered automatically.
 See the [The MLOps Pipeline](./MLOPS.md) documentation for more details.
