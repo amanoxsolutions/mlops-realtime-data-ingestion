@@ -18,7 +18,6 @@ import json
 
 import boto3
 import sagemaker
-import botocore
 import sagemaker.session
 
 from sagemaker.estimator import Estimator
@@ -174,7 +173,7 @@ def get_pipeline_custom_tags(new_tags, region, sagemaker_project_name=None):
         print(f"Error getting project tags: {e}")
     return new_tags
 
-def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str, str]:
+def get_ssm_parameters(ssm_client, param_path):
     """Retrieves the SSM parameters from the specified path
 
     Args:
