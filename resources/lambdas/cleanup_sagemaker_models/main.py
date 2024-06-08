@@ -41,4 +41,28 @@ def lambda_handler(event, context):
     for model_name in model_names:
         sm.delete_model(ModelName=model_name)
         logger.info(f"Deleted model {model_name}")
+    # List all the model package groups with a name starting with the project prefix
+    model_package_groups = []
+    paginator = sm.get_paginator("list_model_package_groups")
+    for page in paginator.paginate():
+        for model_package_group in page["ModelPackageGroupSummaryList"]:
+            if model_package_group["ModelPackageGroupName"].startswith(project_prefix):
+                model_package_groups.append(model_package_group)
+    logger.info(f"Found {len(model_package_groups)} model package groups to delete")
+    # List all the model package versions for each model package group
+    model_package_versions = []
+    for model_package_group in model_package_groups:
+        paginator = sm.get_paginator("list_model_packages")
+        for page in paginator.paginate(ModelPackageGroupName=model_package_group["ModelPackageGroupName"]):
+            for model_package in page["ModelPackageSummaryList"]:
+                model_package_versions.append(model_package)
+    logger.info(f"Found {len(model_package_versions)} model package versions to delete")
+    # Delete all the model package versions in the list
+    for model_package_version in model_package_versions:
+        sm.delete_model_package(ModelPackageName=model_package_version["ModelPackageName"])
+        logger.info(f"Deleted model package {model_package_version['ModelPackageName']}")
+    # Delete all the model package groups in the list
+    for model_package_group in model_package_groups:
+        sm.delete_model_package_group(ModelPackageGroupName=model_package_group["ModelPackageGroupName"])
+        logger.info(f"Deleted model package group {model_package_group['ModelPackageGroupName']}")
     return {}
