@@ -3,6 +3,7 @@ import json
 import logging
 import boto3
 from botocore.exceptions import ClientError
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 sm_client = boto3.client("sagemaker")
