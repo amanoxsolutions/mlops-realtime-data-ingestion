@@ -60,4 +60,4 @@ You do not have much to configure and can directly play with the application and
 ## Cost
 This demo deploys many services (e.g. Fargate, DynamoDB, 2xKinesis Data Streams, Kinesis Firehose, Managed Service for Apache Flink, SageMaker endpoints...) and must be run for 
 several days to collect enough data to be able to start training a model and see the model being retrained. This demo do generate costs which could be 
-expensive, depending on your budget. The full demo costs about $850 per month in the Ireland region.
+expensive, depending on your budget. The full demo costs about $480 per month in the Ireland region.

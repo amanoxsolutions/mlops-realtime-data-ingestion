@@ -117,5 +117,18 @@ The use of the SageMaker Project provided through AWS Service Catalog, was of si
 
 As with every built-in framework, you can save time and move faster by benefiting from a pre-built solution, but you lose in flexibility.
 ### Model Monitoring
-As described above, we faced the limitations of the built-in model monitoring provided by SageMaker. Working around them was not an easy challenge as the AWS documentation describing data collection, how records are matched and how the model monitoring jobs works is sometimes not very detailed or simply does not apply to our time series forecasting use case. We had to invest a significant amount of time and effort through trial and error to implement the workaround explained above and format the data in a way that would work for the built-in monitoring. Yet, the built-in model monitoring is not generating EventBridge events when montioring alarms are raised, making it unusable for us to fully automate the MLOps lifecycle. We had to revert to a fully custom approach using AWS CloudWatch metrics and alarms.
+As described above, we faced the limitations of the built-in model monitoring provided by SageMaker. Working around them was not an easy challenge as the AWS documentation describing data collection, how records are matched and how the model monitoring jobs works is sometimes not very detailed or simply does not apply to our time series forecasting use case. We had to invest a significant amount of time and effort through trial and error to implement the workaround explained above and format the data in a way that would work for the built-in monitoring. Yet, the built-in model monitoring is not generating EventBridge events when monitoring alarms are raised, making it unusable for us to fully automate the MLOps lifecycle. We had to revert to a fully custom approach using AWS CloudWatch metrics and alarms.
 ### Model Retraining Results
+Ideally, the pipeline trains a model that would before below the requested accuracy threshold (lower the better). When the accuracy threshold is breached a CloudWatch alarm is raised through our custom metric, automatically triggering the training of a new and better model. The new model accuracy becomes the new accuracy threshold and the model would perform under that threshold for a while before it drifts and is retrained automatically. 
+
+![Model Monitoring Dashboard](./images/model-monitoring-dashboard.jpg)
+
+What we see in this demo and illustrated in the model monitoring CloudWatch dashboard above is slightly different. When the model’s accuracy threshold is breached and an alarm is raised (around 13:00 in the dashboard above), a new model is retrained (green dots), and its accuracy becomes the new threshold (blue line dropping around 17:00). But the new model’s accuracy is instantly breached. This is of course not desirable but is explainable in the context of this demo. 
+
+We spent no effort in 
+1. finding the most appropriate forecasting model. We just needed a model to test the MLOps pipeline automation.
+2. analyzing the average blockchain transaction fee per minute the model is predicting.
+3. analyzing the best way to evaluate the model. While DeepAR can be evaluated using weighted quantile loss (e.g. 80% quantile), we just picked the 50% quantile for simplicity.
+4. evaluating the model against multiple predictions. To evaluate the model, we just take the latest data, take out the last 30 data points as ground truth data and test the model’s predictions against that. 30 predictions is not a lot to evaluate the model and it can easily happen by chance that there will be many outliers in the evaluation data, skewing the evaluation results.
+
+However, the objective of this demo was to demonstrate the full automation of the MLOps pipeline and this demo succeeds in achieving these objectives.
