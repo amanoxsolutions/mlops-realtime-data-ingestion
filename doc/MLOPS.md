@@ -129,6 +129,8 @@ We spent no effort in
 1. finding the most appropriate forecasting model. We just needed a model to test the MLOps pipeline automation.
 2. analyzing the average blockchain transaction fee per minute the model is predicting.
 3. analyzing the best way to evaluate the model. While DeepAR can be evaluated using weighted quantile loss (e.g. 80% quantile), we just picked the 50% quantile for simplicity.
-4. evaluating the model against multiple predictions. To evaluate the model, we just take the latest data, take out the last 30 data points as ground truth data and test the model’s predictions against that. 30 predictions is not a lot to evaluate the model and it can easily happen by chance that there will be many outliers in the evaluation data, skewing the evaluation results.
+4. evaluating the model against multiple predictions. To evaluate the model, we just take the latest data, take out the last 30 data points as ground truth data and test the model’s predictions against that. 30 predictions is not a lot to evaluate the model, and it can easily happen by chance that there will be many outliers in the evaluation data, skewing the evaluation results.
+
+Also, as more data are gathered, we should expect the model's hypertunning parameters (e.g. learning rate, epochs, etc.) to be re-evaluated to better fit the data and optimize the model training. In the demo the hypertunning parameters are stored in SSM Parameters, allowing them to be updated independently of the SageMaker pipeline code. It would thus be easy to train the new model with updated hypertunning parameters, hopefully training a more accurate model. But this is not done in this demo.
 
 However, the objective of this demo was to demonstrate the full automation of the MLOps pipeline and this demo succeeds in achieving these objectives.
