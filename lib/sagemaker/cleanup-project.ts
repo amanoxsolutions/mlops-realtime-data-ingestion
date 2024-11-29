@@ -269,7 +269,7 @@ export class RDICleanupStepFunction extends Construct {
       stateMachineName: stepFunctionName,
       definitionBody: DefinitionBody.fromChainable(definition),
       role: stateMachineRole,
-      timeout: Duration.minutes(20),
+      timeout: Duration.minutes(600),
       stateMachineType: StateMachineType.STANDARD,
       tracingEnabled: true,
       logs: {

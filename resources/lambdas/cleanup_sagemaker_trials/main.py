@@ -1,11 +1,12 @@
 import boto3
+from botocore.config import Config
 import concurrent.futures
 from aws_lambda_powertools import Logger
 from typing import Dict
 
 logger = Logger()
 ssm = boto3.client("ssm")
-sm = boto3.client("sagemaker")
+sm = boto3.client('sagemaker', config=Config(connect_timeout=5, read_timeout=60, retries={'max_attempts': 20}))
 sts = boto3.client("sts")
 AWS_REGION = boto3.session.Session().region_name
 ACCOUNT_ID = sts.get_caller_identity().get("Account")
@@ -29,16 +30,16 @@ def lambda_handler(event, context):
             ):
                 trials.append(trial)
     logger.info(f"Found {len(trials)} trials to delete")
-    ## If there are more than 50 trials, delte only the first 50 and set the more_trials flag to True
+    ## If there are more than 200 trials, delte only the first 200 and set the more_trials flag to True
     more_trials = False
-    if len(trials) > 50:
+    if len(trials) > 200:
         more_trials = True
-        trials = trials[:50]
+        trials = trials[:200]
     # Delete all trials in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(delete_trials, trials)
     if more_trials:
-        logger.info("There are more than 50 trials to delete, please run the lambda again")
+        logger.info("There are more than 200 trials to delete, please run the lambda again")
     else:
         logger.info("All trials deleted")
     return {"more_trials": more_trials}
