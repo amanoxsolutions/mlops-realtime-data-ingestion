@@ -30,16 +30,16 @@ def lambda_handler(event, context):
             ):
                 trials.append(trial)
     logger.info(f"Found {len(trials)} trials to delete")
-    ## If there are more than 200 trials, delte only the first 200 and set the more_trials flag to True
+    ## If there are more than 100 trials, delte only the first 100 and set the more_trials flag to True
     more_trials = False
-    if len(trials) > 200:
+    if len(trials) > 100:
         more_trials = True
-        trials = trials[:200]
+        trials = trials[:100]
     # Delete all trials in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(delete_trials, trials)
     if more_trials:
-        logger.info("There are more than 200 trials to delete, please run the lambda again")
+        logger.info("There are more than 100 trials to delete, please run the lambda again")
     else:
         logger.info("All trials deleted")
     return {"more_trials": more_trials}

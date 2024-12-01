@@ -169,7 +169,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.minutes(1),
+      timeout: Duration.minutes(15),
       hasLayer: true,
     });
     // Lambda Function to cleanup SageMaker Pipelines
@@ -180,7 +180,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.seconds(30),
+      timeout: Duration.minutes(15),
       hasLayer: true,
     });
     // Lambda Functio to cleanup the SageMaker Project Bucket
