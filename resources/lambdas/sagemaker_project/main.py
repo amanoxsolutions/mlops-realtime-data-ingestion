@@ -11,6 +11,7 @@ helper = CfnResource()
 logger = Logger()
 catalog = boto3.client("servicecatalog")
 sts_connection = boto3.client('sts')
+TEMPLATE_NAME = "MLOps template for model building, training, deployment and monitoring with 3p git"
 
 
 @logger.inject_lambda_context(log_event=True)
@@ -29,24 +30,23 @@ def create(event, _):
     portfolio_id = project_properties.get("PortfolioId")
     domain_execution_role_arn = project_properties.get("DomainExecutionRoleArn")
     # Search for the SageMaker project product in the portfolio
-    # We want to use the "MLOps template for model building, training, deployment and monitoring" product
     response = catalog.search_products_as_admin(
         PortfolioId=portfolio_id,
         Filters={
             "FullTextSearch": [
-                "MLOps template for model building, training, deployment and monitoring"
+                TEMPLATE_NAME
             ]
         }
     )
     product_id = None
     for product in response["ProductViewDetails"]:
-        if product["ProductViewSummary"]["Name"] == "MLOps template for model building, training, deployment and monitoring":
+        if product["ProductViewSummary"]["Name"] == TEMPLATE_NAME:
             product_id = product["ProductViewSummary"]["ProductId"]
             break
     if product_id is None:
-        logger.error("Could not find product 'MLOps template for model building, training, deployment and monitoring'")
-        raise Exception("Could not find product 'MLOps template for model building, training, deployment and monitoring'")
-    logger.info(f"Found product 'MLOps template for model building, training, deployment and monitoring' with ID: {product_id}")
+        logger.error(f"Could not find product {TEMPLATE_NAME}")
+        raise Exception(f"Could not find product {TEMPLATE_NAME}")
+    logger.info(f"Found product {TEMPLATE_NAME} with ID: {product_id}")
     # Get the latest version of the product
     response = catalog.describe_product_as_admin(
         Id=product_id
@@ -62,7 +62,25 @@ def create(event, _):
         ProjectDescription="MLOps project for the Realtime Data Ingestion and Analytics solution",
         ServiceCatalogProvisioningDetails={
             "ProductId": product_id,
-            "ProvisioningArtifactId": latest_product_artifact_id
+            "ProvisioningArtifactId": latest_product_artifact_id,
+            "ProvisioningParameters": [
+                 {
+                    "Key": "CodeConnectionArn",
+                    "Value": "arn:aws:codeconnections:eu-west-1:645143808269:connection/df27ac2a-79a6-4bd2-8044-2f24c23fd999"
+                 },
+                 {
+                     "Key": "ModelBuildCodeRepositoryFullname",
+                     "Value": "mlops-sagermaker-model-build"
+                 },
+                 {
+                    "Key": "ModelDeployCodeRepositoryFullname",
+                    "Value": "mlops-sagermaker-model-deploy"
+                 },
+                 {
+                    "Key": "ModelMonitorCodeRepositoryFullname",
+                    "Value": "mlops-sagermaker-model-monitor"
+                 }
+            ]
         }
     )
     project_id = response["ProjectId"]
