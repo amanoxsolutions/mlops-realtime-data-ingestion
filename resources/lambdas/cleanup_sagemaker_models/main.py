@@ -63,7 +63,6 @@ def lambda_handler(event, context):
         sm.delete_model_package(ModelPackageName=model_package_version["ModelPackageArn"])
         logger.info(f"Deleted model package {model_package_version['ModelPackageArn']}")
     # Delete all the model package groups in the list
-
     for model_package_group in model_package_groups:
         sm.delete_model_package_group(ModelPackageGroupName=model_package_group["ModelPackageGroupName"])
         logger.info(f"Deleted model package group {model_package_group['ModelPackageGroupName']}")
