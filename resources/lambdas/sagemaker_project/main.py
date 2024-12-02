@@ -70,15 +70,15 @@ def create(event, _):
                  },
                  {
                      "Key": "ModelBuildCodeRepositoryFullname",
-                     "Value": "mlops-sagermaker-model-build"
+                     "Value": "amanoxsolutions/mlops-sagermaker-model-build"
                  },
                  {
                     "Key": "ModelDeployCodeRepositoryFullname",
-                    "Value": "mlops-sagermaker-model-deploy"
+                    "Value": "amanoxsolutions/mlops-sagermaker-model-deploy"
                  },
                  {
                     "Key": "ModelMonitorCodeRepositoryFullname",
-                    "Value": "mlops-sagermaker-model-monitor"
+                    "Value": "amanoxsolutions/mlops-sagermaker-model-monitor"
                  }
             ]
         }
