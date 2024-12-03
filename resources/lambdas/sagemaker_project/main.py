@@ -66,7 +66,7 @@ def create(event, _):
             "ProvisioningParameters": [
                  {
                     "Key": "CodeConnectionArn",
-                    "Value": "arn:aws:codeconnections:eu-west-1:645143808269:connection/df27ac2a-79a6-4bd2-8044-2f24c23fd999"
+                    "Value": "arn:aws:codestar-connections:us-east-1:645143808269:connection/538f4755-ecd8-48e8-8782-e8c9054e7df3"
                  },
                  {
                      "Key": "ModelBuildCodeRepositoryFullname",
