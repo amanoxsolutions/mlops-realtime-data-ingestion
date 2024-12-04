@@ -1,9 +1,10 @@
 import boto3
+from botocore.config import Config
 from aws_lambda_powertools import Logger
 
 logger = Logger()
 ssm = boto3.client("ssm")
-sm = boto3.client("sagemaker")
+sm = boto3.client('sagemaker', config=Config(connect_timeout=5, read_timeout=60, retries={'max_attempts': 20}))
 
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
@@ -59,8 +60,8 @@ def lambda_handler(event, context):
     logger.info(f"Found {len(model_package_versions)} model package versions to delete")
     # Delete all the model package versions in the list
     for model_package_version in model_package_versions:
-        sm.delete_model_package(ModelPackageName=model_package_version["ModelPackageName"])
-        logger.info(f"Deleted model package {model_package_version['ModelPackageName']}")
+        sm.delete_model_package(ModelPackageName=model_package_version["ModelPackageArn"])
+        logger.info(f"Deleted model package {model_package_version['ModelPackageArn']}")
     # Delete all the model package groups in the list
     for model_package_group in model_package_groups:
         sm.delete_model_package_group(ModelPackageGroupName=model_package_group["ModelPackageGroupName"])
