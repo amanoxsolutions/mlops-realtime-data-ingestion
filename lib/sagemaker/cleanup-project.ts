@@ -81,6 +81,8 @@ export class RDICleanupStepFunction extends Construct {
             `arn:aws:sagemaker:${region}:${account}:pipeline/blockchainforecastpipeline*`,
             `arn:aws:sagemaker:${region}:${account}:pipeline/modelmonitordataingestion*`,
             `arn:aws:sagemaker:${region}:${account}:model/*`,
+            `arn:aws:sagemaker:${region}:${account}:model-package/*`,
+            `arn:aws:sagemaker:${region}:${account}:model-package-group/*`,
             `arn:aws:sagemaker:${region}:${account}:experiment-trial-component/*`,
             `arn:aws:sagemaker:${region}:${account}:experiment-trial/*`,
             `arn:aws:sagemaker:${region}:${account}:experiment/*`,
@@ -90,6 +92,7 @@ export class RDICleanupStepFunction extends Construct {
           sid: 'DeleteS3Objects',
           actions: [
             's3:ListBucket',
+            's3:GetBucketVersioning',
             's3:DeleteObject*',
           ],
           resources: [
@@ -169,7 +172,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.minutes(1),
+      timeout: Duration.minutes(15),
       hasLayer: true,
     });
     // Lambda Function to cleanup SageMaker Pipelines
@@ -180,7 +183,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.seconds(30),
+      timeout: Duration.minutes(15),
       hasLayer: true,
     });
     // Lambda Functio to cleanup the SageMaker Project Bucket
@@ -191,7 +194,7 @@ export class RDICleanupStepFunction extends Construct {
       role: cleanupRole,
       runtime: this.runtime,
       memorySize: 256,
-      timeout: Duration.minutes(5),
+      timeout: Duration.minutes(15),
       hasLayer: true,
     });
 
@@ -269,7 +272,7 @@ export class RDICleanupStepFunction extends Construct {
       stateMachineName: stepFunctionName,
       definitionBody: DefinitionBody.fromChainable(definition),
       role: stateMachineRole,
-      timeout: Duration.minutes(20),
+      timeout: Duration.minutes(600),
       stateMachineType: StateMachineType.STANDARD,
       tracingEnabled: true,
       logs: {
