@@ -2,6 +2,7 @@ import time
 import boto3
 import random
 import string
+import os
 from aws_lambda_powertools import Logger
 from crhelper import CfnResource
 from botocore.exceptions import ClientError
@@ -12,7 +13,7 @@ logger = Logger()
 catalog = boto3.client("servicecatalog")
 sts_connection = boto3.client("sts")
 ssm_client = boto3.client("ssm")
-TEMPLATE_NAME = "MLOps template for model building, training, deployment and monitoring with 3p git"
+TEMPLATE_NAME = "MLOps template for model building, training, deployment and monitoring with third-party git using CodePipeline"
 
 
 @logger.inject_lambda_context(log_event=True)
