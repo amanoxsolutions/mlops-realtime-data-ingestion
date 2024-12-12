@@ -21,6 +21,10 @@ export interface SagemakerStackProps extends StackProps {
   readonly vpc: IVpc;
   readonly ingestionPipelineDashboard: Dashboard;
   readonly ingestionPipelineWidget: GraphWidget;
+  readonly connectionArn: string;
+  readonly repoNameBuild: string;
+  readonly repoNameDeploy: string;
+  readonly repoNameMonitor: string;
 }
   
 export class SagemakerStack extends Stack {
@@ -194,6 +198,10 @@ export class SagemakerStack extends Stack {
       domainExecutionRole: this.domain.executionRole,
       cloudFormationRoleName: this.domain.cloudFormationRoleName,
       dataAccessPolicy: dataAccessPolicy,
+      connectionArn: props.connectionArn,
+      repoNameBuild: props.repoNameBuild,
+      repoNameDeploy: props.repoNameDeploy,
+      repoNameMonitor: props.repoNameMonitor,
     });
 
     // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard

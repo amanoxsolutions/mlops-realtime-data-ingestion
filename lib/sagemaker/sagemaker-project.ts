@@ -20,6 +20,10 @@ interface RDISagemakerMlopsProjectCustomResourceProps {
   readonly customResourceLayerArn: string;
   readonly portfolioId : string;
   readonly domainExecutionRole: Role;
+  readonly connectionArn: string;
+  readonly repoNameBuild: string;
+  readonly repoNameDeploy: string;
+  readonly repoNameMonitor: string;
 }
 
 export class RDISagemakerMlopsProjectCustomResource extends Construct {
@@ -107,6 +111,12 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       handler: 'main.lambda_handler',
       timeout: Duration.seconds(5),
       runtime: this.runtime,
+      environment: {
+        BUILD_REPO_NAME: props.repoNameBuild,
+        DEPLOY_REPO_NAME: props.repoNameDeploy,
+        MONITOR_REPO_NAME: props.repoNameMonitor,
+        CODE_CONNECTION_ARN: props.connectionArn,
+      },
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
     });
@@ -138,6 +148,10 @@ interface RDISagemakerProjectProps {
   readonly domainExecutionRole: Role;
   readonly cloudFormationRoleName: string;
   readonly dataAccessPolicy: Policy;
+  readonly connectionArn: string;
+  readonly repoNameBuild: string;
+  readonly repoNameDeploy: string;
+  readonly repoNameMonitor: string;
 }
   
 export class RDISagemakerProject extends Construct {
@@ -168,6 +182,10 @@ export class RDISagemakerProject extends Construct {
       customResourceLayerArn: props.customResourceLayerArn,
       portfolioId : this.portfolioId,
       domainExecutionRole: props.domainExecutionRole,
+      connectionArn: props.connectionArn,
+      repoNameBuild: props.repoNameBuild,
+      repoNameDeploy: props.repoNameDeploy,
+      repoNameMonitor: props.repoNameMonitor,
     });
     this.projectId = sagemakerProjectCustomResource.projectId;
     this.projectName = sagemakerProjectCustomResource.projectName;

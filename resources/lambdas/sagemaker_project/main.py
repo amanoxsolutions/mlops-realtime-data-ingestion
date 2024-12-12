@@ -66,19 +66,19 @@ def create(event, _):
             "ProvisioningParameters": [
                  {
                     "Key": "CodeConnectionArn",
-                    "Value": "arn:aws:codeconnections:eu-west-1:768545273476:connection/ddc35df1-eba3-4ac8-899f-1eeaae6fbfc4"
+                    "Value": os.environ['CODE_CONNECTION_ARN']
                  },
                  {
                      "Key": "ModelBuildCodeRepositoryFullname",
-                     "Value": "RaphaelEymann/mlops-sagemaker-model-build"
+                     "Value": os.environ['BUILD_REPO_NAME']
                  },
                  {
                     "Key": "ModelDeployCodeRepositoryFullname",
-                    "Value": "RaphaelEymann/mlops-sagemaker-model-deploy"
+                    "Value": os.environ['DEPLOY_REPO_NAME']
                  },
                  {
                     "Key": "ModelMonitorCodeRepositoryFullname",
-                    "Value": "RaphaelEymann/mlops-sagemaker-model-monitor"
+                    "Value": os.environ['MONITOR_REPO_NAME']
                  }
             ]
         }
