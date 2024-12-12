@@ -136,6 +136,7 @@ interface RDISagemakerProjectProps {
   readonly customResourceLayerArn: string;
   readonly portfolioId: string;
   readonly domainExecutionRole: Role;
+  readonly cloudFormationRoleName: string;
   readonly dataAccessPolicy: Policy;
 }
   
@@ -170,6 +171,151 @@ export class RDISagemakerProject extends Construct {
     });
     this.projectId = sagemakerProjectCustomResource.projectId;
     this.projectName = sagemakerProjectCustomResource.projectName;
+
+    const region = Stack.of(this).region;
+    const account = Stack.of(this).account;
+
+    const cloudWatchDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'CloudWatchDashboardAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'cloudwatch:PutDashboard',
+            'cloudwatch:DeleteDashboards'
+          ],
+          resources: [
+              `arn:aws:cloudwatch::${account}:dashboard/${this.prefix}-staging-model-monitoring-dashboard`,
+              `arn:aws:cloudwatch::${account}:dashboard/${this.prefix}-prod-model-monitoring-dashboard`
+          ],
+        }),
+        new PolicyStatement({
+          sid: 'CloudWatchAlarmAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'cloudwatch:PutMetricAlarm',
+            'cloudwatch:DeleteAlarms'
+          ],
+          resources: [
+              `arn:aws:cloudwatch:${region}:${account}:alarm:${this.projectName}-staging-custom-alarm`,
+              `arn:aws:cloudwatch:${region}:${account}:alarm:${this.projectName}-prod-custom-alarm`
+          ],
+        }),
+      ],
+    });
+    const cloudWatchPolicy = new Policy(this, 'CloudWatchPolicy', {
+      policyName: `${this.prefix}-cloudwatch-policy`,
+      document: cloudWatchDocument,
+    });
+
+    const eventBridgeDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'EventBridgeAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'scheduler:GetSchedule',
+            'scheduler:CreateSchedule',
+            'scheduler:DeleteSchedule'
+          ],
+          resources: [
+            `arn:aws:scheduler:${region}:${account}:schedule/default/${this.projectName}-staging-data-collection`,
+            `arn:aws:scheduler:${region}:${account}:schedule/default/${this.projectName}-prod-data-collection`
+          ],
+        }),
+      ],
+    });
+    const eventBridgePolicy = new Policy(this, 'EventBridgePolicy', {
+      policyName: `${this.prefix}-eventbridge-policy`,
+      document: eventBridgeDocument,
+    });
+
+    const iamDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'IAMTriggerRoleAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:GetRole',
+            'iam:PassRole',
+            'iam:DeleteRolePolicy',
+            'iam:TagRole',
+            'iam:CreateRole',
+            'iam:DeleteRole',
+            'iam:PutRolePolicy'
+          ],
+          resources: [
+            `arn:aws:iam::${account}:role/${this.projectName}-staging-trigger-modelbuild-role`,
+            `arn:aws:iam::${account}:role/${this.projectName}-prod-trigger-modelbuild-role`
+          ],
+        }),
+        new PolicyStatement({
+          sid: 'IAMEventBridgeRoleAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'iam:PassRole'
+          ],
+          resources: [`arn:aws:iam::${account}:role/${this.prefix}-eventbridge-scheduler-role`],
+        }),
+      ],
+    });
+    const iamPolicy = new Policy(this, 'IAMPolicy', {
+      policyName: `${this.prefix}-iam-policy`,
+      document: iamDocument,
+    });
+
+    const lambdaDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'LambdaAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'lambda:CreateFunction',
+            'lambda:TagResource',
+            'lambda:AddPermission',
+            'lambda:GetFunction',
+            'lambda:DeleteFunction',
+            'lambda:RemovePermission',
+            'lambda:UpdateFunctionCode',
+            'lambda:ListTags'
+          ],
+          resources: [
+            `arn:aws:lambda:${region}:${account}:function:${this.projectName}-staging-trigger-modelbuild`,
+            `arn:aws:lambda:${region}:${account}:function:${this.projectName}-prod-trigger-modelbuild`
+          ],
+        }),
+      ],
+    });
+    const lambdaPolicy = new Policy(this, 'LambdaPolicy', {
+      policyName: `${this.prefix}-lambda-policy`,
+      document: lambdaDocument,
+    });
+
+    const s3Document = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'S3Access',
+          effect: Effect.ALLOW,
+          actions: [
+            's3:GetObject'
+          ],
+          resources: [`arn:aws:s3:::sagemaker-project-${this.projectId}/code-artifacts/monitoring-data-collection/*`],
+        }),
+      ],
+    });
+    const s3Policy = new Policy(this, 'S3Policy', {
+      policyName: `${this.prefix}-s3-policy`,
+      document: s3Document,
+    });
+
+    const serviceCatalogProductsCloudFormationRole = Role.fromRoleName(this, 'ServiceCatalogProductsCloudFormationRole',
+        props.cloudFormationRoleName
+    );
+    serviceCatalogProductsCloudFormationRole.attachInlinePolicy(cloudWatchPolicy);
+    serviceCatalogProductsCloudFormationRole.attachInlinePolicy(eventBridgePolicy);
+    serviceCatalogProductsCloudFormationRole.attachInlinePolicy(iamPolicy);
+    serviceCatalogProductsCloudFormationRole.attachInlinePolicy(lambdaPolicy);
+    serviceCatalogProductsCloudFormationRole.attachInlinePolicy(s3Policy);
 
     // Create an IAM Policy allowing access to the SageMaker Project S3 Bucket and attach it to the data access policy
     const sagemakerProjectBucketPolicy = new PolicyStatement({

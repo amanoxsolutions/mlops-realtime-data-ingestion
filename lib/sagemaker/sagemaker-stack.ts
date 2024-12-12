@@ -192,6 +192,7 @@ export class SagemakerStack extends Stack {
       customResourceLayerArn: customResourceLayerArn,
       portfolioId: this.domain.portfolioId,
       domainExecutionRole: this.domain.executionRole,
+      cloudFormationRoleName: this.domain.cloudFormationRoleName,
       dataAccessPolicy: dataAccessPolicy,
     });
 

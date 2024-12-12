@@ -66,26 +66,26 @@ def create(event, _):
             "ProvisioningParameters": [
                  {
                     "Key": "CodeConnectionArn",
-                    "Value": "arn:aws:codeconnections:eu-west-1:645143808269:connection/12d19124-96b4-426c-9dae-4daa0eae1baf"
+                    "Value": "arn:aws:codeconnections:eu-west-1:768545273476:connection/ddc35df1-eba3-4ac8-899f-1eeaae6fbfc4"
                  },
                  {
                      "Key": "ModelBuildCodeRepositoryFullname",
-                     "Value": "amanoxsolutions/mlops-sagemaker-model-build"
+                     "Value": "RaphaelEymann/mlops-sagemaker-model-build"
                  },
                  {
                     "Key": "ModelDeployCodeRepositoryFullname",
-                    "Value": "amanoxsolutions/mlops-sagemaker-model-deploy"
+                    "Value": "RaphaelEymann/mlops-sagemaker-model-deploy"
                  },
                  {
                     "Key": "ModelMonitorCodeRepositoryFullname",
-                    "Value": "amanoxsolutions/mlops-sagemaker-model-monitor"
+                    "Value": "RaphaelEymann/mlops-sagemaker-model-monitor"
                  }
             ]
         }
     )
     project_id = response["ProjectId"]
     logger.info(f"Initiated the creation of the SageMaker project with ID: {project_id}")
-    # We do not wait for the SageMaker project to be created because 
+    # We do not wait for the SageMaker project to be created because
     # it is created by another CloudFormation Stack and it takes too long
     helper.Data.update({"ProjectId": project_id, "ProjectName": project_name})
     return project_id
@@ -111,7 +111,7 @@ def delete(event, _):
             ProjectName=project_name
         )
         logger.info(f"Initiated the SageMaker project deletion: {response}")
-        # We do not wait for the SageMaker project to be deleted because 
+        # We do not wait for the SageMaker project to be deleted because
         # it is deleted by another CloudFormation Stack and it takes too long
     else:
         logger.info(f"Skipping deletion of SageMaker project {project_name} because removal policy is set to {removal_policy}")
@@ -137,7 +137,7 @@ def get_sagemaker_client_with_domain_execution_role(role_arn: str):
         RoleSessionName="SreateSagemakerProject"+"".join(random.choices(string.digits, k=10)),
     )
     logger.info({"sts AssumeRole response": sts_response})
-    # From the response that contains the assumed role, get the temporary 
+    # From the response that contains the assumed role, get the temporary
     # credentials that can be used to make subsequent API calls
     credentials = sts_response["Credentials"]
     access_key = credentials["AccessKeyId"]
