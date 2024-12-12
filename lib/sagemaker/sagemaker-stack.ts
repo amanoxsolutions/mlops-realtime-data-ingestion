@@ -21,7 +21,6 @@ export interface SagemakerStackProps extends StackProps {
   readonly vpc: IVpc;
   readonly ingestionPipelineDashboard: Dashboard;
   readonly ingestionPipelineWidget: GraphWidget;
-  readonly connectionArn: string;
   readonly repoNameBuild: string;
   readonly repoNameDeploy: string;
   readonly repoNameMonitor: string;
@@ -37,6 +36,9 @@ export class SagemakerStack extends Stack {
   public readonly project: RDISagemakerProject;
   public readonly experimentBucket: IBucket;
   public readonly ingestionPipelineDashboard: Dashboard;
+  public readonly repoNameBuild: string;
+  public readonly repoNameDeploy: string;
+  public readonly repoNameMonitor: string;
 
   constructor(scope: Construct, id: string, props: SagemakerStackProps) {
     super(scope, id, props);
@@ -46,6 +48,9 @@ export class SagemakerStack extends Stack {
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.ingestionPipelineDashboard = props.ingestionPipelineDashboard;
+    this.repoNameBuild = props.repoNameBuild;
+    this.repoNameDeploy = props.repoNameDeploy;
+    this.repoNameMonitor = props.repoNameMonitor;
 
     // Get the necessary information of the ingestion stack from SSM parameters
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
@@ -198,10 +203,9 @@ export class SagemakerStack extends Stack {
       domainExecutionRole: this.domain.executionRole,
       cloudFormationRoleName: this.domain.cloudFormationRoleName,
       dataAccessPolicy: dataAccessPolicy,
-      connectionArn: props.connectionArn,
-      repoNameBuild: props.repoNameBuild,
-      repoNameDeploy: props.repoNameDeploy,
-      repoNameMonitor: props.repoNameMonitor,
+      repoNameBuild: this.repoNameBuild,
+      repoNameDeploy: this.repoNameDeploy,
+      repoNameMonitor: this.repoNameMonitor,
     });
 
     // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard

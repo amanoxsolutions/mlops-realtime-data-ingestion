@@ -6,7 +6,7 @@ from typing import Tuple
 helper = CfnResource()
 logger = Logger()
 csc = boto3.client("codestar-connections")
-
+ssm_client = boto3.client("ssm")
 
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
@@ -22,6 +22,12 @@ def get_connection_arn(event, _):
     if connection_arn:
         helper.Data.update({"ConnectionArn": connection_arn})
         logger.info(f"CodeStar Connection ARN for '{connection_name}' found")
+        ssm_client.put_parameter(
+            Name="/rdi-mlops/stack-parameters/connection-arn",
+            Value=connection_arn,
+            Type='String',
+            Overwrite=True
+        )
     else:
         error_reason = f"CodeStar Connection ARN for '{connection_name}' not found"
         logger.error(error_reason)

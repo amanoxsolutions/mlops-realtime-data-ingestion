@@ -20,7 +20,6 @@ interface RDISagemakerMlopsProjectCustomResourceProps {
   readonly customResourceLayerArn: string;
   readonly portfolioId : string;
   readonly domainExecutionRole: Role;
-  readonly connectionArn: string;
   readonly repoNameBuild: string;
   readonly repoNameDeploy: string;
   readonly repoNameMonitor: string;
@@ -34,6 +33,9 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
   public readonly projectId: string;
   public readonly projectName: string;
   public readonly customResourceLayerArn: string;
+  public readonly repoNameBuild: string;
+  public readonly repoNameDeploy: string;
+  public readonly repoNameMonitor: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerMlopsProjectCustomResourceProps) {
     super(scope, id);
@@ -46,6 +48,9 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy;
     this.customResourceLayerArn = props.customResourceLayerArn;
+    this.repoNameBuild = props.repoNameBuild;
+    this.repoNameDeploy = props.repoNameDeploy;
+    this.repoNameMonitor = props.repoNameMonitor;
 
     const policyDocument = new PolicyDocument({
       statements: [
@@ -76,6 +81,12 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
             'sts:AssumeRole',
           ],
           resources: [props.domainExecutionRole.roleArn],
+        }),
+        // IAM Policy for putting code connection arn to parameter store
+        new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['ssm:GetParameter'],
+          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/connection-arn`],
         }),
       ],
     });
@@ -112,10 +123,9 @@ export class RDISagemakerMlopsProjectCustomResource extends Construct {
       timeout: Duration.seconds(5),
       runtime: this.runtime,
       environment: {
-        BUILD_REPO_NAME: props.repoNameBuild,
-        DEPLOY_REPO_NAME: props.repoNameDeploy,
-        MONITOR_REPO_NAME: props.repoNameMonitor,
-        CODE_CONNECTION_ARN: props.connectionArn,
+        BUILD_REPO_NAME: this.repoNameBuild,
+        DEPLOY_REPO_NAME: this.repoNameDeploy,
+        MONITOR_REPO_NAME: this.repoNameMonitor,
       },
       logRetention: RetentionDays.ONE_WEEK,
       layers: [PythonLayerVersion.fromLayerVersionArn(this, 'layerversion', this.customResourceLayerArn)],
@@ -148,7 +158,6 @@ interface RDISagemakerProjectProps {
   readonly domainExecutionRole: Role;
   readonly cloudFormationRoleName: string;
   readonly dataAccessPolicy: Policy;
-  readonly connectionArn: string;
   readonly repoNameBuild: string;
   readonly repoNameDeploy: string;
   readonly repoNameMonitor: string;
@@ -161,6 +170,9 @@ export class RDISagemakerProject extends Construct {
   public readonly portfolioId: string;
   public readonly projectName: string;
   public readonly projectId: string;
+  public readonly repoNameBuild: string;
+  public readonly repoNameDeploy: string;
+  public readonly repoNameMonitor: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerProjectProps) {
     super(scope, id);
@@ -168,7 +180,10 @@ export class RDISagemakerProject extends Construct {
     this.prefix = props.prefix;
     this.portfolioId = props.portfolioId;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
-    this.runtime = props.runtime; 
+    this.runtime = props.runtime;
+    this.repoNameBuild = props.repoNameBuild;
+    this.repoNameDeploy = props.repoNameDeploy;
+    this.repoNameMonitor = props.repoNameMonitor;
 
     //
     // Create SageMaker Project
@@ -182,10 +197,9 @@ export class RDISagemakerProject extends Construct {
       customResourceLayerArn: props.customResourceLayerArn,
       portfolioId : this.portfolioId,
       domainExecutionRole: props.domainExecutionRole,
-      connectionArn: props.connectionArn,
-      repoNameBuild: props.repoNameBuild,
-      repoNameDeploy: props.repoNameDeploy,
-      repoNameMonitor: props.repoNameMonitor,
+      repoNameBuild: this.repoNameBuild,
+      repoNameDeploy: this.repoNameDeploy,
+      repoNameMonitor: this.repoNameMonitor,
     });
     this.projectId = sagemakerProjectCustomResource.projectId;
     this.projectName = sagemakerProjectCustomResource.projectName;

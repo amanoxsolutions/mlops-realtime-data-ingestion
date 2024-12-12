@@ -1,18 +1,18 @@
-import { Construct } from 'constructs';
-import { Stack, Duration, CustomResource, RemovalPolicy  } from 'aws-cdk-lib';
+import {Construct} from 'constructs';
+import {CustomResource, Duration, RemovalPolicy, Stack} from 'aws-cdk-lib';
 import {
+  Effect,
   ManagedPolicy,
   Policy,
   PolicyDocument,
   PolicyStatement,
   Role,
   ServicePrincipal,
-  Effect,
 } from 'aws-cdk-lib/aws-iam';
-import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
-import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { CfnUserProfile } from 'aws-cdk-lib/aws-sagemaker';
+import {Code, Runtime, SingletonFunction} from 'aws-cdk-lib/aws-lambda';
+import {PythonLayerVersion} from '@aws-cdk/aws-lambda-python-alpha';
+import {RetentionDays} from 'aws-cdk-lib/aws-logs';
+import {CfnUserProfile} from 'aws-cdk-lib/aws-sagemaker';
 
 
 interface RDISagemakerServiceCataloRolesProps {

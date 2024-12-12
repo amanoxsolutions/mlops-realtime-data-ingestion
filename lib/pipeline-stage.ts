@@ -5,12 +5,12 @@ import { CommonResourcesStack } from "./common/common-stack";
 import { RealtimeDataIngestionStack } from './ingestion/data-ingestion-stack';
 import { SagemakerStack } from './sagemaker/sagemaker-stack';
 
+
 export interface RealtimeDataIngestionStageProps extends StageProps {
   readonly prefix: string;
   readonly uniqueSuffix: string;
   readonly runtime: Runtime;
   readonly removalPolicy: RemovalPolicy;
-  readonly connectionArn: string;
   readonly repoNameBuild: string;
   readonly repoNameDeploy: string;
   readonly repoNameMonitor: string;
@@ -26,7 +26,6 @@ export class RealtimeDataIngestionStage extends Stage {
       s3Suffix: props.uniqueSuffix,
       runtime: props.runtime,
       removalPolicy: props.removalPolicy,
-      connectionArn: props.connectionArn,
       repoNameBuild: props.repoNameBuild,
       repoNameDeploy: props.repoNameDeploy,
       repoNameMonitor: props.repoNameMonitor,
