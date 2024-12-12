@@ -29,24 +29,24 @@ def create(event, _):
     portfolio_id = project_properties.get("PortfolioId")
     domain_execution_role_arn = project_properties.get("DomainExecutionRoleArn")
     # Search for the SageMaker project product in the portfolio
-    # We want to use the "MLOps template for model building, training, deployment and monitoring" product
+    # We want to use the "[Not supported] MLOps template for model building, training, deployment and monitoring" product
     response = catalog.search_products_as_admin(
         PortfolioId=portfolio_id,
         Filters={
             "FullTextSearch": [
-                "MLOps template for model building, training, deployment and monitoring"
+                "[Not supported] MLOps template for model building, training, deployment and monitoring"
             ]
         }
     )
     product_id = None
     for product in response["ProductViewDetails"]:
-        if product["ProductViewSummary"]["Name"] == "MLOps template for model building, training, deployment and monitoring":
+        if product["ProductViewSummary"]["Name"] == "[Not supported] MLOps template for model building, training, deployment and monitoring":
             product_id = product["ProductViewSummary"]["ProductId"]
             break
     if product_id is None:
-        logger.error("Could not find product 'MLOps template for model building, training, deployment and monitoring'")
-        raise Exception("Could not find product 'MLOps template for model building, training, deployment and monitoring'")
-    logger.info(f"Found product 'MLOps template for model building, training, deployment and monitoring' with ID: {product_id}")
+        logger.error("Could not find product '[Not supported] MLOps template for model building, training, deployment and monitoring'")
+        raise Exception("Could not find product '[Not supported] MLOps template for model building, training, deployment and monitoring'")
+    logger.info(f"Found product '[Not supported] MLOps template for model building, training, deployment and monitoring' with ID: {product_id}")
     # Get the latest version of the product
     response = catalog.describe_product_as_admin(
         Id=product_id
