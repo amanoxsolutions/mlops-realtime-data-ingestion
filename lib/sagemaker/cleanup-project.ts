@@ -57,7 +57,10 @@ export class RDICleanupStepFunction extends Construct {
         new PolicyStatement({
           sid: 'AllowToDeleteSagemakerModelParameters',
           actions: ['ssm:DeleteParameter*'],
-          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`]
+          resources: [
+              `arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`,
+              `arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/connection-arn`
+          ]
         }),
         new PolicyStatement({
           sid: 'AllowToListSagemakerResources',
