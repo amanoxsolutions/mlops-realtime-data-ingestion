@@ -36,7 +36,7 @@ new DataIngestionPipelineStack(app, `${prefix}-DataIngestionPipelineStack`, {
   repoNameBuild: 'amanoxsolutions/mlops-sagemaker-model-build',
   repoNameDeploy: 'amanoxsolutions/mlops-sagemaker-model-deploy',
   repoNameMonitor: 'amanoxsolutions/mlops-sagemaker-model-monitor',
-  codestarConnectionName: 'test',
+  codestarConnectionName: 'mlops-realtime-data-ingestion',
   fullBranchName: fullBranchName,
   shortBranchName: shortBranchName,
 });
