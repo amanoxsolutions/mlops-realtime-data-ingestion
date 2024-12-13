@@ -11,19 +11,19 @@ Although it might be irrelevant, data are aggregated and predicted using a 1 min
 Once enough data have been captured and a first model trained, you will be able to see the model being deployed being a SageMaker API endpoint and resources being provisioned to monitor the model. If the model performance alarm threshold is breached, you will see alarms in the dashboard and the model training pipeline being automatically triggered to retrain a new model based on the lastest ingested data, thus, fully atuomating the training, deployment and monitoring lifecycle of the model.
 
 > [!WARNING]
-> Since the creation of this demo, AWS has deprecated the CodeCommit service which is used by the MLOps project. 
-> It is not possible anymore to create a CodeCommit repositories. The MLOps project will not work as is. 
+> Since the creation of this demo, AWS has deprecated the CodeCommit service which is used by the MLOps project.
+> It is not possible anymore to create a CodeCommit repositories. The MLOps project will not work as is.
 > An issue has been opened to update this demo: [Issue #63](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/issues/63)
 
 ## The Data
-For this project, we decided to ingest blockchain transactions from the blockchain.com API (see documentation [here](https://www.blockchain.com/explorer/api)). 
+For this project, we decided to ingest blockchain transactions from the blockchain.com API (see documentation [here](https://www.blockchain.com/explorer/api)).
 We focus on 3 simple metrics:
 * The total number of transactions
 * The total amount of transaction fees
 * The average amount of transaction fees
 
-These metrics are computed per minute. Although it might not be the best window period to analyze blockchain 
-transactions, it allows us to quickly gather a lot of data points in a short period of time, avoiding to run the demo 
+These metrics are computed per minute. Although it might not be the best window period to analyze blockchain
+transactions, it allows us to quickly gather a lot of data points in a short period of time, avoiding to run the demo
 for too long which has an impact on the AWS billing.
 ## Architecture
 ### The Full Architecture
@@ -41,7 +41,7 @@ See [this documentation](./doc/INGESTION.md) for more details.
 ### MLOps Architecture
 The MLOps project contains 3 CodeCommit repositories with their own CodePipeline pipelines to train, deploy and monitor the model.
 1. The __Model Build__ pipeline creates a SageMaker Pipeline orchestrating all the steps to train a model and, if it passes the validation threshold, registers the model, which then has to be manually approved.
-2. If the registered model is approved, the __Model Deploy__ pipeline is automatically triggered and deploys the model behind 2 SageMaker API Endpoints, one for the staging environment and one for the production environment. 
+2. If the registered model is approved, the __Model Deploy__ pipeline is automatically triggered and deploys the model behind 2 SageMaker API Endpoints, one for the staging environment and one for the production environment.
 3. If the new model baseline performance is better than the existing one, we update the SSM Parameter storing the model monitoring threshold with the new model performance. When the new model monitoring is deployed, the alarm threshold will be updated from the SSM Parameter value. Note that in a real world scenario you might not want to update the model monitoring threshold like this, as it might be dictated by business criterias. We do this in this demo to test automated retraining and improvement of the model.
 4. Once the endpoints are __IN_SERVICE__, it triggers automatically the __Model Monitor__ pipeline, which deploys resources to monitor the pipeline
 5. Every hour, a SageMaker Pipeline is executed to test the model against the latest data. The performance of the model is tracked by the SageMaker Monitoring service and a custom CloudWatch Alarm. We use a custom CloudWatch Alarm because, as of now
@@ -52,19 +52,19 @@ The MLOps project contains 3 CodeCommit repositories with their own CodePipeline
 ![](./doc/images/mlops-overview.jpg)
 ## What are the Prerequisites?
 The list below is for _Windows_ environment
-* The AWS CLI ([documentation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))  
-* Docker Desktop ([Documentation](https://docs.docker.com/desktop/windows/install/))  
+* The AWS CLI ([documentation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))
+* Docker Desktop ([Documentation](https://docs.docker.com/desktop/windows/install/))
 * NPM and Node.js ([Documentation](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
 * The AWS CDK: `npm install -g aws-cdk`
 * Configure your programmatic access to AWS for the CLI (see instructions [here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_auth)).
 ## Documentation
-Most of the architecture is fully automated through the CDK. 
+Most of the architecture is fully automated through the CDK.
 You do not have much to configure and can directly play with the application and watch it ingest and aggregate the data in near real time. Once you have ingested some data you can start to train a forecasting model by running the corresponding pipeline and see the entire MLOps process automation.
 * [Deploy the Environment & MLOps Pipelines](./doc/DEPLOY.md)
 * [The Data Ingestion](./doc/INGESTION.md)
 * [The MLOps Pipeline](./doc/MLOPS.md)
 * [Delete the Entire Project](./doc/DELETION.md)
 ## Cost
-This demo deploys many services (e.g. Fargate, DynamoDB, 2xKinesis Data Streams, Kinesis Firehose, Managed Service for Apache Flink, SageMaker endpoints...) and must be run for 
-several days to collect enough data to be able to start training a model and see the model being retrained. This demo do generate costs which could be 
+This demo deploys many services (e.g. Fargate, DynamoDB, 2xKinesis Data Streams, Kinesis Firehose, Managed Service for Apache Flink, SageMaker endpoints...) and must be run for
+several days to collect enough data to be able to start training a model and see the model being retrained. This demo do generate costs which could be
 expensive, depending on your budget. The full demo costs about $480 per month in the Ireland region.

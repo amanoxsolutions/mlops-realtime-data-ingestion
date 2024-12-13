@@ -753,5 +753,5 @@ export class RDISagemakerStudio extends Construct {
       }),
     });
     serviceCatalogProductsUseRole.attachInlinePolicy(additionalProjectRolePolicies);
-  } 
+  }
 }

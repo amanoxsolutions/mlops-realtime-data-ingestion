@@ -6,7 +6,7 @@ stages of the data pipeline.
 The pipeline works as follow:
 1. An AWS Fargate container polls the data source API every second to ingest the last 100 transactions and publish all transactions on the data ingestion event bus of AWS EventBridge.
 2. An AWS EventBridge Rule routes the ingested data to an AWS Lambda Function.
-3. The AWS Lambda Function is used in combination with Amazon DynamoDB to keep track of recently ingested transactions and filter out transactions already ingested. 
+3. The AWS Lambda Function is used in combination with Amazon DynamoDB to keep track of recently ingested transactions and filter out transactions already ingested.
 4. Filtered transactions are written by the AWS Lambda Function into an _ingestion_ Amazon Kinesis Data Stream.
 5. An Amazon Kinesis Firehose streams gets the data from the _ingestion_ stream and delivers the raw data to an Amazon S3 Bucket for archival.
 6. An Amazon Managed Service for Apache Flink application gets the data from the _ingestion_ stream and aggregates them using a 1 minute tumbling window. The Flink application then puts the data into a _delivery_ Amazon Kinesis Data Stream. The application is computing the following 3 metrics per minute:
@@ -16,7 +16,7 @@ The pipeline works as follow:
 7. An AWS Lambda Function gets the aggregated data  and writes them into Amazon SageMaker Feature Store which is used as the centralized data store for machine learning training and predictions.
 8. An AWS Glue Job periodically aggregates the small files in the Amazon SageMaker Feature Store S3 Bucket to improve performance when reading data.
 ## Controlling the Data Ingestion Pipeline
-Once the stack is deployed, the AWS Fargate container will automatically start polling blockchain data and write them into Amazon EventBridge, which will be filtered by the AWS Lambda Function and written into the _ingestion_ Amazon Kinesis Data Stream. 
+Once the stack is deployed, the AWS Fargate container will automatically start polling blockchain data and write them into Amazon EventBridge, which will be filtered by the AWS Lambda Function and written into the _ingestion_ Amazon Kinesis Data Stream.
 An Amazon CloudWatch dashboard is automatically deployed by the Stacks to monitor the ingestion pipeline. It shows:
 * The amount of bytes ingested by the AWS Fargate container.
 * The total (not jus to the pipeline bus) amount of bytes written to EventBridge.
@@ -31,7 +31,7 @@ You can use Amazon Athena to query the data in the SageMaker Feature Store.
 1. go in the __Amazon Athena__ Service
 2. then in the __Query Editor__ left menu
 3. when asked, select (create if you don't have one already) the S3 bucket where the Athena query results will be stored
-4. in the __Data__ menu, select the database __sagemaker_feature__ and the  feature group table (it should look like 
+4. in the __Data__ menu, select the database __sagemaker_feature__ and the  feature group table (it should look like
 __\<application prefix\>_agg_feature_group\_xxxxxxxxx__ and click on the __Preview Table__ button"
 5. To see the latest data, you can add the ``ORDER BY tx_minute DESC`` clause in the SQL query
 ## Use SageMaker Studio Notebook to read data from SageMaker Feature Store

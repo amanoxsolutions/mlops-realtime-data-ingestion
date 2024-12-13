@@ -16,7 +16,7 @@ console.log('Current branch name: 👉 ', fullBranchName);
 const nb_delimiters = (fullBranchName.match(/\//g) || []).length;
 const start = nthIndexOf(fullBranchName, '/', nb_delimiters);
 const shortBranchName = fullBranchName.substring(start+1);
-console.log('Short branch name used for naming: 👉 ', shortBranchName);            
+console.log('Short branch name used for naming: 👉 ', shortBranchName);
 
 // Get the first 6 characters of the hash value computed from the Git branch name
 // and use it in the prefix of all the resource names

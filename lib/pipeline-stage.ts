@@ -17,7 +17,7 @@ export interface RealtimeDataIngestionStageProps extends StageProps {
 }
 
 export class RealtimeDataIngestionStage extends Stage {
-    
+
   constructor(scope: Construct, id: string, props: RealtimeDataIngestionStageProps) {
     super(scope, id, props);
 
@@ -34,7 +34,7 @@ export class RealtimeDataIngestionStage extends Stage {
     // Stack to deploy common resources
     const customResourcesStack = new CommonResourcesStack(this, "CommonResourcesStack", properties);
 
-    // Stack to deploy the Realtime Data Ingestion 
+    // Stack to deploy the Realtime Data Ingestion
     const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", properties);
     ingestionStack.node.addDependency(customResourcesStack);
 

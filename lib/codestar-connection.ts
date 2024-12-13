@@ -10,7 +10,7 @@ interface CodestarConnectionProps {
   readonly name: string;
   readonly runtime: Runtime;
 }
-  
+
 export class CodestarConnection extends Construct {
   public readonly prefix: string;
   public readonly arn: string;

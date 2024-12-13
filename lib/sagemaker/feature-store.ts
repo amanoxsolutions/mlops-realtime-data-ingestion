@@ -92,7 +92,7 @@ export class RDIFeatureStore extends Construct {
     });
     // Deploy the Glue script to the code assets bucket
     const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
-      sources: [Source.asset('./resources/glue')], 
+      sources: [Source.asset('./resources/glue')],
       destinationBucket: codeAssetsBucket,
       destinationKeyPrefix: 'glue-scripts',
     });
@@ -128,8 +128,8 @@ export class RDIFeatureStore extends Construct {
         's3:ListBucket',
         's3:ListAllMyBuckets',
         's3:GetBucket*',
-        's3:GetObject*', 
-        's3:PutObject*', 
+        's3:GetObject*',
+        's3:PutObject*',
         's3:DeleteObject*',
       ],
       resources: [
@@ -154,11 +154,11 @@ export class RDIFeatureStore extends Construct {
           new PolicyStatement({
             effect: Effect.ALLOW,
             actions: [
-              's3:GetObject', 
-              's3:PutObject', 
-              's3:DeleteObject', 
-              's3:AbortMultipartUpload', 
-              's3:GetBucketAcl', 
+              's3:GetObject',
+              's3:PutObject',
+              's3:DeleteObject',
+              's3:AbortMultipartUpload',
+              's3:GetBucketAcl',
               's3:PutObjectAcl'
             ],
             resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
@@ -179,7 +179,7 @@ export class RDIFeatureStore extends Construct {
       ),
       featureGroupName: this.featureGroupName ,
       recordIdentifierFeatureName: fgConfig.record_identifier_feature_name,
-    
+
       // the properties below are optional
       description: fgConfig.description,
       offlineStoreConfig: {
@@ -275,11 +275,11 @@ export class RDIFeatureStore extends Construct {
               sid: 'AllowToPutCloudWatchLogEvents',
               resources: [flinkAppLogGroup.logGroupArn],
               actions: [
-                'logs:PutLogEvents', 
+                'logs:PutLogEvents',
                 'logs:CreateLogStream',
                 'logs:DescribeLogGroups',
                 'logs:DescribeLogStreams'
-              ] 
+              ]
             })
           ]
         })
@@ -338,7 +338,7 @@ export class RDIFeatureStore extends Construct {
               "s3:GetObject",
               "s3:ListBucket",
               "s3:DeleteObject"
-            ] 
+            ]
           }),
           new PolicyStatement({
             effect: Effect.ALLOW,
@@ -346,7 +346,7 @@ export class RDIFeatureStore extends Construct {
             actions: [
               "s3:GetObject",
               "s3:ListBucket"
-            ] 
+            ]
           })
         ]
       })
@@ -357,7 +357,7 @@ export class RDIFeatureStore extends Construct {
       command: {
         name: 'glueetl',
         pythonVersion: '3',
-        scriptLocation: `s3://${codeAssetsBucket.bucketName}/glue-scripts/FeatureStoreAggregateParquet.py`, 
+        scriptLocation: `s3://${codeAssetsBucket.bucketName}/glue-scripts/FeatureStoreAggregateParquet.py`,
       },
       role: glueRole.roleName,
       glueVersion: '4.0',

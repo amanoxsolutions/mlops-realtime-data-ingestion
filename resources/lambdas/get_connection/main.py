@@ -8,9 +8,11 @@ logger = Logger()
 csc = boto3.client("codestar-connections")
 ssm_client = boto3.client("ssm")
 
+
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     helper(event, context)
+
 
 @helper.create
 @helper.update
@@ -25,25 +27,29 @@ def get_connection_arn(event, _):
         ssm_client.put_parameter(
             Name="/rdi-mlops/stack-parameters/connection-arn",
             Value=connection_arn,
-            Type='String',
-            Overwrite=True
+            Type="String",
+            Overwrite=True,
         )
     else:
         error_reason = f"CodeStar Connection ARN for '{connection_name}' not found"
         logger.error(error_reason)
         return {
-            'Status': 'FAILED',
-            'Reason': error_reason,
-            'LogicalResourceId': event.LogicalResourceId,
-            'RequestId': event.RequestId,
-            'StackId': event.StackId
+            "Status": "FAILED",
+            "Reason": error_reason,
+            "LogicalResourceId": event.LogicalResourceId,
+            "RequestId": event.RequestId,
+            "StackId": event.StackId,
         }
+
 
 @helper.delete
 def do_nothing(_, __):
     logger.info("Nothing to do")
 
-def search_for_connection(connection_name: str, next_token: str = None) -> Tuple[str, str]:
+
+def search_for_connection(
+    connection_name: str, next_token: str = None
+) -> Tuple[str, str]:
     """This function list CodeStar connections and search for the connection ARN
 
     Args:
@@ -54,13 +60,10 @@ def search_for_connection(connection_name: str, next_token: str = None) -> Tuple
         Tuple[str, str]: the CodeStar connection ARN and the next token to use for pagination
     """
     if not next_token:
-        csc_response = csc.list_connections(
-            ProviderTypeFilter="GitHub"
-        )
+        csc_response = csc.list_connections(ProviderTypeFilter="GitHub")
     else:
         csc_response = csc.list_connections(
-            ProviderTypeFilter="GitHub",
-            NextToken = next_token
+            ProviderTypeFilter="GitHub", NextToken=next_token
         )
     connections_list = csc_response.get("Connections", [])
     next_token = csc_response.get("NextToken")

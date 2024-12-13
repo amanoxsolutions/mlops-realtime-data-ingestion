@@ -343,8 +343,6 @@ Resources:
         - Key: sagemaker:project-name
           Value:
             Ref: SageMakerProjectName
-    DependsOn:
-      - DataQualityJobDefinition
     Condition: EnableDataQualityCondition
   ModelQualityJobDefinition:
     Type: AWS::SageMaker::ModelQualityJobDefinition
@@ -437,8 +435,6 @@ Resources:
         - Key: sagemaker:project-name
           Value:
             Ref: SageMakerProjectName
-    DependsOn:
-      - ModelQualityJobDefinition
     Condition: GroundTruthS3UriProvidedAndModelQualityMonitorEnabled
   ModelBiasJobDefinition:
     Type: AWS::SageMaker::ModelBiasJobDefinition
@@ -536,8 +532,6 @@ Resources:
         - Key: sagemaker:project-name
           Value:
             Ref: SageMakerProjectName
-    DependsOn:
-      - ModelBiasJobDefinition
     Condition: GroundTruthS3UriProvidedAndModelBiasMonitorEnabled
   ModelExplainabilityJobDefinition:
     Type: AWS::SageMaker::ModelExplainabilityJobDefinition
@@ -627,8 +621,6 @@ Resources:
         - Key: sagemaker:project-name
           Value:
             Ref: SageMakerProjectName
-    DependsOn:
-      - ModelExplainabilityJobDefinition
     Condition: EnableModelExplainabilityCondition
   TriggerModelBuildLambdaFunctionRole:
     Type: AWS::IAM::Role
@@ -654,7 +646,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - codepipeline:StartPipelineExecution
-                Resource: 
+                Resource:
                   Fn::Join:
                     - ''
                     - - arn:aws:codepipeline:*:*:sagemaker-
@@ -690,7 +682,7 @@ Resources:
           Ref: ModelBuildTriggerLambdaCodeS3Bucket
         S3Key:
           Ref: ModelBuildTriggerLambdaCodeS3Key
-      Architectures: 
+      Architectures:
         - arm64
       Runtime: python3.11
       Timeout: 3
@@ -713,7 +705,7 @@ Resources:
           - TriggerModelBuildLambdaFunction
           - Arn
       Principal: lambda.alarms.cloudwatch.amazonaws.com
-      SourceAccount: 
+      SourceAccount:
         Ref: AWS::AccountId
   MonitoringDataCollectionPipeline:
     Type: AWS::SageMaker::Pipeline
@@ -726,8 +718,8 @@ Resources:
             - Ref: StageName
             - -data-collection
       PipelineDefinition:
-        PipelineDefinitionS3Location: 
-          Bucket: 
+        PipelineDefinitionS3Location:
+          Bucket:
             Ref: MonitoringPipelineDefinitionBucket
           Key:
             Ref: MonitoringPipelineDefinitionKey
@@ -736,19 +728,19 @@ Resources:
   MonitoringDataCollectionPipelineScedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      FlexibleTimeWindow: 
+      FlexibleTimeWindow:
         Mode: 'OFF'
-      Name: 
+      Name:
         Fn::Join:
           - ''
           - - Ref: SageMakerProjectName
             - '-'
             - Ref: StageName
             - -data-collection
-      ScheduleExpression: 
+      ScheduleExpression:
         Ref: ModelQualityDataCollectionScheduleExpression
       State: ENABLED
-      Target: 
+      Target:
         Arn:
           Fn::Join:
             - ''
@@ -792,7 +784,7 @@ Resources:
       Statistic: Maximum
       Period: 3600
       EvaluationPeriods: 1
-      Threshold: 
+      Threshold:
         Ref: ModelQualityWeightedQuantileLossThreshold
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
@@ -806,8 +798,8 @@ Resources:
             - '-'
             - Ref: StageName
             - -model-monitoring-dashboard
-      DashboardBody: 
-        Fn::Sub: 
+      DashboardBody:
+        Fn::Sub:
           - |
             {
               "widgets": [
@@ -832,7 +824,7 @@ Resources:
                   }
               ]
             }
-          - StageName: 
+          - StageName:
               Ref: StageName
 Outputs:
   MonitorSageMakerProjectName:

@@ -42,7 +42,7 @@ export class DataIngestionPipelineStack extends Stack {
       runtime: runtime,
     });
 
-    // Create the code artifact S3 bucket in order to be able to set the object deletion and 
+    // Create the code artifact S3 bucket in order to be able to set the object deletion and
     // removalPolicy
     const artifactBucket = new Bucket(this, 'ArtifactBucket', {
       bucketName: `${props.prefix}-pipeline-artifacts-bucket-${uniqueSuffix}`,
@@ -51,13 +51,13 @@ export class DataIngestionPipelineStack extends Stack {
       removalPolicy: removalPolicy,
       autoDeleteObjects: removalPolicy === RemovalPolicy.DESTROY,
     });
-    
+
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: `${props.prefix}-pipeline`,
       artifactBucket: artifactBucket,
       synth: new ShellStep('Synth', {
         input: CodePipelineSource.connection(props.repoName, props.fullBranchName,
-          { 
+          {
             connectionArn: codestarConnection.arn,
             codeBuildCloneOutput: true,
           }

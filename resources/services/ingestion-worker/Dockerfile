@@ -1,4 +1,4 @@
-# Dockerfile implementing Node best practices -> 
+# Dockerfile implementing Node best practices ->
 # https://snyk.io/blog/10-best-practices-to-containerize-nodejs-web-applications-with-docker/
 
 # --------------> The build image

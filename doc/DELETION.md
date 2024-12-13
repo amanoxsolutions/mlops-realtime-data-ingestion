@@ -1,7 +1,7 @@
 # Delete the Entire Project
 This project contains 3 main parts:
 * The resources deployed through the CDK
-* The SageMaker MLOps Project deployed using the Service Catalog through the CDK 
+* The SageMaker MLOps Project deployed using the Service Catalog through the CDK
 * The different SageMaker resources deployed throughout the life of the MLOps pipeline (e.g. model endpoints, model monitoring resources, etc.)
 
 These resources must be deleted following the below steps.
@@ -16,7 +16,7 @@ In the CloudFormation console, delete each of these 4 stacks manually from top t
 In the CloudFormation console delete the SageMaker project stack (looking similar to the 3rd stack in the above screen capture).
 ## 4. Delete the SageMaker resources
 Throughout the MLOps lifecycle, different resources are deployed outside of the Infrastructure as Code stacks of both the CDK Infrastructure stack and the AWS Service Catalog MLOps project stack (e.g. SageMaker ML models).
-We provide a Step Function, to orchestrate the cleanup of all those resources. In the Step Functions console, 
+We provide a Step Function, to orchestrate the cleanup of all those resources. In the Step Functions console,
 1. select the `mlops-********-cleanup-sagemaker-project-role-statemachine`
 2. click on `Start Execution`
 3. when asked for an input, just click again on `Start Execution`
@@ -27,11 +27,11 @@ The S3 bucket storing the raw data ingested through Kinesis Firehose is configur
 Depending on how long you ran the demo and how much data are stored it can take quite some time for the cleanup of the S3 bucket to complete through CloudFormation.
 If you want to fasten the deletion of the `mlops-********-RealtimeDataIngestion-IngestionStack` stack, we recommend to manually empty the data ingestion bucket `mlops-********-input-bucket-********` before hand.
 ## 6. Delete the CDK Stacks
-Unfortunately running the CLI command 
+Unfortunately running the CLI command
 ```
 cdk destroy
 ```
-will only destroy the CI/CD pipeline stack, not the data ingestion and the SageMaker stacks. 
+will only destroy the CI/CD pipeline stack, not the data ingestion and the SageMaker stacks.
 To delete all resources, go into CloudFormation and delete the stacks manually. You should have 4 remaining CloudFormation stacks as shown in the following screen capture (stack prefixes will be unique to your deployment)
 ![](./images/cdk-stacks.jpg)
 Delete each of these stacks manually from top to bottom:

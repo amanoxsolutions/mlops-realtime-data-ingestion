@@ -4,12 +4,20 @@ from aws_lambda_powertools import Logger
 
 logger = Logger()
 ssm = boto3.client("ssm")
-sm = boto3.client('sagemaker', config=Config(connect_timeout=5, read_timeout=60, retries={'max_attempts': 20}))
+sm = boto3.client(
+    "sagemaker",
+    config=Config(connect_timeout=5, read_timeout=60, retries={"max_attempts": 20}),
+)
+
 
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     # Get the SageMaker prefix name from SSM parameter store
-    project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
+    project_prefix = (
+        ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix")
+        .get("Parameter")
+        .get("Value")
+    )
     # List the SageMaker pipelines where the PipelineName starts with the project prefix
     pipelines = []
     paginator = sm.get_paginator("list_pipelines")

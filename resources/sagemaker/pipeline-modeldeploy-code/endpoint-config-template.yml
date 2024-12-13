@@ -39,7 +39,7 @@ Parameters:
     Description: Enable Data capture.
     Default: true
     Type: String
-    AllowedValues: [true, false]   
+    AllowedValues: [true, false]
 
 
 Resources:
@@ -60,7 +60,7 @@ Resources:
           ModelName: !GetAtt Model.ModelName
           VariantName: AllTraffic
       DataCaptureConfig:
-          EnableCapture: !Ref EnableDataCapture 
+          EnableCapture: !Ref EnableDataCapture
           InitialSamplingPercentage: !Ref SamplingPercentage
           DestinationS3Uri: !Ref DataCaptureUploadPath
           CaptureOptions:

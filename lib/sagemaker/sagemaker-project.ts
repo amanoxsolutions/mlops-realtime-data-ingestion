@@ -1,12 +1,12 @@
 import { Construct } from 'constructs';
 import { Stack, Duration, CustomResource, RemovalPolicy } from 'aws-cdk-lib';
-import { 
-  PolicyStatement, 
+import {
+  PolicyStatement,
   PolicyDocument,
-  Effect, 
-  Role, 
-  Policy, 
-  ServicePrincipal 
+  Effect,
+  Role,
+  Policy,
+  ServicePrincipal
 } from 'aws-cdk-lib/aws-iam';
 import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
 import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
@@ -162,7 +162,7 @@ interface RDISagemakerProjectProps {
   readonly repoNameDeploy: string;
   readonly repoNameMonitor: string;
 }
-  
+
 export class RDISagemakerProject extends Construct {
   public readonly prefix: string;
   public readonly removalPolicy: RemovalPolicy;
@@ -357,8 +357,8 @@ export class RDISagemakerProject extends Construct {
         's3:ListBucket',
         's3:ListAllMyBuckets',
         's3:GetBucket*',
-        's3:GetObject*', 
-        's3:PutObject*', 
+        's3:GetObject*',
+        's3:PutObject*',
         's3:DeleteObject*',
       ],
       resources: [
@@ -367,5 +367,5 @@ export class RDISagemakerProject extends Construct {
       ],
     });
     props.dataAccessPolicy.addStatements(sagemakerProjectBucketPolicy);
-  } 
+  }
 }
