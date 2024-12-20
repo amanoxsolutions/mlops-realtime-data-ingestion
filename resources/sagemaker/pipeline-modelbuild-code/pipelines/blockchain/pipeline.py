@@ -13,6 +13,7 @@
 Implements a get_pipeline(**kwargs) method.
 Example of DeepAR pipeline: https://github.com/aws-samples/amazon-sagemaker-forecasting-air-pollution-with-deepar/blob/main/02_manual_ml_pipeline_creation_for_air_quality_forecasting.ipynb
 """
+
 import os
 import json
 
@@ -22,41 +23,29 @@ import sagemaker.session
 
 from sagemaker.estimator import Estimator
 from sagemaker.inputs import TrainingInput, TransformInput
-from sagemaker.model import Model
 from sagemaker.transformer import Transformer
 
-from sagemaker.model_metrics import (
-    MetricsSource,
-    ModelMetrics
-)
+from sagemaker.model_metrics import MetricsSource, ModelMetrics
 from sagemaker.drift_check_baselines import DriftCheckBaselines
-from sagemaker.processing import (
-    ProcessingInput,
-    ProcessingOutput,
-    ScriptProcessor
-)
+from sagemaker.processing import ProcessingInput, ProcessingOutput, ScriptProcessor
 from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
 from sagemaker.workflow.parameters import (
     ParameterBoolean,
     ParameterInteger,
-    ParameterString
+    ParameterString,
 )
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.properties import PropertyFile
-from sagemaker.workflow.steps import (
-    ProcessingStep,
-    TrainingStep,
-    TransformStep
-)
+from sagemaker.workflow.steps import ProcessingStep, TrainingStep, TransformStep
 from sagemaker.workflow.check_job_config import CheckJobConfig
 from sagemaker.workflow.execution_variables import ExecutionVariables
 from sagemaker.workflow.functions import Join
 from sagemaker.model_monitor import DatasetFormat
 from sagemaker.workflow.quality_check_step import (
     ModelQualityCheckConfig,
-    QualityCheckStep
+    QualityCheckStep,
 )
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.model import Model
@@ -70,27 +59,27 @@ from sagemaker.workflow.pipeline_context import PipelineSession
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 PROCESSING_FOLDER_PREFIX = "/opt/ml/processing"
 LOCAL_DATA_DIR = f"{PROCESSING_FOLDER_PREFIX}/data"
-LOCAL_MODEL_DIR =  f"{PROCESSING_FOLDER_PREFIX}/model"
+LOCAL_MODEL_DIR = f"{PROCESSING_FOLDER_PREFIX}/model"
 LOCAL_TEST_DIR = f"{LOCAL_DATA_DIR}/test"
 LOCAL_TRANSFORM_DIR = f"{LOCAL_DATA_DIR}/transform"
 LOCAL_EVALUATION_DIR = f"{LOCAL_DATA_DIR}/evaluation"
 # Resources names
-#MODEL_PACKAGE_GROUP_NAME = f"PackageGroup"
-PROCESSING_STEP_NAME = f"PreprocessData"
-PROCESSING_JOB_NAME = f"PreprocessingJob"
-TRAINING_JOB_NAME = f"TrainingJob"
-TRAINING_STEP_NAME = f"TrainModel"
-CREATE_MODEL_STEP_NAME = f"CreateModel"
-TRANSFORM_STEP_NAME = f"Transform"
-TRANSFORM_JOB_NAME = f"TransformOutputsProcessingJob"
-PROCESSING_TRANSFORM_STEP_NAME = f"ProcessingTransformOutputs"
-MODEL_QUALITY_CHECK_STEP_NAME = f"QualityCheck"
-EVALUATION_JOB_NAME = f"EvaluationJob"
-EVALUATION_REPORT_NAME = f"EvaluationReport"
-EVALUATION_STEP_NAME = f"EvaluateModel"
-REGISTER_MODEL_STEP_NAME = f"RegisterModel"
-CONDITON_STEP_NAME = f"CheckMQLCondition"
-FAIL_STEP_NAME = f"Fail"
+# MODEL_PACKAGE_GROUP_NAME = f"PackageGroup"
+PROCESSING_STEP_NAME = "PreprocessData"
+PROCESSING_JOB_NAME = "PreprocessingJob"
+TRAINING_JOB_NAME = "TrainingJob"
+TRAINING_STEP_NAME = "TrainModel"
+CREATE_MODEL_STEP_NAME = "CreateModel"
+TRANSFORM_STEP_NAME = "Transform"
+TRANSFORM_JOB_NAME = "TransformOutputsProcessingJob"
+PROCESSING_TRANSFORM_STEP_NAME = "ProcessingTransformOutputs"
+MODEL_QUALITY_CHECK_STEP_NAME = "QualityCheck"
+EVALUATION_JOB_NAME = "EvaluationJob"
+EVALUATION_REPORT_NAME = "EvaluationReport"
+EVALUATION_STEP_NAME = "EvaluateModel"
+REGISTER_MODEL_STEP_NAME = "RegisterModel"
+CONDITON_STEP_NAME = "CheckMQLCondition"
+FAIL_STEP_NAME = "Fail"
 # Instances
 BASE_INSTANCE_TYPE = "ml.m5.large"
 PROCESSING_INSTANCE_TYPE = "ml.t3.medium"
@@ -101,19 +90,20 @@ CHECK_INSTANCE_TYPE = BASE_INSTANCE_TYPE
 INFERENCE_INSTANCES_TYPE = ["ml.t2.medium", BASE_INSTANCE_TYPE]
 ACCELERATOR_TYPE = "ml.eia1.medium"
 
+
 def get_sagemaker_client(region):
-     """Gets the sagemaker client.
+    """Gets the sagemaker client.
 
-        Args:
-            region: the aws region to start the session
-            default_bucket: the bucket to use for storing the artifacts
+    Args:
+        region: the aws region to start the session
+        default_bucket: the bucket to use for storing the artifacts
 
-        Returns:
-            `sagemaker.session.Session instance
-        """
-     boto_session = boto3.Session(region_name=region)
-     sagemaker_client = boto_session.client("sagemaker")
-     return sagemaker_client
+    Returns:
+        `sagemaker.session.Session instance
+    """
+    boto_session = boto3.Session(region_name=region)
+    sagemaker_client = boto_session.client("sagemaker")
+    return sagemaker_client
 
 
 def get_session(region, default_bucket):
@@ -159,19 +149,20 @@ def get_pipeline_session(region, default_bucket):
         default_bucket=default_bucket,
     )
 
+
 def get_pipeline_custom_tags(new_tags, region, sagemaker_project_name=None):
     try:
         sm_client = get_sagemaker_client(region)
         response = sm_client.describe_project(ProjectName=sagemaker_project_name)
         sagemaker_project_arn = response["ProjectArn"]
-        response = sm_client.list_tags(
-            ResourceArn=sagemaker_project_arn)
+        response = sm_client.list_tags(ResourceArn=sagemaker_project_arn)
         project_tags = response["Tags"]
         for project_tag in project_tags:
             new_tags.append(project_tag)
     except Exception as e:
         print(f"Error getting project tags: {e}")
     return new_tags
+
 
 def get_ssm_parameters(ssm_client, param_path):
     """Retrieves the SSM parameters from the specified path
@@ -186,10 +177,8 @@ def get_ssm_parameters(ssm_client, param_path):
     parameters = {}
     try:
         response = ssm_client.get_parameters_by_path(
-                Path=param_path,
-                Recursive=False,
-                WithDecryption=False
-            )
+            Path=param_path, Recursive=False, WithDecryption=False
+        )
         for param in response["Parameters"]:
             parameters[param["Name"].split("/")[-1]] = param["Value"]
         while next_token := response.get("NextToken"):
@@ -197,13 +186,14 @@ def get_ssm_parameters(ssm_client, param_path):
                 Path=param_path,
                 Recursive=False,
                 WithDecryption=False,
-                NextToken=next_token
+                NextToken=next_token,
             )
             for param in response["Parameters"]:
                 parameters[param["Name"].split("/")[-1]] = param["Value"]
     except Exception as e:
         print(f"An error occurred reading the SSM stack parameters: {e}")
     return parameters
+
 
 def get_pipeline(
     region,
@@ -236,32 +226,26 @@ def get_pipeline(
         role = sagemaker.session.get_execution_role(sagemaker_session)
 
     pipeline_session = get_pipeline_session(region, default_bucket)
-    
+
     # parameters for pipeline execution
     processing_instance_count = ParameterInteger(
-        name="ProcessingInstanceCount", 
-        default_value=1
+        name="ProcessingInstanceCount", default_value=1
     )
     model_approval_status = ParameterString(
-        name="ModelApprovalStatus", 
-        default_value="PendingManualApproval"
+        name="ModelApprovalStatus", default_value="PendingManualApproval"
     )
     # for model quality check step
     skip_check_model_quality = ParameterBoolean(
-        name="SkipModelQualityCheck", 
-        default_value = False
+        name="SkipModelQualityCheck", default_value=False
     )
     register_new_baseline_model_quality = ParameterBoolean(
-        name="RegisterNewModelQualityBaseline", 
-        default_value=False
+        name="RegisterNewModelQualityBaseline", default_value=False
     )
     supplied_baseline_statistics_model_quality = ParameterString(
-        name="ModelQualitySuppliedStatistics", 
-        default_value=''
+        name="ModelQualitySuppliedStatistics", default_value=""
     )
     supplied_baseline_constraints_model_quality = ParameterString(
-        name="ModelQualitySuppliedConstraints", 
-        default_value=''
+        name="ModelQualitySuppliedConstraints", default_value=""
     )
 
     # Read the Feature Group Name from SageMaker feature store
@@ -270,12 +254,20 @@ def get_pipeline(
         Name="/rdi-mlops/stack-parameters/sagemaker-feature-group-name"
     )["Parameter"]["Value"]
     # Read the SSM Paramters for the model prediction target
-    model_target_parameters = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/target")
+    model_target_parameters = get_ssm_parameters(
+        ssm_client, "/rdi-mlops/sagemaker/model-build/target"
+    )
     # Read the SSM Parameters storing the model training hyperparamters
-    model_training_hyperparameters = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/training-hyperparameters")
+    model_training_hyperparameters = get_ssm_parameters(
+        ssm_client, "/rdi-mlops/sagemaker/model-build/training-hyperparameters"
+    )
     # Read the SSM Parameters storing the model validation thresholds by the parameters path
-    model_validation_thresholds = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold")
-    weighted_quantile_loss_threshold = float(model_validation_thresholds["weighted_quantile_loss"])
+    model_validation_thresholds = get_ssm_parameters(
+        ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold"
+    )
+    weighted_quantile_loss_threshold = float(
+        model_validation_thresholds["weighted_quantile_loss"]
+    )
 
     #
     # Step 1: Data Preprocessing
@@ -284,8 +276,7 @@ def get_pipeline(
     # List of processing images: https://github.com/aws/sagemaker-python-sdk/tree/master/src/sagemaker/image_uri_config
     # If we need to create our own container: https://docs.aws.amazon.com/sagemaker/latest/dg/processing-container-run-scripts.html
     processing_image_uri = sagemaker.image_uris.get_base_python_image_uri(
-        region=region, 
-        py_version="310"
+        region=region, py_version="310"
     )
 
     data_preprocessor = ScriptProcessor(
@@ -301,24 +292,33 @@ def get_pipeline(
     preprocessing_step_args = data_preprocessor.run(
         outputs=[
             ProcessingOutput(output_name="train", source=f"{LOCAL_DATA_DIR}/train"),
-            ProcessingOutput(output_name="validation", source=f"{LOCAL_DATA_DIR}/validation"),
-            ProcessingOutput(output_name="test", source=f"{LOCAL_DATA_DIR}/test")
+            ProcessingOutput(
+                output_name="validation", source=f"{LOCAL_DATA_DIR}/validation"
+            ),
+            ProcessingOutput(output_name="test", source=f"{LOCAL_DATA_DIR}/test"),
         ],
         code=os.path.join(BASE_DIR, "preprocess.py"),
         arguments=[
-            "--region", region,
-            "--feature-group-name", feature_group_name,
-            "--artifacts-bucket", default_bucket,
-            "--base-job-prefix", base_job_prefix,
-            "--freq", model_target_parameters["freq"],
-            "--target-col", model_target_parameters["target_col"],
-            "--prediction-length", model_target_parameters["prediction_length"],
+            "--region",
+            region,
+            "--feature-group-name",
+            feature_group_name,
+            "--artifacts-bucket",
+            default_bucket,
+            "--base-job-prefix",
+            base_job_prefix,
+            "--freq",
+            model_target_parameters["freq"],
+            "--target-col",
+            model_target_parameters["target_col"],
+            "--prediction-length",
+            model_target_parameters["prediction_length"],
         ],
     )
 
     step_preprocessing = ProcessingStep(
         name=PROCESSING_STEP_NAME,
-        step_args=preprocessing_step_args,        
+        step_args=preprocessing_step_args,
     )
 
     #
@@ -326,9 +326,7 @@ def get_pipeline(
     #
     model_path = f"s3://{default_bucket}/{base_job_prefix}/model_training/output"
     deepar_image_uri = sagemaker.image_uris.retrieve(
-        framework="forecasting-deepar",
-        region=region, 
-        version="1"
+        framework="forecasting-deepar", region=region, version="1"
     )
 
     deepar_estimator = Estimator(
@@ -339,19 +337,21 @@ def get_pipeline(
         instance_type=TRAINING_INSTANCE_TYPE,
         base_job_name=TRAINING_JOB_NAME,
         use_spot_instances=True,
-        max_run=60*60-1,
-        max_wait=60*60,
+        max_run=60 * 60 - 1,
+        max_wait=60 * 60,
         output_path=model_path,
     )
     hyperparameters = {
         "time_freq": model_target_parameters["freq"],
         "epochs": model_training_hyperparameters["epochs"],
-        "early_stopping_patience": model_training_hyperparameters["early_stopping_patience"],
+        "early_stopping_patience": model_training_hyperparameters[
+            "early_stopping_patience"
+        ],
         "mini_batch_size": model_training_hyperparameters["mini_batch_size"],
         "learning_rate": model_training_hyperparameters["learning_rate"],
         "context_length": model_target_parameters["prediction_length"],
         "prediction_length": model_target_parameters["prediction_length"],
-        "likelihood": "negative-binomial"
+        "likelihood": "negative-binomial",
     }
     deepar_estimator.set_hyperparameters(**hyperparameters)
     preprocessing_step_args = deepar_estimator.fit(
@@ -407,9 +407,11 @@ def get_pipeline(
     deepar_environment_param = {
         "num_samples": 100,
         "output_types": ["quantiles", "mean"],
-        "quantiles": ["0.1", "0.5", "0.9"]
+        "quantiles": ["0.1", "0.5", "0.9"],
     }
-    transform_output_path = f"s3://{default_bucket}/{base_job_prefix}/batch_transform/output"
+    transform_output_path = (
+        f"s3://{default_bucket}/{base_job_prefix}/batch_transform/output"
+    )
     transformer = Transformer(
         model_name=step_create_model.properties.ModelName,
         instance_type=TRANSFORM_INSTANCE_TYPE,
@@ -419,18 +421,19 @@ def get_pipeline(
         assemble_with="Line",
         output_path=transform_output_path,
         sagemaker_session=pipeline_session,
-        env={
-            "DEEPAR_INFERENCE_CONFIG": json.dumps(deepar_environment_param)
-        }
+        env={"DEEPAR_INFERENCE_CONFIG": json.dumps(deepar_environment_param)},
     )
 
     transform_inputs = TransformInput(
         data=Join(
-            on = "/", 
+            on="/",
             values=[
-                step_preprocessing.properties.ProcessingOutputConfig.Outputs["test"].S3Output.S3Uri,
-                "test-inputs.json"
-            ])
+                step_preprocessing.properties.ProcessingOutputConfig.Outputs[
+                    "test"
+                ].S3Output.S3Uri,
+                "test-inputs.json",
+            ],
+        )
     )
 
     # The output of the DeepAR Tranform is also in JSON lines format, with one line per prediction
@@ -450,7 +453,7 @@ def get_pipeline(
     #
     # Step 5: Evaluate the results of the Batch transform
     #
-    # Process the Batch Transform Outputs with the target data to have a single CSV file with the 
+    # Process the Batch Transform Outputs with the target data to have a single CSV file with the
     # following format:
     # target, mean, quantile1, quantile5, quantile9
     evaluate_processor = ScriptProcessor(
@@ -480,11 +483,9 @@ def get_pipeline(
             ProcessingOutput(output_name="evaluation", source=LOCAL_EVALUATION_DIR)
         ],
         code=os.path.join(BASE_DIR, "evaluate.py"),
-        arguments=[
-            "--target-col", model_target_parameters["target_col"]
-        ],
+        arguments=["--target-col", model_target_parameters["target_col"]],
     )
-    
+
     evaluation_report = PropertyFile(
         name=EVALUATION_REPORT_NAME,
         output_name="evaluation",
@@ -495,7 +496,7 @@ def get_pipeline(
         name=EVALUATION_STEP_NAME,
         step_args=eval_step_args,
         property_files=[evaluation_report],
-        depends_on=[TRANSFORM_STEP_NAME], 
+        depends_on=[TRANSFORM_STEP_NAME],
     )
 
     #
@@ -519,22 +520,26 @@ def get_pipeline(
         baseline_dataset=Join(
             on="/",
             values=[
-                step_eval.properties.ProcessingOutputConfig.Outputs["evaluation"].S3Output.S3Uri,
-                "targets-quantiles.csv"
-            ]),
+                step_eval.properties.ProcessingOutputConfig.Outputs[
+                    "evaluation"
+                ].S3Output.S3Uri,
+                "targets-quantiles.csv",
+            ],
+        ),
         dataset_format=DatasetFormat.csv(header=True),
         output_s3_uri=Join(
-            on="/", 
+            on="/",
             values=[
-                "s3:/", 
-                default_bucket, 
-                base_job_prefix, 
-                execution_prefix, 
-                "modelqualitycheck"
-            ]),
-        problem_type='Regression',
-        inference_attribute='quantile5',
-        ground_truth_attribute='target'
+                "s3:/",
+                default_bucket,
+                base_job_prefix,
+                execution_prefix,
+                "modelqualitycheck",
+            ],
+        ),
+        problem_type="Regression",
+        inference_attribute="quantile5",
+        ground_truth_attribute="target",
     )
 
     model_quality_check_step = QualityCheckStep(
@@ -545,7 +550,7 @@ def get_pipeline(
         check_job_config=check_job_config,
         supplied_baseline_statistics=supplied_baseline_statistics_model_quality,
         supplied_baseline_constraints=supplied_baseline_constraints_model_quality,
-        model_package_group_name=model_package_group_name
+        model_package_group_name=model_package_group_name,
     )
 
     model_metrics = ModelMetrics(
@@ -556,7 +561,7 @@ def get_pipeline(
         model_constraints=MetricsSource(
             s3_uri=model_quality_check_step.properties.CalculatedBaselineConstraints,
             content_type="application/json",
-        )
+        ),
     )
 
     drift_check_baselines = DriftCheckBaselines(
@@ -567,7 +572,7 @@ def get_pipeline(
         model_constraints=MetricsSource(
             s3_uri=model_quality_check_step.properties.BaselineUsedForDriftCheckConstraints,
             content_type="application/json",
-        )
+        ),
     )
 
     ### Register the model
@@ -606,12 +611,14 @@ def get_pipeline(
     )
 
     # condition step for evaluating model quality and branching execution
-    print(f"model validation threshold used is : weighted_quantile_loss <= {weighted_quantile_loss_threshold}")
+    print(
+        f"model validation threshold used is : weighted_quantile_loss <= {weighted_quantile_loss_threshold}"
+    )
     cond_lte = ConditionLessThanOrEqualTo(
         left=JsonGet(
             step_name=step_eval.name,
             property_file=evaluation_report,
-            json_path="deepar_metrics.weighted_quantile_loss.value"
+            json_path="deepar_metrics.weighted_quantile_loss.value",
         ),
         right=weighted_quantile_loss_threshold,
     )
@@ -631,20 +638,19 @@ def get_pipeline(
             TRAINING_INSTANCE_TYPE,
             model_approval_status,
             feature_group_name,
-
             skip_check_model_quality,
             register_new_baseline_model_quality,
             supplied_baseline_statistics_model_quality,
             supplied_baseline_constraints_model_quality,
         ],
         steps=[
-            step_preprocessing, 
-            step_train, 
-            step_create_model, 
-            step_transform, 
+            step_preprocessing,
+            step_train,
+            step_create_model,
+            step_transform,
             step_eval,
-            model_quality_check_step, 
-            step_cond
+            model_quality_check_step,
+            step_cond,
         ],
         sagemaker_session=pipeline_session,
     )

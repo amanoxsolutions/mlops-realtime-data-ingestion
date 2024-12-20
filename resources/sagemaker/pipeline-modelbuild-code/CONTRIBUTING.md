@@ -10,7 +10,7 @@
 
 on ubuntu 18.04, it's all something like this
 ```
-❯ pip3 install virtualenv 
+❯ pip3 install virtualenv
 
 ❯ pip3 install virtualenvwrapper
 
@@ -54,11 +54,11 @@ start up your virtualenv again and let's get to testing
 ```
 ❯ workon your-project
 
-❯ python -m pytest   
+❯ python -m pytest
 ============================================================= test session starts =============================================================
 cachedir: .pytest_cache
 plugins: cov-2.10.1
-collected 2 items                                                                                                                               
+collected 2 items
 
 tests/test_pipelines.py::test_that_you_wrote_tests XFAIL                                                                           [ 50%]
 tests/test_pipelines.py::test_pipelines_importable PASSED                                                                          [100%]

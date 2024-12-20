@@ -1,5 +1,5 @@
-import murmurhash = require('murmurhash'); 
- 
+import murmurhash = require('murmurhash');
+
  import fs = require('fs');
  import path = require('path');
 
@@ -13,9 +13,9 @@ import murmurhash = require('murmurhash');
     return NaN;
 }
 
-export function getCurrentBranchName(p = process.cwd()): string | undefined {  
+export function getCurrentBranchName(p = process.cwd()): string | undefined {
     // Get the current branch name from the /.git/HEAD file
-    // and extract only the branch name "feature/my_brilliant_feature_idea" 
+    // and extract only the branch name "feature/my_brilliant_feature_idea"
     // from the "ref: refs/heads/feature/my_brilliant_feature_idea"
     // i.e. it gets rid of the "ref: refs/heads" reference
     const gitHeadPath = `${p}/.git/HEAD`;

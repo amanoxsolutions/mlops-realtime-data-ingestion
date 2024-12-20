@@ -6,15 +6,23 @@ from typing import Dict
 
 logger = Logger()
 ssm = boto3.client("ssm")
-sm = boto3.client('sagemaker', config=Config(connect_timeout=5, read_timeout=60, retries={'max_attempts': 20}))
+sm = boto3.client(
+    "sagemaker",
+    config=Config(connect_timeout=5, read_timeout=60, retries={"max_attempts": 20}),
+)
 sts = boto3.client("sts")
 AWS_REGION = boto3.session.Session().region_name
 ACCOUNT_ID = sts.get_caller_identity().get("Account")
 
+
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     # Get the SageMaker prefix name from SSM parameter store
-    project_prefix = ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix").get("Parameter").get("Value")
+    project_prefix = (
+        ssm.get_parameter(Name="/rdi-mlops/stack-parameters/project-prefix")
+        .get("Parameter")
+        .get("Value")
+    )
     # List all the sagemaker trials where the TrialSource.SourceArn starts with either
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:training-job/{project_prefix}
     # - arn:aws:sagemaker:{AWS_REGION}:{ACCOUNT_ID}:pipeline/{project_prefix}
@@ -39,19 +47,28 @@ def lambda_handler(event, context):
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(delete_trials, trials)
     if more_trials:
-        logger.info("There are more than 100 trials to delete, please run the lambda again")
+        logger.info(
+            "There are more than 100 trials to delete, please run the lambda again"
+        )
     else:
         logger.info("All trials deleted")
     return {"more_trials": more_trials}
 
+
 def delete_trials(trial: Dict):
     trial_name = trial.get("TrialName")
-    trial_components = sm.list_trial_components(TrialName=trial_name).get("TrialComponentSummaries")
+    trial_components = sm.list_trial_components(TrialName=trial_name).get(
+        "TrialComponentSummaries"
+    )
     for trial_component in trial_components:
         trial_component_name = trial_component.get("TrialComponentName")
         # First disassociate the trial component from the trial
-        sm.disassociate_trial_component(TrialComponentName=trial_component_name, TrialName=trial_name)
-        logger.info(f"Disassociated trial {trial_name} component {trial_component_name}")
+        sm.disassociate_trial_component(
+            TrialComponentName=trial_component_name, TrialName=trial_name
+        )
+        logger.info(
+            f"Disassociated trial {trial_name} component {trial_component_name}"
+        )
         # Then delete the trial component
         sm.delete_trial_component(TrialComponentName=trial_component_name)
         logger.info(f"Deleted trial {trial_name} component {trial_component_name}")

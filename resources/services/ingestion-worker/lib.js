@@ -52,7 +52,7 @@ async function ingestData(throwError = false) {
 async function pushEntryOnEventBus(entry, throwError = false) {
   let params = {
     Entries: [entry],
-  }; 
+  };
   try {
     await ebClient.send(new PutEventsCommand(params));
     console.log(`-- Pushed data points on the eventBus ${entry.EventBusName}`);
@@ -95,7 +95,7 @@ async function writeMetric(dataSize) {
 async function pushDataOnEventBus(data, detailType, throwError = false) {
   const eventBusName = process.env.EVENT_BUS_NAME || 'default';
   // create a parameter object with an empty list of entries
-  
+
   // Try first to create an entry with all the data
   let entry = {
     EventBusName: eventBusName,
@@ -142,7 +142,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
         numberOfEntries += 1;
       } else if (tempEntrySize > 256000) {
         // if the size of the temporary transaction list is greater than 256KB
-        // we keep the entry transactions list as is and add it to the list of 
+        // we keep the entry transactions list as is and add it to the list of
         // paramaters entries
         entry.Detail = JSON.stringify({txs: entryTransactions});
         console.log(`-- Entry ${numberOfEntries} contains ${nbTransactions} transactions for a total size of ${currentEntrySize} bytes`);
@@ -157,7 +157,7 @@ async function pushDataOnEventBus(data, detailType, throwError = false) {
         nbTransactions += 1;
       }
     }
-    // if there are still transactions in the entry transactions list we need to 
+    // if there are still transactions in the entry transactions list we need to
     // add it to the entry and push it on the event bus if its size is inferior to 256KB
     if (entryTransactions.length > 0 && currentEntrySize <= 256000) {
       entry.Detail = JSON.stringify({txs: entryTransactions});

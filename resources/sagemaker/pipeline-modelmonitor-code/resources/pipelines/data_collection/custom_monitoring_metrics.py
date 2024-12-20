@@ -1,32 +1,30 @@
 import subprocess
 import sys
+
 subprocess.check_call([sys.executable, "-m", "pip", "install", "sagemaker>=2.197.0"])
 subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas>=2.1.3"])
-
-import json
-import os
-import argparse
-from datetime import datetime
-import uuid
-
-import boto3
-import logging
-import time
-from botocore.config import Config
-from sagemaker import Session
-import pandas as pd
-from datetime import datetime
-from typing import List, Dict, Any, TypeAlias
-from sagemaker.feature_store.feature_group import FeatureGroup
-from utils import DeepARPredictor, DeepARData, get_session, write_dicts_to_file, get_ssm_parameters
-
+from utils import (  # noqa: E402
+    DeepARPredictor,
+    get_session,
+    write_dicts_to_file,
+    get_ssm_parameters,
+)
+import json  # noqa: E402
+import os  # noqa: E402
+import argparse  # noqa: E402
+import boto3  # noqa: E402
+import logging  # noqa: E402
+from botocore.config import Config  # noqa: E402
+from sagemaker import Session  # noqa: E402
+import pandas as pd  # noqa: E402
+from sagemaker.feature_store.feature_group import FeatureGroup  # noqa: E402
 
 # create clients
 AWS_REGION = os.environ["AWS_REGION"]
 STAGE_NAME = os.environ["STAGE_NAME"]
 logger = logging.getLogger(__name__)
 boto3_config = Config(
-    region_name = AWS_REGION,
+    region_name=AWS_REGION,
 )
 ssm_client = boto3.client("ssm", config=boto3_config)
 s3_client = boto3.resource("s3", config=boto3_config)
@@ -41,32 +39,39 @@ if __name__ == "__main__":
     # Read the SSM Paramters for the stack
     stack_parameters = get_ssm_parameters(ssm_client, "/rdi-mlops/stack-parameters")
     # Read the SSM Paramters for the model prediction target
-    model_target_parameters = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/target")
+    model_target_parameters = get_ssm_parameters(
+        ssm_client, "/rdi-mlops/sagemaker/model-build/target"
+    )
     # Read the SSM Parameters storing the model validation thresholds by the parameters path
-    model_validation_thresholds = get_ssm_parameters(ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold")
+    model_validation_thresholds = get_ssm_parameters(
+        ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold"
+    )
 
     # Set some Buckets variables
     model_artifacts_bucket = f"{stack_parameters['project-prefix']}-sagemaker-experiment-{stack_parameters['bucket-suffix']}"
 
     # Set session variables
-    sagemaker_session = get_session(AWS_REGION ,model_artifacts_bucket)
+    sagemaker_session = get_session(AWS_REGION, model_artifacts_bucket)
     boto_session = boto3.Session(region_name=AWS_REGION)
 
     # Set boto3 S3 client
-    
+
     # Set feature store session
-    sagemaker_client = boto_session.client(service_name='sagemaker', region_name=AWS_REGION)
-    featurestore_runtime = boto_session.client(service_name='sagemaker-featurestore-runtime', region_name=AWS_REGION)
+    sagemaker_client = boto_session.client(
+        service_name="sagemaker", region_name=AWS_REGION
+    )
+    featurestore_runtime = boto_session.client(
+        service_name="sagemaker-featurestore-runtime", region_name=AWS_REGION
+    )
     feature_store_session = Session(
         boto_session=boto_session,
         sagemaker_client=sagemaker_client,
-        sagemaker_featurestore_runtime_client=featurestore_runtime
+        sagemaker_featurestore_runtime_client=featurestore_runtime,
     )
 
     transactions_feature_group_name = stack_parameters["sagemaker-feature-group-name"]
     transactions_feature_group = FeatureGroup(
-        name=transactions_feature_group_name, 
-        sagemaker_session=feature_store_session
+        name=transactions_feature_group_name, sagemaker_session=feature_store_session
     )
     transactions_data_query = transactions_feature_group.athena_query()
     transactions_data_table = transactions_data_query.table_name
@@ -93,8 +98,8 @@ if __name__ == "__main__":
     prediction_length = int(model_target_parameters["prediction_length"])
     min_data_length = 2 * prediction_length
 
-    if total_nb_data_points < min_data_length :
-        prediction_length = int(total_nb_data_points  * 0.05)
+    if total_nb_data_points < min_data_length:
+        prediction_length = int(total_nb_data_points * 0.05)
 
     df_input_data = df[:-prediction_length]
     df_target_data = df[-prediction_length:]
@@ -105,23 +110,28 @@ if __name__ == "__main__":
             "target": list(df_input_data[target_col]),
         }
     ]
-    
 
-    endpoint_name=f"{stack_parameters['sagemaker-project-name']}-staging"
-    predictor = DeepARPredictor(endpoint_name=endpoint_name, sagemaker_session=sagemaker_session)
+    endpoint_name = f"{stack_parameters['sagemaker-project-name']}-staging"
+    predictor = DeepARPredictor(
+        endpoint_name=endpoint_name, sagemaker_session=sagemaker_session
+    )
 
     # Convert the context data to time series
-    ts=df_input_data[target_col]
-    df_predictions = predictor.predict(ts=ts, quantiles=[0.1, 0.5, 0.9], return_mean=True)
+    ts = df_input_data[target_col]
+    df_predictions = predictor.predict(
+        ts=ts, quantiles=[0.1, 0.5, 0.9], return_mean=True
+    )
 
     # Create a dataframe with the target_col from the test targets and the quantiles from the Batch Transform outputs
-    df_aggregate = pd.DataFrame({
-        "target": df_target_data[target_col],
-        "mean": df_predictions["mean"],
-        "quantile1": df_predictions["0.1"],
-        "quantile5": df_predictions["0.5"],
-        "quantile9": df_predictions["0.9"]
-    })
+    df_aggregate = pd.DataFrame(
+        {
+            "target": df_target_data[target_col],
+            "mean": df_predictions["mean"],
+            "quantile1": df_predictions["0.1"],
+            "quantile5": df_predictions["0.5"],
+            "quantile9": df_predictions["0.9"],
+        }
+    )
 
     # Compute the RMSE for the middle quantile
     logger.info("Computing the RMSE for the middle quantile.")
@@ -139,21 +149,28 @@ if __name__ == "__main__":
     weighted_quantile_loss = []
     for q in [1, 5, 9]:
         df_aggregate[f"quantile_loss_{q}"] = 0.0
-        df_aggregate.loc[df_aggregate[f"quantile{q}"] > df_aggregate["target"], f"quantile_loss_{q}"] = (1-(q/10)) * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
-        df_aggregate.loc[df_aggregate[f"quantile{q}"] <= df_aggregate["target"], f"quantile_loss_{q}"] = q/10 * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
-        weighted_quantile_loss.append(2 * df_aggregate[f"quantile_loss_{q}"].sum() / abs(df_aggregate["target"]).sum())
-    mean_weighted_quantile_loss = sum(weighted_quantile_loss) / len(weighted_quantile_loss)
+        df_aggregate.loc[
+            df_aggregate[f"quantile{q}"] > df_aggregate["target"], f"quantile_loss_{q}"
+        ] = (1 - (q / 10)) * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
+        df_aggregate.loc[
+            df_aggregate[f"quantile{q}"] <= df_aggregate["target"], f"quantile_loss_{q}"
+        ] = q / 10 * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
+        weighted_quantile_loss.append(
+            2
+            * df_aggregate[f"quantile_loss_{q}"].sum()
+            / abs(df_aggregate["target"]).sum()
+        )
+    mean_weighted_quantile_loss = sum(weighted_quantile_loss) / len(
+        weighted_quantile_loss
+    )
 
     report_dict = {
         "deepar_metrics": {
-            "rmse": {
-                "value": rmse,
-                "standard_deviation": "NaN"
-            },
+            "rmse": {"value": rmse, "standard_deviation": "NaN"},
             "weighted_quantile_loss": {
                 "value": mean_weighted_quantile_loss,
-                "standard_deviation": "NaN"
-            }
+                "standard_deviation": "NaN",
+            },
         },
     }
 
@@ -163,33 +180,23 @@ if __name__ == "__main__":
         MetricData=[
             {
                 "MetricName": "weighted_quantile_loss",
-                "Dimensions": [
-                    {
-                        "Name": "StageName",
-                        "Value": STAGE_NAME
-                    }
-                ],
+                "Dimensions": [{"Name": "StageName", "Value": STAGE_NAME}],
                 "Unit": "None",
-                "Value": mean_weighted_quantile_loss
+                "Value": mean_weighted_quantile_loss,
             },
         ],
-        Namespace="CustomModelMonitoring"
+        Namespace="CustomModelMonitoring",
     )
     cw_client.put_metric_data(
         MetricData=[
             {
                 "MetricName": "weighted_quantile_loss_threshold",
-                "Dimensions": [
-                    {
-                        "Name": "StageName",
-                        "Value": STAGE_NAME
-                    }
-                ],
+                "Dimensions": [{"Name": "StageName", "Value": STAGE_NAME}],
                 "Unit": "None",
-                "Value": float(model_validation_thresholds['weighted_quantile_loss'])
+                "Value": float(model_validation_thresholds["weighted_quantile_loss"]),
             },
         ],
-        Namespace="CustomModelMonitoring"
+        Namespace="CustomModelMonitoring",
     )
 
     # Write files
@@ -197,7 +204,11 @@ if __name__ == "__main__":
         if not os.path.isdir(f"{local_data_folder}/{folder_name}"):
             os.makedirs(f"{local_data_folder}/{folder_name}", exist_ok=True)
     write_dicts_to_file(f"{local_data_folder}/input/input.jsonl", input_data)
-    df_target_data.to_csv(f"{local_data_folder}/target/target.csv", header=True, index=False) 
-    df_predictions.to_csv(f"{local_data_folder}/predictions/predictions.csv", header=True, index=False) 
+    df_target_data.to_csv(
+        f"{local_data_folder}/target/target.csv", header=True, index=False
+    )
+    df_predictions.to_csv(
+        f"{local_data_folder}/predictions/predictions.csv", header=True, index=False
+    )
     with open(f"{local_data_folder}/evaluation/evaluation.json", "w") as f:
         f.write(json.dumps(report_dict))

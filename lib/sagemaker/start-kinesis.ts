@@ -35,7 +35,7 @@ export class RDIStartFlinkApplication extends Construct {
         new PolicyStatement({
           effect: Effect.ALLOW,
           actions: [
-            'kinesisanalytics:DescribeApplication', 
+            'kinesisanalytics:DescribeApplication',
             'kinesisanalytics:StartApplication'
           ],
           resources: [`arn:aws:kinesisanalytics:${region}:${account}:application/${this.flink_application_name}`],

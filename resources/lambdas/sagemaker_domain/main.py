@@ -3,7 +3,6 @@ import boto3
 from aws_lambda_powertools import Logger
 from crhelper import CfnResource
 from botocore.exceptions import ClientError
-from typing import Dict
 
 helper = CfnResource()
 logger = Logger()
@@ -14,6 +13,7 @@ catalog = boto3.client("servicecatalog")
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     helper(event, context)
+
 
 @helper.create
 def create(event, _):
@@ -27,7 +27,7 @@ def create(event, _):
         AuthMode="IAM",
         DefaultUserSettings=default_user_settings,
         SubnetIds=subnet_ids,
-        VpcId=vpc_id
+        VpcId=vpc_id,
     )
     domain_id = response["DomainArn"].split("/")[-1]
     created = False
@@ -51,15 +51,15 @@ def create(event, _):
     response = catalog.associate_principal_with_portfolio(
         PortfolioId=portfolio_id,
         PrincipalARN=domain_execution_role_arn,
-        PrincipalType="IAM"
+        PrincipalType="IAM",
     )
     logger.info(f"Associated SageMaker domain role {domain_execution_role_arn}")
     helper.Data.update({"DomainId": domain_id, "PortfolioId": portfolio_id})
     return domain_id
 
+
 def enable_sagemaker_servicecatalog():
-    """This function enables the use of the Service Catalog in SageMaker and waits for it to be enabled.
-    """
+    """This function enables the use of the Service Catalog in SageMaker and waits for it to be enabled."""
     response = sagemaker.enable_sagemaker_servicecatalog_portfolio()
     logger.info("Enabling the SageMaker Service Catalog portfolio")
     # Wait for the SageMaker Service Catalog portfolio to be enabled
@@ -72,18 +72,17 @@ def enable_sagemaker_servicecatalog():
             enabled = True
         time.sleep(5)
 
+
 def get_portfolio_id():
     """This function returns the ID of the Service Catalog 'Amazon SageMaker Solutions and ML Ops products' portfolio.
-    
+
     Returns:
         str: The ID of the SageMaker Service Catalog portfolio
     """
     # List the portfolios in the AWS Service Catalog
     # There should be an imported portfolio called "Amazon SageMaker Solutions and ML Ops products"
     # This portfolio contains the SageMaker project template we want to use
-    response = catalog.list_accepted_portfolio_shares(
-        PortfolioShareType = "IMPORTED"
-    )
+    response = catalog.list_accepted_portfolio_shares(PortfolioShareType="IMPORTED")
     logger.info(f"Imported Portfolios: {response}")
     portfolio_id = None
     for portfolio in response["PortfolioDetails"]:
@@ -91,9 +90,14 @@ def get_portfolio_id():
             portfolio_id = portfolio["Id"]
             break
     if portfolio_id is None:
-        logger.error("Could not find portfolio 'Amazon SageMaker Solutions and ML Ops products'")
-        raise Exception("Could not find portfolio 'Amazon SageMaker Solutions and ML Ops products'")
+        logger.error(
+            "Could not find portfolio 'Amazon SageMaker Solutions and ML Ops products'"
+        )
+        raise Exception(
+            "Could not find portfolio 'Amazon SageMaker Solutions and ML Ops products'"
+        )
     return portfolio_id
+
 
 @helper.delete
 def delete(event, _):
@@ -111,11 +115,8 @@ def delete(event, _):
             return
         # Delete the SageMaker domain
         logger.info(f"Deleting domain {domain_id} and its EFS file system")
-        response = sagemaker.delete_domain(
-            DomainId=domain_id,
-            RetentionPolicy={
-                "HomeEfsFileSystem": "Delete"
-            }
+        sagemaker.delete_domain(
+            DomainId=domain_id, RetentionPolicy={"HomeEfsFileSystem": "Delete"}
         )
         # Wait for the SageMaker domain to be deleted
         deleted = False
@@ -129,7 +130,10 @@ def delete(event, _):
                 return
             time.sleep(5)
     else:
-        logger.info(f"Skipping deletion of domain {domain_id} because removal policy is set to {removal_policy}")
+        logger.info(
+            f"Skipping deletion of domain {domain_id} because removal policy is set to {removal_policy}"
+        )
+
 
 @helper.update
 def update(event, _):
@@ -137,8 +141,7 @@ def update(event, _):
     domain_properties = event.get("ResourceProperties")
     default_user_settings = domain_properties["DefaultUserSettings"]
     response = sagemaker.update_domain(
-        DomainId=domain_id,
-        DefaultUserSettings=default_user_settings
+        DomainId=domain_id, DefaultUserSettings=default_user_settings
     )
     updated = False
     while not updated:

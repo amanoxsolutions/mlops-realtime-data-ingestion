@@ -8,6 +8,7 @@ from typing import List, TypedDict
 from sagemaker.serializers import IdentitySerializer
 from typing import Dict
 
+
 class DeepARData(TypedDict):
     start: str
     target: List[float]
@@ -46,11 +47,17 @@ class DeepARPredictor(sagemaker.predictor.Predictor):
         """
         prediction_time = ts.index[-1] + freq
         quantiles = [str(q) for q in quantiles]
-        req = self.__encode_request(ts, cat, dynamic_feat, num_samples, return_samples, return_mean, quantiles)
+        req = self.__encode_request(
+            ts, cat, dynamic_feat, num_samples, return_samples, return_mean, quantiles
+        )
         res = super(DeepARPredictor, self).predict(req)
-        return self.__decode_response(res, freq, prediction_time, return_samples, return_mean)
+        return self.__decode_response(
+            res, freq, prediction_time, return_samples, return_mean
+        )
 
-    def __encode_request(self, ts, cat, dynamic_feat, num_samples, return_samples, return_mean, quantiles):
+    def __encode_request(
+        self, ts, cat, dynamic_feat, num_samples, return_samples, return_mean, quantiles
+    ):
         instance = series_to_dict(
             ts, cat if cat is not None else None, dynamic_feat if dynamic_feat else None
         )
@@ -70,7 +77,9 @@ class DeepARPredictor(sagemaker.predictor.Predictor):
 
         return json.dumps(http_request_data).encode("utf-8")
 
-    def __decode_response(self, response, freq, prediction_time, return_samples, return_mean):
+    def __decode_response(
+        self, response, freq, prediction_time, return_samples, return_mean
+    ):
         # we only sent one time series so we only receive one in return
         # however, if possible one will pass multiple time series as predictions will then be faster
         predictions = json.loads(response.decode("utf-8"))["predictions"][0]
@@ -79,7 +88,9 @@ class DeepARPredictor(sagemaker.predictor.Predictor):
             start=prediction_time, freq=freq, periods=prediction_length
         )
         if return_samples:
-            dict_of_samples = {"sample_" + str(i): s for i, s in enumerate(predictions["samples"])}
+            dict_of_samples = {
+                "sample_" + str(i): s for i, s in enumerate(predictions["samples"])
+            }
         else:
             dict_of_samples = {}
         if return_mean:
@@ -87,11 +98,13 @@ class DeepARPredictor(sagemaker.predictor.Predictor):
         else:
             dict_of_mean = {}
         return pd.DataFrame(
-            data={**predictions["quantiles"], **dict_of_samples, **dict_of_mean}, index=prediction_index
+            data={**predictions["quantiles"], **dict_of_samples, **dict_of_mean},
+            index=prediction_index,
         )
 
     def set_frequency(self, freq):
         self.freq = freq
+
 
 def series_to_dict(ts, cat=None, dynamic_feat=None):
     """Given a pandas.Series object, returns a dictionary encoding the time series.
@@ -108,8 +121,10 @@ def series_to_dict(ts, cat=None, dynamic_feat=None):
         obj["dynamic_feat"] = dynamic_feat
     return obj
 
+
 def encode_target(ts):
     return [x if np.isfinite(x) else "NaN" for x in ts]
+
 
 def get_session(region, default_bucket):
     """Gets the sagemaker session based on the region.
@@ -133,11 +148,13 @@ def get_session(region, default_bucket):
         default_bucket=default_bucket,
     )
 
+
 def write_dicts_to_file(path: str, data: List[DeepARData]) -> None:
     with open(path, "wb") as fp:
         for d in data:
             fp.write(json.dumps(d).encode("utf-8"))
             fp.write("\n".encode("utf-8"))
+
 
 def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str, str]:
     """Retrieves the SSM parameters from the specified path
@@ -152,10 +169,8 @@ def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str
     parameters = {}
     try:
         response = ssm_client.get_parameters_by_path(
-                Path=param_path,
-                Recursive=False,
-                WithDecryption=False
-            )
+            Path=param_path, Recursive=False, WithDecryption=False
+        )
         for param in response["Parameters"]:
             parameters[param["Name"].split("/")[-1]] = param["Value"]
         while next_token := response.get("NextToken"):
@@ -163,7 +178,7 @@ def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str
                 Path=param_path,
                 Recursive=False,
                 WithDecryption=False,
-                NextToken=next_token
+                NextToken=next_token,
             )
             for param in response["Parameters"]:
                 parameters[param["Name"].split("/")[-1]] = param["Value"]

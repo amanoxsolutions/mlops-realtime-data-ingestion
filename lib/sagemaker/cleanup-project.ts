@@ -57,7 +57,10 @@ export class RDICleanupStepFunction extends Construct {
         new PolicyStatement({
           sid: 'AllowToDeleteSagemakerModelParameters',
           actions: ['ssm:DeleteParameter*'],
-          resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`]
+          resources: [
+              `arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`,
+              `arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/connection-arn`
+          ]
         }),
         new PolicyStatement({
           sid: 'AllowToListSagemakerResources',
@@ -97,19 +100,19 @@ export class RDICleanupStepFunction extends Construct {
           ],
           resources: [
             props.sagemakerProjectBucketArn,
-            `${props.sagemakerProjectBucketArn}/*`]	
+            `${props.sagemakerProjectBucketArn}/*`]
         }),
         new PolicyStatement({
           sid: 'DeleteS3Bucket',
           actions: [
             's3:DeleteBucket',
           ],
-          resources: [props.sagemakerProjectBucketArn]	
+          resources: [props.sagemakerProjectBucketArn]
         }),
         new PolicyStatement({
           sid: 'AllowToPutCloudWatchLogEvents',
           actions: [
-            'logs:PutLogEvents', 
+            'logs:PutLogEvents',
             'logs:CreateLogGroup',
             'logs:CreateLogStream',
           ],

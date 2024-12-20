@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        exclude: ^resources/sagemaker/pipeline-.*/.*template.*\.(yaml|yml)$
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.3
+    hooks:
+      # Run the linter.
+      - id: ruff
+      # Run the formatter.
+      - id: ruff-format
+  - repo: https://github.com/awslabs/cfn-python-lint
+    rev: v1.22.1
+    hooks:
+      - id: cfn-python-lint
+        files: ^resources/sagemaker/pipeline-.*/.*template.*\.(yaml|yml)$

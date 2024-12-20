@@ -1,21 +1,23 @@
-import time
 import boto3
 import random
 import string
+import os
 from aws_lambda_powertools import Logger
 from crhelper import CfnResource
 from botocore.exceptions import ClientError
-from typing import Dict
 
 helper = CfnResource()
 logger = Logger()
 catalog = boto3.client("servicecatalog")
-sts_connection = boto3.client('sts')
+sts_connection = boto3.client("sts")
+ssm_client = boto3.client("ssm")
+TEMPLATE_NAME = "MLOps template for model building, training, deployment and monitoring with third-party git using CodePipeline"
 
 
 @logger.inject_lambda_context(log_event=True)
 def lambda_handler(event, context):
     helper(event, context)
+
 
 @helper.create
 def create(event, _):
@@ -25,52 +27,71 @@ def create(event, _):
     # because an old project name can not be reused even if it is deleted.
     # Also make sure the project name prefix is not longer than 32 - 8 characters
     resource_prefix = resource_prefix + "-proj-"
-    project_name =  resource_prefix[:24] + "".join(random.choices(string.digits + string.ascii_lowercase, k=8))
+    project_name = resource_prefix[:24] + "".join(
+        random.choices(string.digits + string.ascii_lowercase, k=8)
+    )
     portfolio_id = project_properties.get("PortfolioId")
     domain_execution_role_arn = project_properties.get("DomainExecutionRoleArn")
     # Search for the SageMaker project product in the portfolio
-    # We want to use the "[Not supported] MLOps template for model building, training, deployment and monitoring" product
     response = catalog.search_products_as_admin(
-        PortfolioId=portfolio_id,
-        Filters={
-            "FullTextSearch": [
-                "[Not supported] MLOps template for model building, training, deployment and monitoring"
-            ]
-        }
+        PortfolioId=portfolio_id, Filters={"FullTextSearch": [TEMPLATE_NAME]}
     )
     product_id = None
     for product in response["ProductViewDetails"]:
-        if product["ProductViewSummary"]["Name"] == "[Not supported] MLOps template for model building, training, deployment and monitoring":
+        if product["ProductViewSummary"]["Name"] == TEMPLATE_NAME:
             product_id = product["ProductViewSummary"]["ProductId"]
             break
     if product_id is None:
-        logger.error("Could not find product '[Not supported] MLOps template for model building, training, deployment and monitoring'")
-        raise Exception("Could not find product '[Not supported] MLOps template for model building, training, deployment and monitoring'")
-    logger.info(f"Found product '[Not supported] MLOps template for model building, training, deployment and monitoring' with ID: {product_id}")
+        logger.error(f"Could not find product {TEMPLATE_NAME}")
+        raise Exception(f"Could not find product {TEMPLATE_NAME}")
+    logger.info(f"Found product {TEMPLATE_NAME} with ID: {product_id}")
     # Get the latest version of the product
-    response = catalog.describe_product_as_admin(
-        Id=product_id
-    )
+    response = catalog.describe_product_as_admin(Id=product_id)
     product_artifacts = response["ProvisioningArtifactSummaries"]
     product_artifacts.sort(key=lambda x: x["CreatedTime"], reverse=True)
     latest_product_artifact_id = product_artifacts[0]["Id"]
     logger.info(f"Found latest product artifact: {product_artifacts[0]}")
     # Create the SageMaker Project for the SageMaker domain
-    sagemaker = get_sagemaker_client_with_domain_execution_role(domain_execution_role_arn)
+    sagemaker = get_sagemaker_client_with_domain_execution_role(
+        domain_execution_role_arn
+    )
+    codeConnectionArn = (
+        ssm_client.get_parameter(Name="/rdi-mlops/stack-parameters/connection-arn")
+        .get("Parameter")
+        .get("Value")
+    )
     response = sagemaker.create_project(
         ProjectName=project_name,
         ProjectDescription="MLOps project for the Realtime Data Ingestion and Analytics solution",
         ServiceCatalogProvisioningDetails={
             "ProductId": product_id,
-            "ProvisioningArtifactId": latest_product_artifact_id
-        }
+            "ProvisioningArtifactId": latest_product_artifact_id,
+            "ProvisioningParameters": [
+                {"Key": "CodeConnectionArn", "Value": codeConnectionArn},
+                {
+                    "Key": "ModelBuildCodeRepositoryFullname",
+                    "Value": os.environ["BUILD_REPO_NAME"],
+                },
+                {
+                    "Key": "ModelDeployCodeRepositoryFullname",
+                    "Value": os.environ["DEPLOY_REPO_NAME"],
+                },
+                {
+                    "Key": "ModelMonitorCodeRepositoryFullname",
+                    "Value": os.environ["MONITOR_REPO_NAME"],
+                },
+            ],
+        },
     )
     project_id = response["ProjectId"]
-    logger.info(f"Initiated the creation of the SageMaker project with ID: {project_id}")
-    # We do not wait for the SageMaker project to be created because 
+    logger.info(
+        f"Initiated the creation of the SageMaker project with ID: {project_id}"
+    )
+    # We do not wait for the SageMaker project to be created because
     # it is created by another CloudFormation Stack and it takes too long
     helper.Data.update({"ProjectId": project_id, "ProjectName": project_name})
     return project_id
+
 
 @helper.delete
 def delete(event, _):
@@ -79,7 +100,9 @@ def delete(event, _):
     domain_execution_role_arn = project_properties.get("DomainExecutionRoleArn")
     removal_policy = project_properties.get("RemovalPolicy", "destroy").lower()
     if removal_policy == "destroy":
-        sagemaker = get_sagemaker_client_with_domain_execution_role(domain_execution_role_arn)
+        sagemaker = get_sagemaker_client_with_domain_execution_role(
+            domain_execution_role_arn
+        )
         # Check if the SageMaker project exists.
         # If it does not, just return as ther is nothing to delete
         try:
@@ -89,18 +112,20 @@ def delete(event, _):
             logger.info(f"SageMaker project {project_name} does not exist")
             return
         # Delete the SageMaker project
-        response = sagemaker.delete_project(
-            ProjectName=project_name
-        )
+        response = sagemaker.delete_project(ProjectName=project_name)
         logger.info(f"Initiated the SageMaker project deletion: {response}")
-        # We do not wait for the SageMaker project to be deleted because 
+        # We do not wait for the SageMaker project to be deleted because
         # it is deleted by another CloudFormation Stack and it takes too long
     else:
-        logger.info(f"Skipping deletion of SageMaker project {project_name} because removal policy is set to {removal_policy}")
+        logger.info(
+            f"Skipping deletion of SageMaker project {project_name} because removal policy is set to {removal_policy}"
+        )
+
 
 @helper.update
 def do_nothing(_, __):
     logger.info("Nothing to do")
+
 
 def get_sagemaker_client_with_domain_execution_role(role_arn: str):
     """This function assumes the domain execution role and use it to initialize the SageMaker client
@@ -116,10 +141,11 @@ def get_sagemaker_client_with_domain_execution_role(role_arn: str):
     logger.info({f"Assuming the {role_arn} IAM Role to create the SageMaker Project"})
     sts_response = sts_connection.assume_role(
         RoleArn=role_arn,
-        RoleSessionName="SreateSagemakerProject"+"".join(random.choices(string.digits, k=10)),
+        RoleSessionName="SreateSagemakerProject"
+        + "".join(random.choices(string.digits, k=10)),
     )
     logger.info({"sts AssumeRole response": sts_response})
-    # From the response that contains the assumed role, get the temporary 
+    # From the response that contains the assumed role, get the temporary
     # credentials that can be used to make subsequent API calls
     credentials = sts_response["Credentials"]
     access_key = credentials["AccessKeyId"]

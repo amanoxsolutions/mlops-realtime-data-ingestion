@@ -30,6 +30,6 @@
 
     "record_identifier_feature_name": "tx_minute",
     "event_time_feature_name": "event_time",
-    "tags": [{"Key": "Project", "Value" : "mlops-realtime-data-ingeestion"}, 
+    "tags": [{"Key": "Project", "Value" : "mlops-realtime-data-ingeestion"},
             {"Key": "IngestionType", "Value": "Streaming"}]
 }

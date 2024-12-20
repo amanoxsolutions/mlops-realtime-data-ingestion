@@ -44,7 +44,7 @@ export class cleanupEcrRepo extends Construct {
         new PolicyStatement({
           effect: Effect.ALLOW,
           actions: [
-            'ecr:ListImages', 
+            'ecr:ListImages',
             'ecr:BatchDeleteImage'
           ],
           resources: [this.ecrRepositoryArn],

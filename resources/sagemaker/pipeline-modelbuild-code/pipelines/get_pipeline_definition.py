@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """A CLI to get pipeline definitions from pipeline modules."""
+
 from __future__ import absolute_import
 
 import argparse
@@ -25,7 +26,9 @@ def main():  # pragma: no cover
 
     Prints the json to stdout or saves to file.
     """
-    parser = argparse.ArgumentParser("Gets the pipeline definition for the pipeline script.")
+    parser = argparse.ArgumentParser(
+        "Gets the pipeline definition for the pipeline script."
+    )
 
     parser.add_argument(
         "-n",

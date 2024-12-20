@@ -3,11 +3,11 @@ import { RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { Role, PolicyStatement, Effect, ServicePrincipal, Policy, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, ILogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Vpc, IVpc, SubnetType, SecurityGroup, IpAddresses } from 'aws-cdk-lib/aws-ec2';
-import { 
-  Cluster, 
-  ICluster, 
-  ContainerImage, 
-  FargateTaskDefinition, 
+import {
+  Cluster,
+  ICluster,
+  ContainerImage,
+  FargateTaskDefinition,
   IFargateTaskDefinition,
   CpuArchitecture,
   OperatingSystemFamily,
@@ -141,12 +141,12 @@ export class RDIIngestionWorker extends Construct {
         startPeriod: Duration.seconds(30),
         timeout: Duration.seconds(5),
       },
-      logging: LogDrivers.awsLogs({ 
+      logging: LogDrivers.awsLogs({
         logGroup: this.fargateLogGroup,
         streamPrefix: `${props.prefix}-ingestion-worker`,
       })
     });
-    
+
     // Setup the worker Fargate Service
     this.fargateService = new FargateService(this, 'FargateService', {
       serviceName: `${this.prefix}-ingestion-service`,

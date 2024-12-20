@@ -12,14 +12,14 @@ export class RDIDynamodbTable extends Construct {
     public readonly table: ITable;
     public readonly partitionKey: string;
     public readonly timeToLiveAttribute: string;
-  
+
     constructor(scope: Construct, id: string, props: RDIDynamodbTableProps) {
       super(scope, id);
-  
+
       this.prefix = props.prefix;
       this.partitionKey = 'hash';
       this.timeToLiveAttribute = 'expiration_time';
-  
+
       this.table = new Table(this, 'table', {
         tableName: `${this.prefix}-input-hash`,
         billingMode: BillingMode.PAY_PER_REQUEST,
