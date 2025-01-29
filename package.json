@@ -28,7 +28,7 @@
     "@aws-solutions-constructs/aws-kinesisstreams-lambda": "^2.55.0",
     "@aws-solutions-constructs/core": "^2.44.0",
     "@types/object-hash": "^3.0.4",
-    "aws-cdk-lib": "^2.133.0",
+    "aws-cdk-lib": "^2.177.0",
     "cdk-ecr-deployment": "^3.0.43",
     "constructs": "^10.3.0",
     "murmurhash": "^2.0.1",
