@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 """A CLI to create or update and run pipelines."""
+
 from __future__ import absolute_import
 
 import argparse
@@ -18,7 +19,11 @@ import json
 import sys
 import traceback
 
-from pipelines._utils import get_pipeline_driver, convert_struct, get_pipeline_custom_tags
+from pipelines._utils import (
+    get_pipeline_driver,
+    convert_struct,
+    get_pipeline_custom_tags,
+)
 
 
 def main():  # pragma: no cover
@@ -75,7 +80,9 @@ def main():  # pragma: no cover
 
     try:
         pipeline = get_pipeline_driver(args.module_name, args.kwargs)
-        print("###### Creating/updating a SageMaker Pipeline with the following definition:")
+        print(
+            "###### Creating/updating a SageMaker Pipeline with the following definition:"
+        )
         parsed = json.loads(pipeline.definition())
         print(json.dumps(parsed, indent=2, sort_keys=True))
 
@@ -94,7 +101,7 @@ def main():  # pragma: no cover
         execution = pipeline.start(
             parameters=dict(
                 SkipModelQualityCheck=True,  # skip drift check for model quality
-                RegisterNewModelQualityBaseline=True  # register newly calculated baseline for model quality
+                RegisterNewModelQualityBaseline=True,  # register newly calculated baseline for model quality
             )
         )
 
@@ -108,11 +115,11 @@ def main():  # pragma: no cover
 
         print("Waiting for the execution to finish...")
 
-        # Setting the attempts and delay (in seconds) will modify the overall time the pipeline waits. 
+        # Setting the attempts and delay (in seconds) will modify the overall time the pipeline waits.
         # If the execution is taking a longer time, update these parameters to a larger value.
         # Eg: The total wait time is calculated as 60 * 240 = 14400 seconds (4 hours)
         execution.wait(max_attempts=240, delay=60)
-        
+
         print("\n#####Execution completed. Execution step details:")
 
         print(execution.list_steps())

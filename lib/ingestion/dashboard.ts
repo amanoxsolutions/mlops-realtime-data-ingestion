@@ -35,7 +35,7 @@ export class RDIIngestionPipelineDashboard extends Construct {
       statistic: 'Sum',
       period: Duration.minutes(5),
       namespace: 'DataIngestionPipeline',
-      dimensionsMap: { 
+      dimensionsMap: {
         IngestedData: 'Size',
       },
       color: Color.GREEN,

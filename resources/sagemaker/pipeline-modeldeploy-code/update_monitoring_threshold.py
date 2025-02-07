@@ -10,14 +10,13 @@ sm_client = boto3.client("sagemaker")
 s3_client = boto3.client("s3")
 ssm_client = boto3.client("ssm")
 
+
 def get_ssm_parameters(param_path: str) -> Dict[str, str]:
     parameters = {}
     try:
         response = ssm_client.get_parameters_by_path(
-                Path=param_path,
-                Recursive=False,
-                WithDecryption=False
-            )
+            Path=param_path, Recursive=False, WithDecryption=False
+        )
         for param in response["Parameters"]:
             parameters[param["Name"].split("/")[-1]] = param["Value"]
         while next_token := response.get("NextToken"):
@@ -25,13 +24,14 @@ def get_ssm_parameters(param_path: str) -> Dict[str, str]:
                 Path=param_path,
                 Recursive=False,
                 WithDecryption=False,
-                NextToken=next_token
+                NextToken=next_token,
             )
             for param in response["Parameters"]:
                 parameters[param["Name"].split("/")[-1]] = param["Value"]
     except Exception as e:
         print(f"An error occurred reading the SSM stack parameters: {e}")
     return parameters
+
 
 def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
     """Update the model validation threshold in the SSM Parameter Store if the threshold is lower
@@ -52,7 +52,9 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         if not response.get("PipelineExecutionSummaries"):
             logger.info(f"No executions found for the pipeline: {model_pipeline_name}")
             return
-        last_execution_id = response["PipelineExecutionSummaries"][0]["PipelineExecutionArn"].split("/")[-1]
+        last_execution_id = response["PipelineExecutionSummaries"][0][
+            "PipelineExecutionArn"
+        ].split("/")[-1]
         logger.info(f"Last execution ID: {last_execution_id}")
     except ClientError as e:
         logger.error(f"An error occurred: {e}")
@@ -64,23 +66,32 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         response = s3_client.get_object(Bucket=bucket, Key=object_key)
         evaluation_output = json.loads(response["Body"].read())
         logger.info(f"Model evaluation output: {evaluation_output}")
-        weighted_quantile_loss_value = evaluation_output["deepar_metrics"]["weighted_quantile_loss"]["value"]
+        weighted_quantile_loss_value = evaluation_output["deepar_metrics"][
+            "weighted_quantile_loss"
+        ]["value"]
         # Read the SSM Parameters storing the model validation thresholds by the parameters path
-        model_validation_thresholds = get_ssm_parameters("/rdi-mlops/sagemaker/model-build/validation-threshold")
-        weighted_quantile_loss_threshold = float(model_validation_thresholds["weighted_quantile_loss"])
+        model_validation_thresholds = get_ssm_parameters(
+            "/rdi-mlops/sagemaker/model-build/validation-threshold"
+        )
+        weighted_quantile_loss_threshold = float(
+            model_validation_thresholds["weighted_quantile_loss"]
+        )
         # Update the threshold stored in the SSM Parameter Store if the threshold is lower
         if weighted_quantile_loss_value < weighted_quantile_loss_threshold:
             ssm_client.put_parameter(
-                Name=f"/rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss",
-                Description=f"Model build pipeline parameter for validation-threshold/weighted_quantile_loss",
+                Name="/rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss",
+                Description="Model build pipeline parameter for validation-threshold/weighted_quantile_loss",
                 Value=f"{weighted_quantile_loss_value:.4f}",
                 Type="String",
                 Overwrite=True,
             )
-            logger.info(f"Updated model validation threshold in SSM parameter /rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss to: {weighted_quantile_loss_value:.3f}")
+            logger.info(
+                "Updated model validation threshold in SSM parameter /rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss to: {weighted_quantile_loss_value:.3f}"
+            )
     except ClientError as e:
         logger.error(f"An error occurred: {e}")
         raise e
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

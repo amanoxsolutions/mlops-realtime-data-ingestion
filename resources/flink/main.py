@@ -52,6 +52,7 @@ def property_map(props, property_group_id):
         if prop["PropertyGroupId"] == property_group_id:
             return prop["PropertyMap"]
 
+
 # Functions to create the input and out tables and the tumbling window aggregation
 def create_input_table(table_name, stream_name, region, initpos):
     return """CREATE TABLE {0} (
@@ -84,6 +85,7 @@ def create_input_table(table_name, stream_name, region, initpos):
                 'json.timestamp-format.standard' = 'ISO-8601'
               ) """.format(table_name, stream_name, region, initpos)
 
+
 def create_output_table(table_name, stream_name, region):
     return """CREATE TABLE {0} (
                 tx_minute VARCHAR(64),
@@ -99,6 +101,7 @@ def create_output_table(table_name, stream_name, region):
                 'json.timestamp-format.standard' = 'ISO-8601'
               ) """.format(table_name, stream_name, region)
 
+
 def perform_tumbling_window_aggregation(input_table_name):
     # use SQL Table in the Table API
     input_table = table_env.from_path(input_table_name)
@@ -111,17 +114,20 @@ def perform_tumbling_window_aggregation(input_table_name):
             (to_string(col("tx_minute").start)).alias("tx_minute"),
             col("hash").count.alias("total_nb_trx_1min"),
             col("fee").sum.alias("total_fee_1min"),
-            col("fee").avg.alias("avg_fee_1min")
+            col("fee").avg.alias("avg_fee_1min"),
         )
     )
     return tumbling_window_table
+
 
 # Create a User Defined Function to convert TIMESTAMP to STRING
 @udf(input_types=[DataTypes.TIMESTAMP(3)], result_type=DataTypes.STRING())
 def to_string(i):
     return str(i)
 
+
 table_env.create_temporary_system_function("to_string", to_string)
+
 
 def main():
     # Application Property Keys
@@ -153,19 +159,27 @@ def main():
     output_region = output_property_map[OUTPUT_REGION_KEY]
 
     # 2. Creates a source table from a Kinesis Data Stream
-    table_env.execute_sql(create_input_table(INPUT_TABLE_NAME, input_stream, input_region, stream_initpos))
+    table_env.execute_sql(
+        create_input_table(INPUT_TABLE_NAME, input_stream, input_region, stream_initpos)
+    )
 
     # 3. Creates a sink table writing to a Kinesis Data Stream
-    table_env.execute_sql(create_output_table(OUTPUT_TABLE_NAME, output_stream, output_region))
+    table_env.execute_sql(
+        create_output_table(OUTPUT_TABLE_NAME, output_stream, output_region)
+    )
 
-    # 4. Queries from the Source Table and creates a tumbling window over 1 minute to calculate the 
+    # 4. Queries from the Source Table and creates a tumbling window over 1 minute to calculate the
     # aggregated metrics over the window.
     tumbling_window_table = perform_tumbling_window_aggregation(INPUT_TABLE_NAME)
     table_env.create_temporary_view("tumbling_window_table", tumbling_window_table)
 
     # 5. These tumbling windows are inserted into the sink table
-    table_env.execute_sql("INSERT INTO {0} SELECT * FROM {1}"
-                          .format(OUTPUT_TABLE_NAME, "tumbling_window_table"))
+    table_env.execute_sql(
+        "INSERT INTO {0} SELECT * FROM {1}".format(
+            OUTPUT_TABLE_NAME, "tumbling_window_table"
+        )
+    )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

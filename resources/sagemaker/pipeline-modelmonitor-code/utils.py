@@ -13,6 +13,7 @@
 import json
 import sagemaker
 import botocore
+from botocore.exceptions import ClientError
 import argparse
 import logging
 from typing import Callable, Any, Dict, List, Tuple
@@ -77,17 +78,16 @@ def get_project_arn(sm_client: botocore.client, sagemaker_project_name: str) -> 
         str: Amazon SageMaker Project arn
     """
     try:
-        response = sm_client.describe_project(
-            ProjectName=sagemaker_project_name
-        )
+        response = sm_client.describe_project(ProjectName=sagemaker_project_name)
         return response["ProjectArn"]
-    except:
+    except ClientError:
         logger.error("Error getting project tags")
     return ""
 
 
-
-def get_project_tags(sm_client: botocore.client, sagemaker_project_arn: str) -> List[Dict[str, str]]:
+def get_project_tags(
+    sm_client: botocore.client, sagemaker_project_arn: str
+) -> List[Dict[str, str]]:
     """
     Combines Resource's tags with Amazon SageMaker Studio project's custom tags
 
@@ -102,12 +102,14 @@ def get_project_tags(sm_client: botocore.client, sagemaker_project_arn: str) -> 
     try:
         response = sm_client.list_tags(ResourceArn=sagemaker_project_arn)
         return response["Tags"]
-    except:
+    except ClientError:
         logger.error("Error getting project tags")
     return []
 
 
-def combine_resource_tags(new_tags: Dict[str, str], project_tags_list: List[Dict[str, str]]) -> Dict[str, str]:
+def combine_resource_tags(
+    new_tags: Dict[str, str], project_tags_list: List[Dict[str, str]]
+) -> Dict[str, str]:
     """
     Combines Resource's tags with Amazon SageMaker Studio project's tags
 
@@ -120,17 +122,22 @@ def combine_resource_tags(new_tags: Dict[str, str], project_tags_list: List[Dict
     """
     try:
         # reformat project tags from [{"Key":<key>, "Value":<value>}, ...] to {<key>:<value>, ...}
-        project_tags_dict = {key_value_dict["Key"]: key_value_dict["Value"] for key_value_dict in project_tags_list}
+        project_tags_dict = {
+            key_value_dict["Key"]: key_value_dict["Value"]
+            for key_value_dict in project_tags_list
+        }
 
         # return combined tags
         return {**new_tags, **project_tags_dict}
-    except:
+    except KeyError:
         logger.error("Error getting resource tags")
     return {}
 
 
 @exception_handler
-def get_baselines_and_model_name(endpoint_name: str, sm_client: botocore.client) -> Dict[str, Any]:
+def get_baselines_and_model_name(
+    endpoint_name: str, sm_client: botocore.client
+) -> Dict[str, Any]:
     """
     Gets Baselines from Model Registry and Model Name from the deployed endpoint
 
@@ -142,27 +149,38 @@ def get_baselines_and_model_name(endpoint_name: str, sm_client: botocore.client)
         dict[str, Any]: The baselines and Model Name {"DriftCheckBaselines": {...}, "ModelName": "..."}
     """
     # get the EndpointConfigName using the Endpoint Name
-    endpoint_config_name = sm_client.describe_endpoint(EndpointName=endpoint_name)["EndpointConfigName"]
-
-    # get the ModelName using EndpointConfigName
-    model_name = sm_client.describe_endpoint_config(EndpointConfigName=endpoint_config_name)["ProductionVariants"][0][
-        "ModelName"
+    endpoint_config_name = sm_client.describe_endpoint(EndpointName=endpoint_name)[
+        "EndpointConfigName"
     ]
 
+    # get the ModelName using EndpointConfigName
+    model_name = sm_client.describe_endpoint_config(
+        EndpointConfigName=endpoint_config_name
+    )["ProductionVariants"][0]["ModelName"]
+
     # get the ModelPackageName using ModelName
-    model_package_name = sm_client.describe_model(ModelName=model_name)["Containers"][0]["ModelPackageName"]
+    model_package_name = sm_client.describe_model(ModelName=model_name)["Containers"][
+        0
+    ]["ModelPackageName"]
 
     # get the baselines from Model Registry using ModelPackageName
-    raw_baselines = sm_client.describe_model_package(ModelPackageName=model_package_name).get("DriftCheckBaselines", {})
+    raw_baselines = sm_client.describe_model_package(
+        ModelPackageName=model_package_name
+    ).get("DriftCheckBaselines", {})
 
     # re-format the baselines
-    result = {key: {k: raw_baselines[key][k]["S3Uri"] for k in raw_baselines.get(key)} for key in raw_baselines}
+    result = {
+        key: {k: raw_baselines[key][k]["S3Uri"] for k in raw_baselines.get(key)}
+        for key in raw_baselines
+    }
 
     return {"DriftCheckBaselines": result, "ModelName": model_name}
 
 
 @exception_handler
-def get_json_file_from_s3(bucket_name: str, file_key: str, s3_client: botocore.client) -> Dict[str, Any]:
+def get_json_file_from_s3(
+    bucket_name: str, file_key: str, s3_client: botocore.client
+) -> Dict[str, Any]:
     """
     Gets JSON file's contents from S3 bucket
 
@@ -174,12 +192,21 @@ def get_json_file_from_s3(bucket_name: str, file_key: str, s3_client: botocore.c
     Returns:
         dict[str, Any]: file contents
     """
-    config_file = json.loads(s3_client.get_object(Bucket=bucket_name, Key=file_key)["Body"].read().decode("utf-8"))
+    config_file = json.loads(
+        s3_client.get_object(Bucket=bucket_name, Key=file_key)["Body"]
+        .read()
+        .decode("utf-8")
+    )
     return config_file
 
 
 @exception_handler
-def upload_json_to_s3(file_contents: Dict[str, Any], bucket_name: str, file_key: str, s3_client: botocore.client):
+def upload_json_to_s3(
+    file_contents: Dict[str, Any],
+    bucket_name: str,
+    file_key: str,
+    s3_client: botocore.client,
+):
     """
     Uploads JSON file's contents to S3 bucket
 
@@ -189,7 +216,9 @@ def upload_json_to_s3(file_contents: Dict[str, Any], bucket_name: str, file_key:
         file_key (str): json file s3 key
         s3_client (Boto3 S3 client): Amazon S3 boto3 client
     """
-    s3_client.put_object(Body=json.dumps(file_contents, indent=4), Bucket=bucket_name, Key=file_key)
+    s3_client.put_object(
+        Body=json.dumps(file_contents, indent=4), Bucket=bucket_name, Key=file_key
+    )
 
 
 @exception_handler
@@ -208,7 +237,9 @@ def get_bucket_name_and_file_key(file_s3_uri: str) -> Tuple[str, str]:
 
 
 @exception_handler
-def process_bias_baselines(bias_baselines: Dict[str, str], s3_client: botocore.client) -> Dict[str, str]:
+def process_bias_baselines(
+    bias_baselines: Dict[str, str], s3_client: botocore.client
+) -> Dict[str, str]:
     """
     Combines Model Bias PreTrainingConstraints/PostTrainingConstraints json files and uploads
     the combined json file to the same S3 bucket
@@ -228,14 +259,20 @@ def process_bias_baselines(bias_baselines: Dict[str, str], s3_client: botocore.c
         bias_baselines["PostTrainingConstraints"]
     )
     # get json contents for Bias Pre/Post TrainingConstraints files
-    pre_training_json = get_json_file_from_s3(pre_s3_bucket_name, pre_training_s3_file_key, s3_client)
-    post_training_json = get_json_file_from_s3(post_s3_bucket_name, post_training_s3_file_key, s3_client)
+    pre_training_json = get_json_file_from_s3(
+        pre_s3_bucket_name, pre_training_s3_file_key, s3_client
+    )
+    post_training_json = get_json_file_from_s3(
+        post_s3_bucket_name, post_training_s3_file_key, s3_client
+    )
     # combine Bias Pre/Post TrainingConstraints files
     pre_training_json.update(post_training_json)
     # create combined constraints file key
     combined_file_key = f"{'/'.join(post_training_s3_file_key.split('/')[:-1])}/combined_bias_constraints.json"
     # upload combined constraints json file to s3 bucket
-    upload_json_to_s3(pre_training_json, post_s3_bucket_name, combined_file_key, s3_client)
+    upload_json_to_s3(
+        pre_training_json, post_s3_bucket_name, combined_file_key, s3_client
+    )
 
     # return the new Bias baselines
     return {
@@ -246,7 +283,9 @@ def process_bias_baselines(bias_baselines: Dict[str, str], s3_client: botocore.c
 
 @exception_handler
 def process_explainability_config_file(
-    explainability_baselines: Dict[str, str], model_name: str, s3_client: botocore.client
+    explainability_baselines: Dict[str, str],
+    model_name: str,
+    s3_client: botocore.client,
 ) -> Dict[str, str]:
     """
     Updates Model Explainability json ConfigFile with model name, and uploads
@@ -261,15 +300,23 @@ def process_explainability_config_file(
         Dict[str, str]: processed Model Explainability baselines
     """
     # extract the bucket name and file key
-    s3_bucket_name, config_s3_file_key = get_bucket_name_and_file_key(explainability_baselines["ConfigFile"])
+    s3_bucket_name, config_s3_file_key = get_bucket_name_and_file_key(
+        explainability_baselines["ConfigFile"]
+    )
     # get json contents for Explainability ConfigFile file
-    config_file_json = get_json_file_from_s3(s3_bucket_name, config_s3_file_key, s3_client)
+    config_file_json = get_json_file_from_s3(
+        s3_bucket_name, config_s3_file_key, s3_client
+    )
     # add model name to the predictor section
     config_file_json["predictor"].update({"model_name": model_name})
     # create the final file key
-    monitor_config_file_key = f"{'/'.join(config_s3_file_key.split('/')[:-1])}/monitor_analysis_config.json"
+    monitor_config_file_key = (
+        f"{'/'.join(config_s3_file_key.split('/')[:-1])}/monitor_analysis_config.json"
+    )
     # upload final config json file to s3 bucket
-    upload_json_to_s3(config_file_json, s3_bucket_name, monitor_config_file_key, s3_client)
+    upload_json_to_s3(
+        config_file_json, s3_bucket_name, monitor_config_file_key, s3_client
+    )
     # return the new Explainability baselines
     return {
         "ConfigFile": "".join(["s3://", s3_bucket_name, "/", monitor_config_file_key]),
@@ -289,7 +336,7 @@ def extend_config(
     project_prefix: str,
     monitoring_pipelinde_definition_object: str,
     timestamp: str,
-    weighted_quantile_loss_threshold: str
+    weighted_quantile_loss_threshold: str,
 ) -> Dict[str, Dict[str, str]]:
     """
     Extend the stage configuration of the Monitoring Schedule with additional parameters and tags based.
@@ -307,13 +354,18 @@ def extend_config(
         dict[str, dict[str, str]]: The final Monitoring Schedule's config containing Parameters and Tags
     """
     # Verify that config has parameters and tags sections
-    if "Parameters" not in stage_config or "StageName" not in stage_config["Parameters"]:
+    if (
+        "Parameters" not in stage_config
+        or "StageName" not in stage_config["Parameters"]
+    ):
         raise ValueError("Configuration file must include SageName parameter")
     if "Tags" not in stage_config:
         stage_config["Tags"] = {}
 
     # Create jobs names
-    endpoint_name = f"{args.sagemaker_project_name}-{stage_config['Parameters']['StageName']}"
+    endpoint_name = (
+        f"{args.sagemaker_project_name}-{stage_config['Parameters']['StageName']}"
+    )
     monitoring_schedule_name = f"{endpoint_name}"
 
     # Create new params and tags
@@ -326,16 +378,20 @@ def extend_config(
         "EndpointName": endpoint_name,
         # if customer provided baselines in the stage config file (seed code) use them. Otherwise, use the baselines from MR
         "DataQualityConstraintsS3Uri": stage_config["Parameters"].get(
-            "DataQualityConstraintsS3Uri", baselines.get("ModelDataQuality", {}).get("Constraints", "Empty")
+            "DataQualityConstraintsS3Uri",
+            baselines.get("ModelDataQuality", {}).get("Constraints", "Empty"),
         ),
         "DataQualityStatisticsS3Uri": stage_config["Parameters"].get(
-            "DataQualityStatisticsS3Uri", baselines.get("ModelDataQuality", {}).get("Statistics", "Empty")
+            "DataQualityStatisticsS3Uri",
+            baselines.get("ModelDataQuality", {}).get("Statistics", "Empty"),
         ),
         "ModelQualityConstraintsS3Uri": stage_config["Parameters"].get(
-            "ModelQualityConstraintsS3Uri", baselines.get("ModelQuality", {}).get("Constraints", "Empty")
+            "ModelQualityConstraintsS3Uri",
+            baselines.get("ModelQuality", {}).get("Constraints", "Empty"),
         ),
         "ModelBiasConstraintsS3Uri": stage_config["Parameters"].get(
-            "ModelBiasConstraintsS3Uri", baselines.get("Bias", {}).get("Constraints", "Empty")
+            "ModelBiasConstraintsS3Uri",
+            baselines.get("Bias", {}).get("Constraints", "Empty"),
         ),
         "ModelBiasConfigS3Uri": stage_config["Parameters"].get(
             "ModelBiasConfigS3Uri", baselines.get("Bias", {}).get("ConfigFile", "Empty")
@@ -345,7 +401,8 @@ def extend_config(
             baselines.get("Explainability", {}).get("Constraints", "Empty"),
         ),
         "ModelExplainabilityConfigS3Uri": stage_config["Parameters"].get(
-            "ModelExplainabilityConfigS3Uri", baselines.get("Explainability", {}).get("ConfigFile", "Empty")
+            "ModelExplainabilityConfigS3Uri",
+            baselines.get("Explainability", {}).get("ConfigFile", "Empty"),
         ),
         "GroundTruthInput": f"s3://{monitor_outputs_bucket}/ground-truth-{stage_config['Parameters']['StageName']}/{args.sagemaker_project_name}-{stage_config['Parameters']['StageName']}",
         "ModelMonitorImageUri": monitor_image_uri,
@@ -358,7 +415,7 @@ def extend_config(
         "MonitoringPipelineDefinitionKey": monitoring_pipelinde_definition_object,
         "ModelBuildTriggerLambdaCodeS3Bucket": monitor_outputs_bucket,
         "ModelBuildTriggerLambdaCodeS3Key": f"code-artifacts/monitoring-data-collection/{timestamp}/trigger_model_build.zip",
-        "ModelQualityWeightedQuantileLossThreshold": weighted_quantile_loss_threshold
+        "ModelQualityWeightedQuantileLossThreshold": weighted_quantile_loss_threshold,
     }
 
     # create new tags
@@ -397,7 +454,9 @@ def read_config_from_json(file_name: str) -> Dict[str, Dict[str, str]]:
 
 
 @exception_handler
-def write_config_to_json(file_name: str, export_config: Dict[str, Dict[str, str]]) -> None:
+def write_config_to_json(
+    file_name: str, export_config: Dict[str, Dict[str, str]]
+) -> None:
     """
     Writes template parameters/tags to a JSON file
 

@@ -11,7 +11,7 @@ phases:
   pre_build:
     commands:
       - python pipelines/deploy_model_build_params.py
-  
+
   build:
     commands:
       - export PYTHONUNBUFFERED=TRUE
@@ -22,4 +22,3 @@ phases:
           --tags "[{\"Key\":\"sagemaker:project-name\", \"Value\":\"${SAGEMAKER_PROJECT_NAME}\"}, {\"Key\":\"sagemaker:project-id\", \"Value\":\"${SAGEMAKER_PROJECT_ID}\"}]" \
           --kwargs "{\"region\":\"${AWS_REGION}\",\"role\":\"${SAGEMAKER_PIPELINE_ROLE_ARN}\",\"sagemaker_project_name\":\"${SAGEMAKER_PROJECT_NAME}\",\"sagemaker_project_id\":\"${SAGEMAKER_PROJECT_ID}\",\"model_package_group_name\":\"${SAGEMAKER_PROJECT_NAME_ID}\",\"default_bucket\":\"${ARTIFACT_BUCKET}\"}"
       - echo "Create/Update of the SageMaker Pipeline and execution completed."
-

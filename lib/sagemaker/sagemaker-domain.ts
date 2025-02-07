@@ -1,18 +1,18 @@
-import { Construct } from 'constructs';
-import { Stack, Duration, CustomResource, RemovalPolicy  } from 'aws-cdk-lib';
+import {Construct} from 'constructs';
+import {CustomResource, Duration, RemovalPolicy, Stack} from 'aws-cdk-lib';
 import {
+  Effect,
   ManagedPolicy,
   Policy,
   PolicyDocument,
   PolicyStatement,
   Role,
   ServicePrincipal,
-  Effect,
 } from 'aws-cdk-lib/aws-iam';
-import { Runtime, Code, SingletonFunction } from 'aws-cdk-lib/aws-lambda';
-import { PythonLayerVersion } from '@aws-cdk/aws-lambda-python-alpha';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { CfnUserProfile } from 'aws-cdk-lib/aws-sagemaker';
+import {Code, Runtime, SingletonFunction} from 'aws-cdk-lib/aws-lambda';
+import {PythonLayerVersion} from '@aws-cdk/aws-lambda-python-alpha';
+import {RetentionDays} from 'aws-cdk-lib/aws-logs';
+import {CfnUserProfile} from 'aws-cdk-lib/aws-sagemaker';
 
 
 interface RDISagemakerServiceCataloRolesProps {
@@ -31,6 +31,9 @@ export class RDISagemakerServiceCataloRoles extends Construct {
   public readonly serviceCatalagProductsLaunchRoleName: string;
   public readonly serviceCatalogProductsUseRoleName: string;
   public readonly serviceCatalagProductsExecutionRoleName: string;
+  public readonly serviceCatalogProductsCodePipelineRoleName: string;
+  public readonly serviceCatalogProductsCodeBuildRoleName: string;
+  public readonly serviceCatalogProductsCloudFormationRoleName: string;
 
   constructor(scope: Construct, id: string, props: RDISagemakerServiceCataloRolesProps) {
     super(scope, id);
@@ -122,6 +125,9 @@ export class RDISagemakerServiceCataloRoles extends Construct {
     this.serviceCatalagProductsLaunchRoleName = this.customResource.getAttString('ServiceCatalogProductsLaunchRoleName');
     this.serviceCatalogProductsUseRoleName = this.customResource.getAttString('ServiceCatalogProductsUseRoleName');
     this.serviceCatalagProductsExecutionRoleName = this.customResource.getAttString('ServiceCatalogProductsExecutionRoleName');
+    this.serviceCatalogProductsCodePipelineRoleName = this.customResource.getAttString('ServiceCatalogProductsCodePipelineRoleName');
+    this.serviceCatalogProductsCodeBuildRoleName = this.customResource.getAttString('ServiceCatalogProductsCodeBuildRoleName');
+    this.serviceCatalogProductsCloudFormationRoleName = this.customResource.getAttString('ServiceCatalogProductsCloudFormationRoleName');
   }
 }
 
@@ -431,6 +437,7 @@ export class RDISagemakerStudio extends Construct {
   public readonly removalPolicy: RemovalPolicy;
   public readonly runtime: Runtime;
   public readonly executionRole: Role;
+  public readonly cloudFormationRoleName: string
   public readonly domainName: string;
   public readonly domainId: string;
   public readonly portfolioId: string;
@@ -451,6 +458,54 @@ export class RDISagemakerStudio extends Construct {
     //
     // Create SageMaker Studio Domain Execution Role
     //
+    const sageMakerTagsDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'SageMakerTagsAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:AddTags',
+          ],
+          resources: [`arn:aws:sagemaker:${region}:${account}:code-repository/*`], // "arn:aws:sagemaker:eu-west-1:768545273476:code-repository/*"
+        }),
+      ],
+    });
+    const sageMakerTagsPolicy = new Policy(this, 'SageMakerTagsPolicy', {
+      policyName: `${this.prefix}-sagemaker-tags-policy`,
+      document: sageMakerTagsDocument,
+    });
+    const codeConnectionUseDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'CodeConnectionUseAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'codestar-connections:UseConnection',
+          ],
+          resources: [`arn:aws:codeconnections:${region}:${account}:connection/*`], // "arn:aws:codeconnections:eu-west-1:768545273476:connection/*"
+        }),
+      ],
+    });
+    const codeConnectionUsePolicy = new Policy(this, 'CodeConnectionUsePolicy', {
+      policyName: `${this.prefix}-codeconnection-use-policy`,
+      document: codeConnectionUseDocument,
+    });
+    const codeConnectionPassDocument = new PolicyDocument({
+      statements: [
+        new PolicyStatement({
+          sid: 'CodeConnectionPassAccess',
+          effect: Effect.ALLOW,
+          actions: [
+            'codestar-connections:PassConnection',
+          ],
+          resources: [`arn:aws:codeconnections:${region}:${account}:connection/*`], // "arn:aws:codeconnections:eu-west-1:768545273476:connection/*"
+        }),
+      ],
+    });
+    const codeConnectionPassPolicy = new Policy(this, 'CodeConnectionPassPolicy', {
+      policyName: `${this.prefix}-codeconnection-pass-policy`,
+      document: codeConnectionPassDocument,
+    });
     const ssmParameterDocument = new PolicyDocument({
       statements: [
         new PolicyStatement({
@@ -460,6 +515,7 @@ export class RDISagemakerStudio extends Construct {
             'ssm:GetParameter*',
             'ssm:DescribeParameters',
             'ssm:PutParameter*',
+            'ssm:GetParametersByPath',
           ],
           resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/*`],
         }),
@@ -521,6 +577,7 @@ export class RDISagemakerStudio extends Construct {
         runtime: this.runtime,
         customResourceLayerArn: props.customResourceLayerArn,
     });
+    this.cloudFormationRoleName = serviceCatalogRoles.serviceCatalogProductsCloudFormationRoleName
 
     //
     // Create SageMaker Studio Domain
@@ -583,6 +640,22 @@ export class RDISagemakerStudio extends Construct {
       ],
     })
     props.monitoringJobPolicy.addStatements(iamPassRole);
+
+    const serviceCatalogProductsCodePipelineRole = Role.fromRoleName(this, 'ServiceCatalogProductsCodePipelineRole',
+        serviceCatalogRoles.serviceCatalogProductsCodePipelineRoleName
+    );
+    serviceCatalogProductsCodePipelineRole.attachInlinePolicy(codeConnectionUsePolicy);
+
+    const serviceCatalagProductsLaunchRole = Role.fromRoleName(this, 'ServiceCatalagProductsLaunchRole',
+        serviceCatalogRoles.serviceCatalagProductsLaunchRoleName
+    );
+    serviceCatalagProductsLaunchRole.attachInlinePolicy(codeConnectionPassPolicy);
+    serviceCatalagProductsLaunchRole.attachInlinePolicy(sageMakerTagsPolicy);
+
+    const serviceCatalogProductsCodeBuildRole = Role.fromRoleName(this, 'ServiceCatalogProductsCodeBuildRole',
+        serviceCatalogRoles.serviceCatalogProductsCodeBuildRoleName
+    );
+    serviceCatalogProductsCodeBuildRole.attachInlinePolicy(ssmParameterPolicy);
 
     // Attach the data access policy to the IAM service role AmazonSageMakerServiceCatalogProductsUseRole
     // This is the role that will be automatically used by the SageMaker project for the MLOps pipeline
@@ -680,5 +753,5 @@ export class RDISagemakerStudio extends Construct {
       }),
     });
     serviceCatalogProductsUseRole.attachInlinePolicy(additionalProjectRolePolicies);
-  } 
+  }
 }

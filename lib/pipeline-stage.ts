@@ -5,15 +5,19 @@ import { CommonResourcesStack } from "./common/common-stack";
 import { RealtimeDataIngestionStack } from './ingestion/data-ingestion-stack';
 import { SagemakerStack } from './sagemaker/sagemaker-stack';
 
+
 export interface RealtimeDataIngestionStageProps extends StageProps {
   readonly prefix: string;
   readonly uniqueSuffix: string;
   readonly runtime: Runtime;
   readonly removalPolicy: RemovalPolicy;
+  readonly repoNameBuild: string;
+  readonly repoNameDeploy: string;
+  readonly repoNameMonitor: string;
 }
 
 export class RealtimeDataIngestionStage extends Stage {
-    
+
   constructor(scope: Construct, id: string, props: RealtimeDataIngestionStageProps) {
     super(scope, id, props);
 
@@ -22,12 +26,15 @@ export class RealtimeDataIngestionStage extends Stage {
       s3Suffix: props.uniqueSuffix,
       runtime: props.runtime,
       removalPolicy: props.removalPolicy,
+      repoNameBuild: props.repoNameBuild,
+      repoNameDeploy: props.repoNameDeploy,
+      repoNameMonitor: props.repoNameMonitor,
     };
 
     // Stack to deploy common resources
     const customResourcesStack = new CommonResourcesStack(this, "CommonResourcesStack", properties);
 
-    // Stack to deploy the Realtime Data Ingestion 
+    // Stack to deploy the Realtime Data Ingestion
     const ingestionStack = new RealtimeDataIngestionStack(this, "IngestionStack", properties);
     ingestionStack.node.addDependency(customResourcesStack);
 

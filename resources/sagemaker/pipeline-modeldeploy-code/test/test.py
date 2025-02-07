@@ -27,15 +27,24 @@ def test_endpoint(endpoint_name):
         response = sm_client.describe_endpoint(EndpointName=endpoint_name)
         status = response["EndpointStatus"]
         if status != "InService":
-            error_message = f"SageMaker endpoint: {endpoint_name} status: {status} not InService"
+            error_message = (
+                f"SageMaker endpoint: {endpoint_name} status: {status} not InService"
+            )
             logger.error(error_message)
             raise Exception(error_message)
 
         # Output if endpoint has data capture enbaled
         endpoint_config_name = response["EndpointConfigName"]
-        response = sm_client.describe_endpoint_config(EndpointConfigName=endpoint_config_name)
-        if "DataCaptureConfig" in response and response["DataCaptureConfig"]["EnableCapture"]:
-            logger.info(f"data capture enabled for endpoint config {endpoint_config_name}")
+        response = sm_client.describe_endpoint_config(
+            EndpointConfigName=endpoint_config_name
+        )
+        if (
+            "DataCaptureConfig" in response
+            and response["DataCaptureConfig"]["EnableCapture"]
+        ):
+            logger.info(
+                f"data capture enabled for endpoint config {endpoint_config_name}"
+            )
 
         # Call endpoint to handle
         return invoke_endpoint(endpoint_name)
@@ -47,7 +56,9 @@ def test_endpoint(endpoint_name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--log-level", type=str, default=os.environ.get("LOGLEVEL", "INFO").upper())
+    parser.add_argument(
+        "--log-level", type=str, default=os.environ.get("LOGLEVEL", "INFO").upper()
+    )
     parser.add_argument("--import-build-config", type=str, required=True)
     parser.add_argument("--export-test-results", type=str, required=True)
     args, _ = parser.parse_known_args()

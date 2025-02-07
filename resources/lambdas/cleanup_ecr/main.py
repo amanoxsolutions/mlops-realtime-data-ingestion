@@ -11,10 +11,12 @@ ecr = boto3.client("ecr")
 def lambda_handler(event, context):
     helper(event, context)
 
+
 @helper.create
 @helper.update
 def do_nothing(_, __):
     logger.info("Nothing to do")
+
 
 @helper.delete
 def delete(event, _):
@@ -22,6 +24,7 @@ def delete(event, _):
     next_token = delete_ecr_images(ecr_repository_name)
     while next_token:
         next_token = delete_ecr_images(ecr_repository_name, next_token)
+
 
 def delete_ecr_images(ecr_repository_name: str, next_token: str = None) -> str:
     """This function list images in ECR repository and delete them
@@ -37,16 +40,14 @@ def delete_ecr_images(ecr_repository_name: str, next_token: str = None) -> str:
         ecr_response = ecr.list_images(repositoryName=ecr_repository_name)
     else:
         ecr_response = ecr.list_images(
-            repositoryName=ecr_repository_name,
-            NextToken=next_token
+            repositoryName=ecr_repository_name, NextToken=next_token
         )
     images_list = ecr_response.get("imageIds", [])
     next_token = ecr_response.get("NextToken")
 
     if images_list:
         delete_response = ecr.batch_delete_image(
-            repositoryName=ecr_repository_name,
-            imageIds=images_list
+            repositoryName=ecr_repository_name, imageIds=images_list
         )
         logger.info({"ECR images deleted": delete_response.get("imageIds", [])})
         logger.info({"ECR images deletion failed": delete_response.get("failures", [])})

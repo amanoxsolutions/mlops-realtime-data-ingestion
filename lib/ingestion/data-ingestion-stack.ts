@@ -87,7 +87,7 @@ export class RealtimeDataIngestionStack extends Stack {
     const eventDetailType = 'Incoming Data';
     const ingestionEventBridge = new EventbridgeToLambda(this, 'EventBridgeToLambda', {
       eventBusProps: { eventBusName: `${this.prefix}-ingestion-bus` },
-      eventRuleProps: { 
+      eventRuleProps: {
         ruleName: `${this.prefix}-ingestion-rule`,
         eventPattern: {
           detailType: [eventDetailType],
@@ -101,17 +101,17 @@ export class RealtimeDataIngestionStack extends Stack {
     //
     // Ingestion Kinesis Data Stream -> Kinesis Firehose -> S3
     //                            |--> Managed Service for Apache Flink
-    // Create a 2nd ingestion Kinesis Data Stream with a Kinesis Firehose writing to S3 
+    // Create a 2nd ingestion Kinesis Data Stream with a Kinesis Firehose writing to S3
     // The Lambda function will write the filtered data to the second Kinesis Data Stream
     const ingestionStream = new KinesisStreamsToKinesisFirehoseToS3(this, 'IngestionStreamToFirehoseToS3', {
       kinesisStreamProps: {
         streamName: ingestionStreamName,
         streamMode: StreamMode.ON_DEMAND,
       },
-      kinesisFirehoseProps: { 
+      kinesisFirehoseProps: {
         deliveryStreamName : firehoseStreamName,
       },
-      bucketProps: { 
+      bucketProps: {
         bucketName: dataBucketName,
         autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
         removalPolicy: this.removalPolicy,
@@ -122,7 +122,7 @@ export class RealtimeDataIngestionStack extends Stack {
 
     // Add the permissions to the Lambda function's policy to write into the ingestion Kinesis Data Stream
     ingestionStream.kinesisStream.grantWrite(lambda.function.grantPrincipal);
-    
+
     let dataBucketArn;
     if (ingestionStream.s3Bucket) {
       dataBucketArn = ingestionStream.s3Bucket.bucketArn;
@@ -138,7 +138,7 @@ export class RealtimeDataIngestionStack extends Stack {
     if (ingestionEventBridge.eventBus) {
       eventBusArn = ingestionEventBridge.eventBus.eventBusArn;
       eventBusName = ingestionEventBridge.eventBus.eventBusName;
-    } 
+    }
 
     const ingestionWorkerImage = new RDIIngestionWorkerImage(this, 'WorkerImage', {
       prefix: this.prefix,

@@ -21,8 +21,11 @@ export interface SagemakerStackProps extends StackProps {
   readonly vpc: IVpc;
   readonly ingestionPipelineDashboard: Dashboard;
   readonly ingestionPipelineWidget: GraphWidget;
+  readonly repoNameBuild: string;
+  readonly repoNameDeploy: string;
+  readonly repoNameMonitor: string;
 }
-  
+
 export class SagemakerStack extends Stack {
   public readonly prefix: string;
   public readonly s3Suffix: string;
@@ -33,6 +36,9 @@ export class SagemakerStack extends Stack {
   public readonly project: RDISagemakerProject;
   public readonly experimentBucket: IBucket;
   public readonly ingestionPipelineDashboard: Dashboard;
+  public readonly repoNameBuild: string;
+  public readonly repoNameDeploy: string;
+  public readonly repoNameMonitor: string;
 
   constructor(scope: Construct, id: string, props: SagemakerStackProps) {
     super(scope, id, props);
@@ -42,6 +48,9 @@ export class SagemakerStack extends Stack {
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
     this.ingestionPipelineDashboard = props.ingestionPipelineDashboard;
+    this.repoNameBuild = props.repoNameBuild;
+    this.repoNameDeploy = props.repoNameDeploy;
+    this.repoNameMonitor = props.repoNameMonitor;
 
     // Get the necessary information of the ingestion stack from SSM parameters
     const customResourceLayerArn = StringParameter.fromStringParameterAttributes(this, 'CustomResourceLayerArn', {
@@ -80,9 +89,9 @@ export class SagemakerStack extends Stack {
             's3:ListBucket',
             's3:ListAllMyBuckets',
             's3:GetBucket*',
-            's3:GetObject*', 
-            's3:PutObject*', 
-            's3:DeleteObject*', 
+            's3:GetObject*',
+            's3:PutObject*',
+            's3:DeleteObject*',
           ],
           effect: Effect.ALLOW,
           resources: [
@@ -98,7 +107,7 @@ export class SagemakerStack extends Stack {
           actions: [
             'glue:GetDatabase*',
             'glue:GetTable*',
-            'glue:GetPartition*', 
+            'glue:GetPartition*',
             'glue:SearchTables',
           ],
           resources: [
@@ -192,7 +201,11 @@ export class SagemakerStack extends Stack {
       customResourceLayerArn: customResourceLayerArn,
       portfolioId: this.domain.portfolioId,
       domainExecutionRole: this.domain.executionRole,
+      cloudFormationRoleName: this.domain.cloudFormationRoleName,
       dataAccessPolicy: dataAccessPolicy,
+      repoNameBuild: this.repoNameBuild,
+      repoNameDeploy: this.repoNameDeploy,
+      repoNameMonitor: this.repoNameMonitor,
     });
 
     // Add the Kinesis Analytics input metric to the ingestion pipeline dashboard
@@ -204,8 +217,8 @@ export class SagemakerStack extends Stack {
     });
 
     // Store SageMaker environment values in SSM Parameter Store.
-    // We need to store 
-    // - the SageMaker Project Name, 
+    // We need to store
+    // - the SageMaker Project Name,
     // - the SageMaker project ID,
     // - the SageMaker project bucket Name and ARN
     // - the SageMaker Feature Group Name
@@ -247,27 +260,27 @@ export class SagemakerStack extends Stack {
     });
     new StringParameter(this, 'SagemakerProjectBucketNameSSMParameter', {
       parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-name',
-      stringValue: `sagemaker-project-${this.project.projectId}`,	
+      stringValue: `sagemaker-project-${this.project.projectId}`,
       description: 'SageMaker Project Bucket Name',
     });
     new StringParameter(this, 'SagemakerProjectBucketArnSSMParameter', {
       parameterName: '/rdi-mlops/stack-parameters/sagemaker-project-bucket-arn',
-      stringValue: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,	
+      stringValue: `arn:aws:s3:::sagemaker-project-${this.project.projectId}`,
       description: 'SageMaker Project Bucket ARN',
     });
     new StringParameter(this, 'SagemakerFeatureGroupNameSSMParameter', {
       parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-group-name',
-      stringValue: this.featureStore.featureGroupName,	
+      stringValue: this.featureStore.featureGroupName,
       description: 'SageMaker Feature Group Name',
     });
     new StringParameter(this, 'SagemakerFeatureStoreBucketNameSSMParameter', {
       parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-name',
-      stringValue: this.featureStore.bucket.bucketName,	
+      stringValue: this.featureStore.bucket.bucketName,
       description: 'SageMaker Feature Store Bucket Name',
     });
     new StringParameter(this, 'SagemakerFeatureStoreBucketArnSSMParameter', {
       parameterName: '/rdi-mlops/stack-parameters/sagemaker-feature-store-bucket-arn',
-      stringValue: this.featureStore.bucket.bucketArn,	
+      stringValue: this.featureStore.bucket.bucketArn,
       description: 'SageMaker Feature Store Bucket ARN',
     });
     new StringParameter(this, 'SagemakerExecutionRoleARN', {
