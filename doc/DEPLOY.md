@@ -14,7 +14,7 @@ In this example we are using GitHub. If you are using another 3rd party git Prov
 * Make sure that the GitHub App "AWS Connector for GitHub" is installed.
 * Depending on the repository access do the following taks:
   * All repositories: No additional tasks to do - The SageMaker template will create the repos for you.
-  * Only selected repositories: Create three empty repos (Build, Deploy and Monitoring) without any branch and add them to the GitHub App als selected repos.
+  * Only selected repositories: Create three empty repos (Build, Deploy and Monitoring) without any branch and add them to the GitHub App as selected repos.
 ## 4. Edit the Data Ingestion Configuration
 In the [`bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/bin/data-ingestion.ts#L35-L36) configure the
 * repository name
