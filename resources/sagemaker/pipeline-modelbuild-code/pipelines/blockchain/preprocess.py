@@ -4,7 +4,7 @@
 import subprocess
 import sys
 
-subprocess.check_call([sys.executable, "-m", "pip", "install", "sagemaker>=2.197.0"])
+subprocess.check_call([sys.executable, "-m", "pip", "install", "sagemaker>=2.239.0"])
 subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas>=2.1.3"])
 import json  # noqa: E402
 import pathlib  # noqa: E402

@@ -189,7 +189,7 @@ if __name__ == "__main__":
         os.makedirs(prediction_folder, exist_ok=True)
     if not os.path.isdir(ground_truth_folder):
         os.makedirs(ground_truth_folder, exist_ok=True)
-    for i in range(30):
+    for i in range(prediction_length):
         record_uuid = uuid.uuid4()
 
         predictions_data = predictions_with_id(

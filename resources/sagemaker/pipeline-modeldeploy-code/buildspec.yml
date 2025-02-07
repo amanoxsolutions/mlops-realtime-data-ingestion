@@ -6,7 +6,7 @@ phases:
       python: 3.11
     commands:
       # Upgrade AWS CLI to the latest version
-      - pip install --upgrade --force-reinstall "botocore>1.21.30" "boto3>1.18.30" "awscli>1.20.30"
+      - pip install --upgrade --force-reinstall "awscli>=1.37.15" "botocore>1.36.15" "boto3>1.36.15"
 
   build:
     commands:

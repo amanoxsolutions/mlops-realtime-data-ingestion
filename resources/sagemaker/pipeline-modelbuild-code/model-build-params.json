@@ -1,9 +1,9 @@
 {
     "target": {
         "target_col": "avg_fee_1min",
-        "prediction_length": 30,
+        "prediction_length": 5,
         "freq": "1min",
-        "num_validation_windows": 4
+        "num_validation_windows": 10
     },
     "training-hyperparameters": {
         "epochs": 182,
