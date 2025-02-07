@@ -100,11 +100,10 @@ Deploying the CDK project will deploy 3 CloudFormation stacks
 * SageMaker
 
 The last one, through the use of Service Catalog will deploy a 4th CloudFormation stack for the MLOps SageMaker project.
-As [described in the overall architecture](../README.md), this uses 3 git repositories, each to a corresponding
+As [described in the overall architecture](../README.md), this uses 3 git repositories, each corresponding to a
 CodePipeline pipeline.
 
-At first all those pipelines will fail; __this is normal__ since the code contained in those pipelines does not fit the
-project and how could the __Model Deploy__ pipeline deploy a model and the __Model Monitor__ pipeline deploy the
+At first all those pipelines will fail; __this is normal__ since the there is not enough data ingested in order to train the dmodel, and how could the __Model Deploy__ pipeline deploy a model and the __Model Monitor__ pipeline deploy the
 resources to monitor a model, when none has been trained yet?
 
 The code for each pipeline is provided to you in the `\resources\sagemaker` folder. You will have to clone each of the
