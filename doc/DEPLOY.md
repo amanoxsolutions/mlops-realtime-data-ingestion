@@ -100,7 +100,7 @@ Deploying the CDK project will deploy 3 CloudFormation stacks
 * SageMaker
 
 The last one, through the use of Service Catalog will deploy a 4th CloudFormation stack for the MLOps SageMaker project.
-As [described in the overall architecture](../README.md), this will deploy 3 CodeCommit repositories, each with a corresponding
+As [described in the overall architecture](../README.md), this uses 3 git repositories, each to a corresponding
 CodePipeline pipeline.
 
 At first all those pipelines will fail; __this is normal__ since the code contained in those pipelines does not fit the
