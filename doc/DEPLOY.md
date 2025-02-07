@@ -9,15 +9,26 @@ The list below is for _Windows_ environment
 ## 1. Fork this Repository
 ## 2. Create an AWS Codestar Connection
 Please refer to the AWS document [Create a connection to GitHub](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-github.html)
-## 3. Edit the Data Ingestion Configuration
+## 3. Prepare 3rd Party Git
+In this example we are using GitHub. If you are using another 3rd party git Provider, please search for the official documentation to perform the following steps:
+* Make sure that the GitHub App "AWS Connector for GitHub" is installed.
+* Depending on the repository access do the following taks:
+  * All repositories: No additional tasks to do - The SageMaker template will create the repos for you.
+  * Only selected repositories: Create three empty repos (Build, Deploy and Monitoring) without any branch and add them to the GitHub App als selected repos.
+## 4. Edit the Data Ingestion Configuration
 In the [`bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/bin/data-ingestion.ts#L35-L36) configure the
 * repository name
+* Three SageMaker Template repositories
 * your AWS CodeStar connection name
 ```
 new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
   [...]
   repoName: '<your GitHub user>/mlops-realtime-data-ingestion',
+  repoNameBuild: '<your GitHub user>/<Build repo that was created in Step 3>',
+  repoNameDeploy: '<your GitHub user>/<Deploy repo that was created in Step 3>',
+  repoNameMonitor: '<your GitHub user>/<Monitor repo that was created in Step 3>',
   codestarConnectionName: '<your CodeStar connection name>',
+  [...]
 });
 ```
 > [!IMPORTANT]
@@ -25,7 +36,7 @@ new DataIngestionPipelineStack(app, 'DataIngestionPipelineStack', {
 > self-mutating pipeline. It updates itself with the latest changes from the repository. If you do not push the changes
 > to the repository, the pipeline will fail as it will try to use the wrong CodeStar connection and download the
 > code from the wrong repository.
-## 4. CodeBuild Service Quotas
+## 5. CodeBuild Service Quotas
 The fourth step of the project deployment pipeline creates 31 assets using CodeBuild.
 In the AWS Quotas console, make sure that the CodeBuild service quotas are set to at least 30.
 If not, request a quota increase. Otherwise, the deployment will fail with the following error:
@@ -34,7 +45,7 @@ Cannot have more than X builds in queue for the account.
 ```
 An alternative is to click on the `Retry failed actions` button in the CodePipeline console to restart the build for
 the failed assets.
-## 5. Deploy the Environment
+## 6. Deploy the Environment
 > [!TIP]
 > If your AWS CLI is using a named profile instead of the default profile,  specify this profile when issuing
 > AWS CLI & CDK commands using the `--profile <your profile name>` option or the AWS_PROFILE environment variable.
@@ -78,7 +89,7 @@ It will
 1. update itself if new stages have been added in the CI/CD pipeline.
 2. package the code assets for the different stacks' deployment.
 3. deploy the stacks in sequential orders using CloudFormation.
-## 6. Deploy the MLOps Pipelines
+## 7. Deploy the MLOps Pipelines
 #### Minimum Data Requirements
 > [!IMPORTANT]
 > Note that the __DeepAR model requires at least 300 observations to train a model__. As the ingestion pipeline
@@ -107,29 +118,18 @@ At first all those pipelines will fail; __this is normal__ since the there is no
 resources to monitor a model, when none has been trained yet?
 
 The code for each pipeline is provided to you in the `\resources\sagemaker` folder. You will have to clone each of the
-CodeCommit repositories, replace the entire content with the one provided for each pipeline and commit the project code
+3rd Party Git repositories, replace the entire content with the one provided for each pipeline and commit the project code
 for each repository.
 
-The project provides you a SageMaker development environment with all the necessary credentials already granted, which
-will simplify performing the operation. In the AWS Console,
-1. Go to the __CodeCommit__ and copy the __HTTPS (GRC)__ link to clone each of the __Model Build__, __Model Deploy__ and __Model Monitor__ pipelines
-2. Then go the the __SageMaker__ service
-3. On the left panel, go to __Admin configurations > Domains__
-4. You should see a SageMaker domain similar to `mlops-********-sagemaker-studio-domain`, click on it
-5. A user `mlops-********-sagemaker-studio-user` has also been provision. Click on the `Launch` button and select `Studio`
-6. Within your SageMaker Studio development environment, select `Code Editor` and create, run and open a code editor environment
-7. Once in the environment, open a terminal window and execute the following command
-```
-pip install git-remote-codecommit
-```
-8. Still in the terminal configure your Git user using the commands:
+On your machine with __git__ installed perform the following steps:
+1. Go to the __3rd Party Git__ and copy the __HTTPS (GRC)__ link to clone each of the __Model Build__, __Model Deploy__ and __Model Monitor__ pipelines
+2. Open a terminal and execute the following command (if git is not already configured)
 ```
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 ```
-9. Then follow [these instructions](https://docs.aws.amazon.com/sagemaker/latest/dg/code-editor-use-clone-a-repository.html) to clone each of the model pipeline repositories using the __HTTPS (GRC)__  link you copied in step [1]
-10. For each clone repository (build, deploy & monitor):
-    1. In Code Editor open the repository folder
+3. For each clone repository (build, deploy & monitor):
+    1. In your IDE open the repository folder
     2. Delete the entire content of each repository
     2. Upload the code from the `\resources\sagemaker` folder from your computer (pay attention to copy the right repository code)
     3. Commit & push all the changes for each repository
