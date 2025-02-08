@@ -107,6 +107,7 @@ export class RealtimeDataIngestionStack extends Stack {
       kinesisStreamProps: {
         streamName: ingestionStreamName,
         streamMode: StreamMode.ON_DEMAND,
+        removalPolicy: this.removalPolicy,
       },
       kinesisFirehoseProps: {
         deliveryStreamName : firehoseStreamName,

@@ -224,6 +224,7 @@ export class RDIFeatureStore extends Construct {
       kinesisStreamProps: {
         streamName: this.deliveryStreamName,
         streamMode: StreamMode.PROVISIONED,
+        removalPolicy: this.removalPolicy,
         shardCount: 1,
       },
       deploySqsDlqQueue: false,
