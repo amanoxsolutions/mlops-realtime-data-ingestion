@@ -10,7 +10,6 @@ def lambda_handler(event, context):
     # Define the parameters to delete
     parameters_to_delete = [
         "/rdi-mlops/sagemaker/model-build",
-        "/rdi-mlops/stack-parameters/connection-arn",
     ]
 
     paginator = ssm.get_paginator("describe_parameters")

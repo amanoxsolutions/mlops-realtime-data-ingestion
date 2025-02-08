@@ -44,7 +44,10 @@ export class CodestarConnection extends Construct {
         // IAM Policy for putting code connection arn to parameter store
         new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['ssm:PutParameter'],
+          actions: [
+            'ssm:PutParameter',
+            'ssm:DeleteParameter'
+          ],
           resources: [`arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/connection-arn`],
         }),
       ],

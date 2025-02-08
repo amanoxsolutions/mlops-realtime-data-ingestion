@@ -59,7 +59,6 @@ export class RDICleanupStepFunction extends Construct {
           actions: ['ssm:DeleteParameter*'],
           resources: [
               `arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/sagemaker/model-build/*`,
-              `arn:aws:ssm:${region}:${account}:parameter/rdi-mlops/stack-parameters/connection-arn`
           ]
         }),
         new PolicyStatement({

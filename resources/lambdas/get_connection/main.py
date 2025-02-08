@@ -7,6 +7,7 @@ helper = CfnResource()
 logger = Logger()
 csc = boto3.client("codestar-connections")
 ssm_client = boto3.client("ssm")
+CONNECTION_ARN_PARAM_NAME = "/rdi-mlops/stack-parameters/connection-arn"
 
 
 @logger.inject_lambda_context(log_event=True)
@@ -25,7 +26,7 @@ def get_connection_arn(event, _):
         helper.Data.update({"ConnectionArn": connection_arn})
         logger.info(f"CodeStar Connection ARN for '{connection_name}' found")
         ssm_client.put_parameter(
-            Name="/rdi-mlops/stack-parameters/connection-arn",
+            Name=CONNECTION_ARN_PARAM_NAME,
             Value=connection_arn,
             Type="String",
             Overwrite=True,
@@ -43,8 +44,12 @@ def get_connection_arn(event, _):
 
 
 @helper.delete
-def do_nothing(_, __):
-    logger.info("Nothing to do")
+def delete_ssm_parameter(_, __):
+    try:
+        ssm_client.delete_parameter(Name=CONNECTION_ARN_PARAM_NAME)
+        logger.info(f"Deleted SSM parameter {CONNECTION_ARN_PARAM_NAME}")
+    except:
+        logger.info(f"Failed to deleted SSM parameter {CONNECTION_ARN_PARAM_NAME}")
 
 
 def search_for_connection(
