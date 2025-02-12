@@ -337,6 +337,7 @@ def extend_config(
     monitoring_pipelinde_definition_object: str,
     timestamp: str,
     weighted_quantile_loss_threshold: str,
+    consecutive_accuracy_breach_to_alarm: str = "1",
 ) -> Dict[str, Dict[str, str]]:
     """
     Extend the stage configuration of the Monitoring Schedule with additional parameters and tags based.
@@ -416,6 +417,7 @@ def extend_config(
         "ModelBuildTriggerLambdaCodeS3Bucket": monitor_outputs_bucket,
         "ModelBuildTriggerLambdaCodeS3Key": f"code-artifacts/monitoring-data-collection/{timestamp}/trigger_model_build.zip",
         "ModelQualityWeightedQuantileLossThreshold": weighted_quantile_loss_threshold,
+        "ConsecutiveAccuracyBreachToAlarm": consecutive_accuracy_breach_to_alarm
     }
 
     # create new tags

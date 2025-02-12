@@ -52,9 +52,15 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         if not response.get("PipelineExecutionSummaries"):
             logger.info(f"No executions found for the pipeline: {model_pipeline_name}")
             return
-        last_execution_id = response["PipelineExecutionSummaries"][0][
-            "PipelineExecutionArn"
-        ].split("/")[-1]
+        # Get the last pipeline execution ID with PipelineExecutionStatus of 'Succeeded'
+        last_execution_id = None
+        for execution in response["PipelineExecutionSummaries"]:
+            if execution["PipelineExecutionStatus"] == "Succeeded":
+                last_execution_id = execution["PipelineExecutionArn"].split("/")[-1]
+                break
+        if not last_execution_id:
+            logger.info(f"No succeeded execution found for the pipeline: {model_pipeline_name}")
+            return
         logger.info(f"Last execution ID: {last_execution_id}")
     except ClientError as e:
         logger.error(f"An error occurred: {e}")
@@ -69,10 +75,16 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         weighted_quantile_loss_value = evaluation_output["deepar_metrics"][
             "weighted_quantile_loss"
         ]["value"]
-        # Read the SSM Parameters storing the model validation thresholds by the parameters path
+        # Add a margin to the score not to be too restrictive and round up to 4 decimals
         model_validation_thresholds = get_ssm_parameters(
             "/rdi-mlops/sagemaker/model-build/validation-threshold"
         )
+        threshold_percentage_margin = float(model_validation_thresholds["threshold_percentage_margin"])
+        weighted_quantile_loss_value = round(
+            weighted_quantile_loss_value * (1 + threshold_percentage_margin), 4
+        )
+        # Read the SSM Parameters storing the model validation thresholds by the parameters path
+        
         weighted_quantile_loss_threshold = float(
             model_validation_thresholds["weighted_quantile_loss"]
         )

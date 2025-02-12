@@ -144,6 +144,9 @@ def main():
     weighted_quantile_loss_threshold = ssm_client.get_parameter(
         Name="/rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss"
     )["Parameter"]["Value"]
+    consecutive_accuracy_breach_to_alarm = ssm_client.get_parameter(
+        Name="/rdi-mlops/sagemaker/model-build/validation-threshold/consecutive_accuracy_breach_to_alarm"
+    )["Parameter"]["Value"]
     # Configure logging to output the line number and message
     log_format = "%(levelname)s: [%(filename)s:%(lineno)s] %(message)s"
     logging.basicConfig(format=log_format, level=args.log_level)
@@ -191,6 +194,7 @@ def main():
         staging_monitoring_pipeline_config_key,
         timestamp,
         weighted_quantile_loss_threshold,
+        consecutive_accuracy_breach_to_alarm,
     )
     prod_monitor_config = extend_config(
         args,
@@ -204,6 +208,7 @@ def main():
         prod_monitoring_pipeline_config_key,
         timestamp,
         weighted_quantile_loss_threshold,
+        consecutive_accuracy_breach_to_alarm,
     )
 
     # export monitor configs
