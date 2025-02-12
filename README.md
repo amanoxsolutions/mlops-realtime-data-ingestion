@@ -6,7 +6,7 @@ This project demos a full end-to-end near real-time:
 * model deployment
 * model monitoring
 
-It captures in near real-time blockchain transactions data and by default computes, per minute, the amount of average transaction fees. These data are store in SageMaker Feature Store. An MLOps pipeline, uses the [Amazon SageMaker DeepAR forecasting algorithm](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html) to train a forecating model predicting the average transaction fees with a prediction window of 30 data points (in our case 30 minutes).
+It captures in near real-time blockchain transactions data and by default computes, per minute, the amount of average transaction fees. These data are store in SageMaker Feature Store. An MLOps pipeline, uses the [Amazon SageMaker DeepAR forecasting algorithm](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html) to train a forecating model predicting the average transaction fees with a prediction window of 5 data points (in our case 5 minutes).
 Although it might be irrelevant, data are aggregated and predicted using a 1 minute window in order to quickly gather enough data, get results and quickls see the MLOps pipeline automation in action.
 Once enough data have been captured and a first model trained, you will be able to see the model being deployed being a SageMaker API endpoint and resources being provisioned to monitor the model. If the model performance alarm threshold is breached, you will see alarms in the dashboard and the model training pipeline being automatically triggered to retrain a new model based on the lastest ingested data, thus, fully atuomating the training, deployment and monitoring lifecycle of the model.
 
@@ -27,6 +27,10 @@ transactions, it allows us to quickly gather a lot of data points in a short per
 for too long which has an impact on the AWS billing.
 ## Architecture
 ### The Full Architecture
+> [!NOTE]
+> Although they still appear in the architecture diagrams, since the deprecation of AWS CodeCommit, 
+> the MLOps pipeline model build/deploy/monitor repositories have been replaced by GitHub repositories
+
 ![](./doc/images/full-architecture.jpg)
 ### Near Real Time Data Ingestion Architecture
 At a high level, the data are ingested as follow:

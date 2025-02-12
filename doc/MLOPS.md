@@ -11,7 +11,7 @@ In order to train a forecasting model, we decided to use [Amazon Forecasting Alg
 
 But the main objective of this demo is – not – to train the most accurate model. We just need – a – model to test a fully automated MLOps lifecycle and using a prepackaged AWS model, greatly simplified our pipeline and demo development.
 
-The model is trained to forecast the next 30 average transaction fee. As we aggregate data per minute, it forecasts average transaction fee on the blockchain 30 minutes in the future.
+The model is trained to forecast the next 5 average transaction fee. As we aggregate data per minute, it forecasts average transaction fee on the blockchain 5 minutes in the future.
 
 To evaluate the accuracy of the model, this demo uses the [mean quantile loss metric](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html).
 ## The Architecture
@@ -36,10 +36,10 @@ The architecture is based on AWS provided SageMaker project for MLOps (provision
 This pipeline is different from the CodePipeline type of pipelines used to deploy infrastructure and applications. It is a pipeline used to train a machine learning model.
 
 The SageMaker project comes with a built-in SageMaker pipeline code which we had to refactor to match our use case. Our pipeline consists of the following steps:
-1. Read the data from SageMaker Feature store, extract the last 30 data point as a test dataset to evaluate the model and format the data for the DeepAR algorithm.
+1. Read the data from SageMaker Feature store, extract the last 5 data point as a test dataset to evaluate the model and format the data for the DeepAR algorithm.
 2. Train the model.
 3. Create the trained model.
-4. Make a batch prediction of the next 30 data points based on training data.
+4. Make a batch prediction of the next 5 data points based on training data.
 5. Evaluate the forecast accuracy by computing the model’s mean quantile loss between the forecast and test datapoints.
 6. Check the model accuracy compared to the threshold stored in the SSM parameter (deployed by the "Model Build" pipeline).
 7. Store in S3 the model's performance and generate a constraints.json file which will be used by the defaul SageMaker monitoring to evaluate the model.
@@ -47,7 +47,7 @@ The SageMaker project comes with a built-in SageMaker pipeline code which we had
 ## Deploying the Model
 Once the model is registered in SageMaker, it must be manually approved in order to be deployed in the staging environment first. The approval of the model will automatically trigger the "Model Deploy" pipeline. This pipeline performs 3 main actions.
 1. As the model has been approved, we take this new model accuracy as the new model threshold – if it is better (lower is better for our metric) than the existing one – and update the SSM parameter. You might not want to do that for your use case, as you might have fixed business/legal metric that you must match. But for this demo we decided to update the model accuracy as new models are retrained, hopefully building an increasingly accurate models as time passes.
-2. A first AWS CodeDeploy stage deploys the new model behind an Amazon SageMaker endpoint which can then be used to predict 30 data points in the future.
+2. A first AWS CodeDeploy stage deploys the new model behind an Amazon SageMaker endpoint which can then be used to predict 5 data points in the future.
 3. Once the model has been deployed behind the staging endpoint, the pipeline has a manual approval stage before deploying the new model in production. If approved, then a second AWS CodeDeploy stage deploys the new model behind a second Amazon SageMaker endpoint for production.
 ## SageMaker Model Monitoring
 The SageMaker service includes a model monitoring functionality, which can only be run on a schedule. At high level it simply compares predicted values from the model endpoints to ground truth values, computes an accuracy metric and raises an alarm if the accuracy is below the threshold stored in the constraints.json file (created during the model training in our case).
@@ -88,13 +88,13 @@ Currently:
 3. It can only be run on a schedule and cannot be triggered based on events. This is an issue in our case. As we are dealing with time series, instead of tabular data, we have to generate the monitoring data before the monitoring job runs.
 4. A model monitoring raising an Alarm if the model accuracy falls below the threshold does not generate an event in AWS EventBridge. So, it is not possible to directly trigger task automation.
 ### How did we Worked Around Those Limitations?
-The built-in Amazon SageMaker model monitoring is designed to compare ground truth and predictions for tabular datasets. But we have a time series and as we feed the model with one time series we get the next 30 minutes forecast (30 data points) predictions.
+The built-in Amazon SageMaker model monitoring is designed to compare ground truth and predictions for tabular datasets. But we have a time series and as we feed the model with one time series we get the next 5 minutes forecast (5 data points) predictions.
 
 As per [Amazon DeepAR Algorithm documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html#deepar-inputoutput), RMSE is a metric which can be used to evaluate the DeepAR algorithm.
 So we configured the built-in model monitoring job as a regression type with the RMSE metric.
-We then created an Amazon SageMaker pipeline, which we run on a schedule 30 minutes before the monitoring job schedule, to run a monitoring metrics data collection job. The job takes the latest time series data, takes out the last 30 data points as ground truth values and queries the model's endpoint to forecast the 30 data points that we took out.
-Our custom monitoring data collection job then tricks the system by taking the 30 ground truth data points and 30 predictions and treats them, not as two time series but as 30 individual data points stored in the `record_*.jsonl` files described previously. It assigns to each matching record a unique `eventId` and writes the ground truth data file and the predictions into the Amazon S3 Bucket, into the paths configured on the model endpoint data capture and monitoring job configuration (see above).
-This way the monitoring jobs sees 30 ground truth data point with predictions matching on the eventId and computes the RMS accuracy metric based on those 30 data points.
+We then created an Amazon SageMaker pipeline, which we run on a schedule 30 minutes before the monitoring job schedule, to run a monitoring metrics data collection job. The job takes the latest time series data, takes out the last 5 data points as ground truth values and queries the model's endpoint to forecast the 5 data points that we took out.
+Our custom monitoring data collection job then tricks the system by taking the 5 ground truth data points and 5 predictions and treats them, not as two time series but as 5 individual data points stored in the `record_*.jsonl` files described previously. It assigns to each matching record a unique `eventId` and writes the ground truth data file and the predictions into the Amazon S3 Bucket, into the paths configured on the model endpoint data capture and monitoring job configuration (see above).
+This way the monitoring jobs sees 5 ground truth data point with predictions matching on the eventId and computes the RMS accuracy metric based on those 5 data points.
 
 This however still doesn't solve 2 problems:
 * We can't use a custom metric.
@@ -102,7 +102,7 @@ This however still doesn't solve 2 problems:
 
 This is why we also created a custom metric.
 ## Custom Model Monitoring
-In parallel to our data collection job for the built-in SageMaker model monitoring job, we deploy and run another `custom metric` processing job in the scheduled SageMaker pipeline. Similarly to the first job, this one reads the data, extract the latest 30 data points as ground truth data and performs a prediction by sending the time series data to the SageMaker model endpoint.
+In parallel to our data collection job for the built-in SageMaker model monitoring job, we deploy and run another `custom metric` processing job in the scheduled SageMaker pipeline. Similarly to the first job, this one reads the data, extract the latest 5 data points as ground truth data and performs a prediction by sending the time series data to the SageMaker model endpoint.
 But then, the job directly computes the custom mean quantile loss metric and stores the custom metric in CloudWatch for the model.
 A CloudWatch Alarm is also deployed to raise an alarm if the value of the custom metric goes above the accuracy threshold.
 
@@ -129,7 +129,7 @@ We spent no effort in
 1. finding the most appropriate forecasting model. We just needed a model to test the MLOps pipeline automation.
 2. analyzing the average blockchain transaction fee per minute the model is predicting.
 3. analyzing the best way to evaluate the model. While DeepAR can be evaluated using weighted quantile loss (e.g. 80% quantile), we just picked the 50% quantile for simplicity.
-4. evaluating the model against multiple predictions. To evaluate the model, we just take the latest data, take out the last 30 data points as ground truth data and test the model’s predictions against that. 30 predictions is not a lot to evaluate the model, and it can easily happen by chance that there will be many outliers in the evaluation data, skewing the evaluation results.
+4. evaluating the model against multiple predictions. To evaluate the model, we just take the latest data, take out the last 5 data points as ground truth data and test the model’s predictions against that. 5 predictions is not a lot to evaluate the model, and it can easily happen by chance that there will be many outliers in the evaluation data, skewing the evaluation results.
 
 Also, as more data are gathered, we should expect the model's hypertunning parameters (e.g. learning rate, epochs, etc.) to be re-evaluated to better fit the data and optimize the model training. In the demo the hypertunning parameters are stored in SSM Parameters, allowing them to be updated independently of the SageMaker pipeline code. It would thus be easy to train the new model with updated hypertunning parameters, hopefully training a more accurate model. But this is not done in this demo.
 
