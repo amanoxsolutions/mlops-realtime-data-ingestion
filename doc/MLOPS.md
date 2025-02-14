@@ -82,7 +82,7 @@ In this demo the model accuracy is updated each time we retrain of model if the 
 When the SageMaker pipeline trains a new model, the `QualityCheckStep` step of the SageMaker pipeline stores in Amazon S3 the latest model baseline and the constraints to evaluate
 the model. The file containg the evaluation constraints can be found in the SageMaker Project S3 Bucket :
 
-`sagemaker-project-<PROJECT ID>/mlops-*******-<PROJECT ID>/<SAGEMAKER PIPELINE EXECUTION ID>/modelqualitycheck/constraints.json`
+`sagemaker-project-<PROJECT ID>/mlops-*******-<PROJECT ID>/pipeline_executions/<SAGEMAKER PIPELINE EXECUTION ID>/model_quality_check/constraints.json`
 
 When the "Model Monitor" CodePipeline pipeline is executed, it goes and reads those constraints to deploy the model monitoring with the latest model accuracy threshold.
 #### How are model predictions collected?

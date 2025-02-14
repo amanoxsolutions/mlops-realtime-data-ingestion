@@ -218,8 +218,18 @@ def get_pipeline(
         sagemaker_project_name = "blockchain-forecasting"
     if sagemaker_project_id is None:
         sagemaker_project_id = "mlops-pipeline"
-    base_job_prefix = f"{sagemaker_project_name}-{sagemaker_project_id}"
-    execution_prefix = ExecutionVariables.PIPELINE_EXECUTION_ID
+    pipeline_name = f"{sagemaker_project_name}-{sagemaker_project_id}"
+    # Note we can't use f-strings since the SageMaker pipeline execution variable do not support __str__ operations
+    pipeline_execution_s3_path = Join(
+        on="/",
+        values=[
+            "s3:/",
+            default_bucket,
+            pipeline_name,
+            "pipeline_executions",
+            ExecutionVariables.PIPELINE_EXECUTION_ID,
+        ],
+    )
     sagemaker_session = get_session(region, default_bucket)
     default_bucket = sagemaker_session.default_bucket()
     if role is None:
@@ -291,11 +301,42 @@ def get_pipeline(
 
     preprocessing_step_args = data_preprocessor.run(
         outputs=[
-            ProcessingOutput(output_name="train", source=f"{LOCAL_DATA_DIR}/train"),
             ProcessingOutput(
-                output_name="validation", source=f"{LOCAL_DATA_DIR}/validation"
+                output_name="train",
+                source=f"{LOCAL_DATA_DIR}/train",
+                destination=Join(
+                    on="/",
+                    values=[
+                        pipeline_execution_s3_path,
+                        "data_preprocessing",
+                        "train",
+                    ],
+                ),
             ),
-            ProcessingOutput(output_name="test", source=f"{LOCAL_DATA_DIR}/test"),
+            ProcessingOutput(
+                output_name="validation",
+                source=f"{LOCAL_DATA_DIR}/validation",
+                destination=Join(
+                    on="/",
+                    values=[
+                        pipeline_execution_s3_path,
+                        "data_preprocessing",
+                        "validation",
+                    ],
+                ),
+            ),
+            ProcessingOutput(
+                output_name="test",
+                source=f"{LOCAL_DATA_DIR}/test",
+                destination=Join(
+                    on="/",
+                    values=[
+                        pipeline_execution_s3_path,
+                        "data_preprocessing",
+                        "test",
+                    ],
+                ),
+            ),
         ],
         code=os.path.join(BASE_DIR, "preprocess.py"),
         arguments=[
@@ -305,8 +346,14 @@ def get_pipeline(
             feature_group_name,
             "--artifacts-bucket",
             default_bucket,
-            "--base-job-prefix",
-            base_job_prefix,
+            "--output-s3-path",
+            Join(
+                on="/",
+                values=[
+                    pipeline_execution_s3_path,
+                    "athena_query_results",
+                ],
+            ),
             "--freq",
             model_target_parameters["freq"],
             "--target-col",
@@ -324,7 +371,6 @@ def get_pipeline(
     #
     # Step 2: Model Training
     #
-    model_path = f"s3://{default_bucket}/{base_job_prefix}/model_training/output"
     deepar_image_uri = sagemaker.image_uris.retrieve(
         framework="forecasting-deepar", region=region, version="1"
     )
@@ -339,7 +385,13 @@ def get_pipeline(
         use_spot_instances=True,
         max_run=60 * 60 - 1,
         max_wait=60 * 60,
-        output_path=model_path,
+        output_path=Join(
+            on="/",
+            values=[
+                pipeline_execution_s3_path,
+                "model_training",
+            ],
+        ),
     )
     hyperparameters = {
         "time_freq": model_target_parameters["freq"],
@@ -409,9 +461,6 @@ def get_pipeline(
         "output_types": ["quantiles", "mean"],
         "quantiles": ["0.1", "0.5", "0.9"],
     }
-    transform_output_path = (
-        f"s3://{default_bucket}/{base_job_prefix}/batch_transform/output"
-    )
     transformer = Transformer(
         model_name=step_create_model.properties.ModelName,
         instance_type=TRANSFORM_INSTANCE_TYPE,
@@ -419,7 +468,13 @@ def get_pipeline(
         accept="application/jsonlines",
         strategy="SingleRecord",
         assemble_with="Line",
-        output_path=transform_output_path,
+        output_path=Join(
+            on="/",
+            values=[
+                pipeline_execution_s3_path,
+                "batch_transform",
+            ],
+        ),
         sagemaker_session=pipeline_session,
         env={"DEEPAR_INFERENCE_CONFIG": json.dumps(deepar_environment_param)},
     )
@@ -480,7 +535,17 @@ def get_pipeline(
             ),
         ],
         outputs=[
-            ProcessingOutput(output_name="evaluation", source=LOCAL_EVALUATION_DIR)
+            ProcessingOutput(
+                output_name="model_evaluation",
+                source=LOCAL_EVALUATION_DIR,
+                destination=Join(
+                    on="/",
+                    values=[
+                        pipeline_execution_s3_path,
+                        "model_evaluation",
+                    ],
+                ),
+            )
         ],
         code=os.path.join(BASE_DIR, "evaluate.py"),
         arguments=["--target-col", model_target_parameters["target_col"]],
@@ -488,7 +553,7 @@ def get_pipeline(
 
     evaluation_report = PropertyFile(
         name=EVALUATION_REPORT_NAME,
-        output_name="evaluation",
+        output_name="model_evaluation",
         path="evaluation.json",
     )
 
@@ -520,7 +585,7 @@ def get_pipeline(
             on="/",
             values=[
                 step_eval.properties.ProcessingOutputConfig.Outputs[
-                    "evaluation"
+                    "model_evaluation"
                 ].S3Output.S3Uri,
                 "targets-quantiles.csv",
             ],
@@ -529,11 +594,8 @@ def get_pipeline(
         output_s3_uri=Join(
             on="/",
             values=[
-                "s3:/",
-                default_bucket,
-                base_job_prefix,
-                execution_prefix,
-                "modelqualitycheck",
+                pipeline_execution_s3_path,
+                "model_quality_check",
             ],
         ),
         problem_type="Regression",
@@ -630,7 +692,7 @@ def get_pipeline(
 
     # pipeline instance
     pipeline = Pipeline(
-        name=base_job_prefix,
+        name=pipeline_name,
         parameters=[
             PROCESSING_INSTANCE_TYPE,
             processing_instance_count,

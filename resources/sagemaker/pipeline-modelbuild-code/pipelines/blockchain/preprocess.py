@@ -41,7 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("--region", type=str, required=True)
     parser.add_argument("--feature-group-name", type=str, required=True)
     parser.add_argument("--artifacts-bucket", type=str, required=True)
-    parser.add_argument("--base-job-prefix", type=str, required=True)
+    parser.add_argument("--output-s3-path", type=str, required=True)
     parser.add_argument("--freq", type=str, required=True)
     parser.add_argument("--target-col", type=str, required=True)
     parser.add_argument("--prediction-length", type=int, required=True)
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     prediction_length = args.prediction_length
     # Set S3 Buckets variables
     artifacts_bucket = args.artifacts_bucket
-    base_job_prefix = args.base_job_prefix
+    output_s3_path = args.output_s3_path
 
     # Set feature store session
     boto_session = boto3.Session(region_name=region)
@@ -81,11 +81,7 @@ if __name__ == "__main__":
     # dataset = pd.DataFrame()
     transactions_data_query.run(
         query_string=query_string,
-        output_location="s3://"
-        + artifacts_bucket
-        + "/"
-        + base_job_prefix
-        + "/athena_query_results/",
+        output_location=output_s3_path,
     )
     transactions_data_query.wait()
     df = transactions_data_query.as_dataframe()
