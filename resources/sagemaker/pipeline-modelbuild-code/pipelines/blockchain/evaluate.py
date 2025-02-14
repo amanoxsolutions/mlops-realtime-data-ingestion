@@ -65,8 +65,8 @@ if __name__ == "__main__":
         }
     )
 
-    # Compute the RMSE for the middle quantile
-    logger.info("Computing the RMSE for the middle quantile.")
+    # Compute the RMSE for the mean
+    logger.info("Computing the RMSE for the mean prediction.")
     df_aggregate["error"] = df_aggregate["target"] - df_aggregate["prediction_mean"]
     df_aggregate["error"] = df_aggregate["error"].pow(2)
     rmse = df_aggregate["error"].mean() ** 0.5
@@ -100,7 +100,6 @@ if __name__ == "__main__":
     # Write the final dataframe to a CSV file (we keep only the target and the quantiles and mean)
     logger.info("Writing the output of the transform processing and evaluation.")
     pathlib.Path(EVALUATION_DATA_PATH).mkdir(parents=True, exist_ok=True)
-    # df_aggregate = df_aggregate[["target", "mean", "quantile1", "quantile5", "quantile9"]]
     df_aggregate.to_csv(
         f"{EVALUATION_DATA_PATH}/targets-quantiles.csv", header=True, index=False
     )

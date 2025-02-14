@@ -455,7 +455,7 @@ def get_pipeline(
     #
     # Process the Batch Transform Outputs with the target data to have a single CSV file with the
     # following format:
-    # target, mean, quantile1, quantile5, quantile9
+    # target, prediction_mean, prediction_0.1, prediction_0.5, prediction_0.9
     evaluate_processor = ScriptProcessor(
         image_uri=processing_image_uri,
         command=["python3"],
@@ -505,8 +505,7 @@ def get_pipeline(
     # In this `QualityCheckStep` we calculate the baselines for statistics and constraints using the
     # predictions that the model generates from the test dataset (output from the TransformStep). We define
     # the problem type as 'Regression' in the `ModelQualityCheckConfig` along with specifying the columns
-    # which represent the input and output. Since the dataset has no headers, `_c0`, `_c1` are auto-generated
-    # header names that should be used in the `ModelQualityCheckConfig`.
+    # which represent the input and output.
 
     check_job_config = CheckJobConfig(
         role=role,
@@ -538,7 +537,7 @@ def get_pipeline(
             ],
         ),
         problem_type="Regression",
-        inference_attribute="quantile5",
+        inference_attribute="prediction_mean",
         ground_truth_attribute="target",
     )
 
