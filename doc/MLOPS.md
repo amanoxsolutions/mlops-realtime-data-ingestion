@@ -13,15 +13,18 @@ But the main objective of this demo is – not – to train the most accurate mo
 
 The model is trained to forecast the next 5 average transaction fee. As we aggregate data per minute, it forecasts average transaction fee on the blockchain 5 minutes in the future.
 
-To evaluate the accuracy of the model, this demo uses the [mean quantile loss metric](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html).
+To evaluate the accuracy of the model, this demo uses the mean quantile loss metric. See:
+* [Use the SageMaker AI DeepAR forecasting algorithm](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html)
+* [Weighted Quantile Loss](https://docs.aws.amazon.com/forecast/latest/dg/metrics.html#metrics-wQL)
+* [How to Evaluate Probabilistic Forecasts with Weighted Quantile Loss](https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss)
 ## The Architecture
 Refer to [this documentation](./INGESTION.md) for the details about the near real time data ingestion pipeline architecture. This architecture abstracts the data ingestion pipeline to focus on the MLOps architecture to train and operate the model.
 
 The architecture is based on AWS provided SageMaker project for MLOps (provisioned through AWS Service Catalog) which we adapted to our project. The SageMaker project provides the following:
 1. An AWS CodeCommit repository and AWS CodePipeline pipeline for
-  a.	model building
-  b.	model deployment
-  c.	model monitoring
+   1.	model building
+   2.	model deployment
+   3.	model monitoring
 2. An Amazon S3 Bucket to store all the artifacts generated during the MLOps lifecycle
 
 ![Architecture](./images/mlops-overview.jpg)
@@ -32,8 +35,10 @@ The architecture is based on AWS provided SageMaker project for MLOps (provision
 4. Once the endpoint is in service, this automatically triggers the deployment of the "Model Monitoring" pipeline to monitor the new model.
 5. On an hourly schedule, another SageMaker pipeline is triggered to compare the model forecast results with the latest datapoints.
 6. If the model forecasting accuracy falls under the acceptable threshold, the "Model Build" pipeline is automatically retriggered, to train a new model based on the latest data.
+
+The SSM Parameters with the initial values to train and monitor the models are define in the `model-build-params.json` file at the root of the "Model Build" repository. Those parameters can then be updated throught the MLOps lifecycle.
 ## Building the Model With the SageMaker Pipeline
-This pipeline is different from the CodePipeline type of pipelines used to deploy infrastructure and applications. It is a pipeline used to train a machine learning model.
+The SageMaker pipeline is different from the CodePipeline type of pipelines used to deploy infrastructure and applications. It is a pipeline used to train a machine learning model.
 
 The SageMaker project comes with a built-in SageMaker pipeline code which we had to refactor to match our use case. Our pipeline consists of the following steps:
 1. Read the data from SageMaker Feature store, extract the last 5 data point as a test dataset to evaluate the model and format the data for the DeepAR algorithm.
@@ -46,9 +51,23 @@ The SageMaker project comes with a built-in SageMaker pipeline code which we had
 8. Register the trained model if its accuracy passes the threshold.
 ## Deploying the Model
 Once the model is registered in SageMaker, it must be manually approved in order to be deployed in the staging environment first. The approval of the model will automatically trigger the "Model Deploy" pipeline. This pipeline performs 3 main actions.
-1. As the model has been approved, we take this new model accuracy as the new model threshold – if it is better (lower is better for our metric) than the existing one – and update the SSM parameter. You might not want to do that for your use case, as you might have fixed business/legal metric that you must match. But for this demo we decided to update the model accuracy as new models are retrained, hopefully building an increasingly accurate models as time passes.
+1. As the model has been approved, we take this new model accuracy as the new model threshold (taking into account the update_rate parameter) – if it is better (lower is better for our metric) than the existing one – and update the SSM parameter. You might not want to do that for your use case, as you might have fixed business/legal metric that you must match. But for this demo we decided to update the model accuracy as new models are retrained, hopefully building an increasingly accurate models as time passes.
 2. A first AWS CodeDeploy stage deploys the new model behind an Amazon SageMaker endpoint which can then be used to predict 5 data points in the future.
 3. Once the model has been deployed behind the staging endpoint, the pipeline has a manual approval stage before deploying the new model in production. If approved, then a second AWS CodeDeploy stage deploys the new model behind a second Amazon SageMaker endpoint for production.
+
+__How is the model accuracy threshold updated?__
+
+Custom Metric:
+
+For this demo we chose a simple approach: if the new model mean quantile loss is lower than the existing threshold, we add to the new model mean quantile loss, the difference between the existing threshold minus the new model mean quantile loss multiplied by the `update_rate` (set by the model build pipeline parameter file `model-build-params.json`):
+
+`new_threshold = new_model_mean_quatile loss + (new_threshold - new_model_mean_quatile loss) * update_rate`
+
+We do this not to update the monitoring threshold too quickly, otherwise if we were lucky to train a model which performed very good on the validation data for that particular run, we might set the bar too high (set the mean quantile loss threshold too low in our case) and subsequent predictions will fail to pass the new threshold immediately after deployment.
+
+Built-in Model Monitoring:
+
+If the `register_new_baseline` parameter of the `QualityCheckStep` step of the SageMaker pipeline is set to True, SageMaker automatically takes the last model metric as the new baseline for monitoring and we can't influence like we do for the custom metric the rate at which we want to update the monitoring threshold.
 ## SageMaker Model Monitoring
 The SageMaker service includes a model monitoring functionality, which can only be run on a schedule. At high level it simply compares predicted values from the model endpoints to ground truth values, computes an accuracy metric and raises an alarm if the accuracy is below the threshold stored in the constraints.json file (created during the model training in our case).
 ### How is the Monitoring Metric Computed?
@@ -60,8 +79,8 @@ Querying the model's endpoint to preform predictions that will be compared with 
 #### How is the model accuracy threshold configured?
 You can use a fixed accuracy threshold or update it as your pipeline retrains (hopefully) better model. This will depend on your business requirements.
 In this demo the model accuracy is updated each time we retrain of model if the new model performance is better than the previous one.
-When the SageMaker pipeline trains a new model, the last step of the SageMaker pipeline stores in Amazon S3 the latest model baseline and the constraints to evaluate the model.
-The file containg the evaluation constraints can be found in the SageMaker Project S3 Bucket :
+When the SageMaker pipeline trains a new model, the `QualityCheckStep` step of the SageMaker pipeline stores in Amazon S3 the latest model baseline and the constraints to evaluate
+the model. The file containg the evaluation constraints can be found in the SageMaker Project S3 Bucket :
 
 `sagemaker-project-<PROJECT ID>/mlops-*******-<PROJECT ID>/<SAGEMAKER PIPELINE EXECUTION ID>/modelqualitycheck/constraints.json`
 

@@ -10,11 +10,6 @@ It captures in near real-time blockchain transactions data and by default comput
 Although it might be irrelevant, data are aggregated and predicted using a 1 minute window in order to quickly gather enough data, get results and quickls see the MLOps pipeline automation in action.
 Once enough data have been captured and a first model trained, you will be able to see the model being deployed being a SageMaker API endpoint and resources being provisioned to monitor the model. If the model performance alarm threshold is breached, you will see alarms in the dashboard and the model training pipeline being automatically triggered to retrain a new model based on the lastest ingested data, thus, fully atuomating the training, deployment and monitoring lifecycle of the model.
 
-> [!WARNING]
-> Since the creation of this demo, AWS has deprecated the CodeCommit service which is used by the MLOps project.
-> It is not possible anymore to create a CodeCommit repositories. The MLOps project will not work as is.
-> An issue has been opened to update this demo: [Issue #63](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/issues/63)
-
 ## The Data
 For this project, we decided to ingest blockchain transactions from the blockchain.com API (see documentation [here](https://www.blockchain.com/explorer/api)).
 We focus on 3 simple metrics:

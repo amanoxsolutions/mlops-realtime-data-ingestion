@@ -10,11 +10,13 @@ The list below is for _Windows_ environment
 ## 2. Create an AWS Codestar Connection
 Please refer to the AWS document [Create a connection to GitHub](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-github.html)
 ## 3. Prepare 3rd Party Git
-In this example we are using GitHub. If you are using another 3rd party git Provider, please search for the official documentation to perform the following steps:
+The SageMaker project template is going to create 3 Git repositories and it needs permissions for that. In this example we are using GitHub. If you are using another 3rd party git Provider, please search for the official documentation to perform the following steps:
 * Make sure that the GitHub App "AWS Connector for GitHub" is installed.
 * Depending on the repository access do the following tasks:
   * All repositories: No additional tasks to do - The SageMaker template will create the repos for you.
   * Only selected repositories: Create three empty repos (Build, Deploy and Monitoring) without any branch and add them to the GitHub App as selected repos.
+
+__Later on__, once you have enough data (see section 7.), you will need to replace the code in each of these repositories by the code provided in `\resources\sagemaker`.
 ## 4. Edit the Data Ingestion Configuration
 In the [`bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/bin/data-ingestion.ts#L35-L36) configure the
 * repository name
@@ -112,26 +114,23 @@ Deploying the CDK project will deploy 3 CloudFormation stacks
 
 The last one, through the use of Service Catalog will deploy a 4th CloudFormation stack for the MLOps SageMaker project.
 As [described in the overall architecture](../README.md), this uses 3 git repositories, each corresponding to a
-CodePipeline pipeline.
+CodePipeline pipeline to build, deploy and montior the model.
 
-At first all those pipelines will fail; __this is normal__ since the there is not enough data ingested in order to train the dmodel, and how could the __Model Deploy__ pipeline deploy a model and the __Model Monitor__ pipeline deploy the
-resources to monitor a model, when none has been trained yet?
+At first all those pipelines will fail. __This is normal__ since the code that the SageMaker project puts by default in
+the repositories do not match this project and must be replaced. Also, as mentioned above you must have enough data for
+the first model to be trained. Finally, how could the __Model Deploy__ pipeline deploy a model and the __Model Monitor__
+pipeline deploy the resources to monitor a model, when none has been trained yet?
 
 The code for each pipeline is provided to you in the `\resources\sagemaker` folder. You will have to clone each of the
 3rd Party Git repositories, replace the entire content with the one provided for each pipeline and commit the project code
 for each repository.
 
-On your machine with __git__ installed perform the following steps:
-1. Go to the __3rd Party Git__ and copy the __HTTPS (GRC)__ link to clone each of the __Model Build__, __Model Deploy__ and __Model Monitor__ pipelines
-2. Open a terminal and execute the following command (if git is not already configured)
-```
-git config --global user.email "you@example.com"
-git config --global user.name "Your Name"
-```
-3. For each clone repository (build, deploy & monitor):
+On your machine or using the SageMaker Studio Domain Code Editor environment (you will have to configure your Git access):
+1. Clone the __3rd Party Git__ repositories created in step 3 for each of the __Model Build__, __Model Deploy__ and __Model Monitor__ pipelines
+2. For each cloned repository (build, deploy & monitor):
     1. In your IDE open the repository folder
     2. Delete the entire content of each repository
-    2. Upload the code from the `\resources\sagemaker` folder from your computer (pay attention to copy the right repository code)
+    2. Copy the code from the `\resources\sagemaker` folder to the repository (pay attention to copy the right repository code)
     3. Commit & push all the changes for each repository
 
 The __Model Build__ pipeline will start right away, provisioning and running the SageMaker pipeline to train a model.
