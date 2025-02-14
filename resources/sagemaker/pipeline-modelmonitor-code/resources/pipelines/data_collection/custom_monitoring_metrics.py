@@ -140,8 +140,8 @@ if __name__ == "__main__":
         }
     )
 
-    # Compute the RMSE for the middle quantile
-    logger.info("Computing the RMSE for the middle quantile.")
+    # Compute the RMSE for the mean
+    logger.info("Computing the RMSE for the mean predition.")
     df_aggregate["error"] = df_aggregate["target"] - df_aggregate["prediction_mean"]
     df_aggregate["error"] = df_aggregate["error"].pow(2)
     rmse = df_aggregate["error"].mean() ** 0.5
