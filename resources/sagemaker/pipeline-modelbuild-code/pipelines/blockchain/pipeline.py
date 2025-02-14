@@ -218,7 +218,7 @@ def get_pipeline(
         sagemaker_project_name = "blockchain-forecasting"
     if sagemaker_project_id is None:
         sagemaker_project_id = "mlops-pipeline"
-    pipeline_name = f"{sagemaker_project_name}-{sagemaker_project_id}"
+    pipeline_name = f"{sagemaker_project_name}-model-training"
     # Note we can't use f-strings since the SageMaker pipeline execution variable do not support __str__ operations
     pipeline_execution_s3_path = Join(
         on="/",
