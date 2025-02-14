@@ -5,11 +5,12 @@ import subprocess
 import sys
 
 subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas>=2.1.3"])
-import json  # noqa: E402
-import pathlib  # noqa: E402
-import logging  # noqa: E402
-import argparse  # noqa: E402
-import pandas as pd  # noqa: E402
+import json
+import pathlib
+import logging
+import argparse
+import pandas as pd
+import numpy as np
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -24,6 +25,13 @@ LOCAL_DATA_DIR = "/opt/ml/processing/data"
 TEST_DATA_PATH = f"{LOCAL_DATA_DIR}/test"
 TRANSFORM_DATA_PATH = f"{LOCAL_DATA_DIR}/transform"
 EVALUATION_DATA_PATH = f"{LOCAL_DATA_DIR}/evaluation"
+
+
+# See https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss
+# for weightd quantile losss calculations
+def quantile_loss(alpha, q, x):
+    return np.where(x > q, alpha * (x - q), (1 - alpha) * (q - x))
+
 
 if __name__ == "__main__":
     logger.info("Starting processing of Batch Transforms outputs.")
@@ -50,43 +58,34 @@ if __name__ == "__main__":
     df_aggregate = pd.DataFrame(
         {
             "target": df_test_targets[target_col],
-            "mean": transform_outputs["mean"],
-            "quantile1": transform_outputs["quantiles"]["0.1"],
-            "quantile5": transform_outputs["quantiles"]["0.5"],
-            "quantile9": transform_outputs["quantiles"]["0.9"],
+            "prediction_mean": transform_outputs["mean"],
+            "prediction_0.1": transform_outputs["quantiles"]["0.1"],
+            "prediction_0.5": transform_outputs["quantiles"]["0.5"],
+            "prediction_0.9": transform_outputs["quantiles"]["0.9"],
         }
     )
 
     # Compute the RMSE for the middle quantile
     logger.info("Computing the RMSE for the middle quantile.")
-    df_aggregate["error"] = df_aggregate["target"] - df_aggregate["mean"]
+    df_aggregate["error"] = df_aggregate["target"] - df_aggregate["prediction_mean"]
     df_aggregate["error"] = df_aggregate["error"].pow(2)
     rmse = df_aggregate["error"].mean() ** 0.5
     # Compute the mean weighted quantile loss for a specific quantile
     # The weighted quantile loss is :
-    # 2 * Sum of Q(quantile) / sum(abs(target))
+    # 2 / sum(abs(target))
     # Where Q(quantile) is
     # if quantile value > prediction : (1-quantile) * abs(target - prediction)
     # else : quantile * abs(target - prediction)
     # Then we take the mean of the weighted quantile loss for all the predictions
+    # See https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss
     logger.info("Computing the mean weighted quantile loss.")
-    weighted_quantile_loss = []
-    for q in [1, 5, 9]:
-        df_aggregate[f"quantile_loss_{q}"] = 0.0
-        df_aggregate.loc[
-            df_aggregate[f"quantile{q}"] > df_aggregate["target"], f"quantile_loss_{q}"
-        ] = (1 - (q / 10)) * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
-        df_aggregate.loc[
-            df_aggregate[f"quantile{q}"] <= df_aggregate["target"], f"quantile_loss_{q}"
-        ] = q / 10 * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
-        weighted_quantile_loss.append(
-            2
-            * df_aggregate[f"quantile_loss_{q}"].sum()
-            / abs(df_aggregate["target"]).sum()
-        )
-    mean_weighted_quantile_loss = sum(weighted_quantile_loss) / len(
-        weighted_quantile_loss
-    )
+    weighted_quantile_losses = []
+    weight = 2/np.abs(df_aggregate["target"]).sum()
+    for q in [0.1, 0.5, 0.9]:
+        ql = quantile_loss(q, df_aggregate[f"prediction_{q}"], df_aggregate["target"])
+        df_aggregate[f"quantile_loss_{q}"] = ql
+        weighted_quantile_losses.append(np.sum(ql) * weight)
+    mean_weighted_quantile_loss = np.mean(weighted_quantile_losses)
 
     report_dict = {
         "deepar_metrics": {

@@ -3,21 +3,22 @@ import sys
 
 subprocess.check_call([sys.executable, "-m", "pip", "install", "sagemaker>=2.197.0"])
 subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas>=2.1.3"])
-from utils import (  # noqa: E402
+from utils import (
     DeepARPredictor,
     get_session,
     write_dicts_to_file,
     get_ssm_parameters,
 )
-import json  # noqa: E402
-import os  # noqa: E402
-import argparse  # noqa: E402
-import boto3  # noqa: E402
-import logging  # noqa: E402
-from botocore.config import Config  # noqa: E402
-from sagemaker import Session  # noqa: E402
-import pandas as pd  # noqa: E402
-from sagemaker.feature_store.feature_group import FeatureGroup  # noqa: E402
+import json
+import os
+import argparse
+import boto3
+import logging
+from botocore.config import Config
+from sagemaker import Session
+import numpy as np
+import pandas as pd
+from sagemaker.feature_store.feature_group import FeatureGroup
 
 # create clients
 AWS_REGION = os.environ["AWS_REGION"]
@@ -29,6 +30,12 @@ boto3_config = Config(
 ssm_client = boto3.client("ssm", config=boto3_config)
 s3_client = boto3.resource("s3", config=boto3_config)
 cw_client = boto3.client("cloudwatch", config=boto3_config)
+
+
+# See https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss
+# for weightd quantile losss calculations
+def quantile_loss(alpha, q, x):
+    return np.where(x > q, alpha * (x - q), (1 - alpha) * (q - x))
 
 
 if __name__ == "__main__":
@@ -126,43 +133,34 @@ if __name__ == "__main__":
     df_aggregate = pd.DataFrame(
         {
             "target": df_target_data[target_col],
-            "mean": df_predictions["mean"],
-            "quantile1": df_predictions["0.1"],
-            "quantile5": df_predictions["0.5"],
-            "quantile9": df_predictions["0.9"],
+            "prediction_mean": df_predictions["mean"],
+            "prediction_0.1": df_predictions["0.1"],
+            "prediction_0.5": df_predictions["0.5"],
+            "prediction_0.9": df_predictions["0.9"],
         }
     )
 
     # Compute the RMSE for the middle quantile
     logger.info("Computing the RMSE for the middle quantile.")
-    df_aggregate["error"] = df_aggregate["target"] - df_aggregate["mean"]
+    df_aggregate["error"] = df_aggregate["target"] - df_aggregate["prediction_mean"]
     df_aggregate["error"] = df_aggregate["error"].pow(2)
     rmse = df_aggregate["error"].mean() ** 0.5
     # Compute the mean weighted quantile loss for a specific quantile
     # The weighted quantile loss is :
-    # 2 * Sum of Q(quantile) / sum(abs(target))
+    # 2 / sum(abs(target))
     # Where Q(quantile) is
     # if quantile value > prediction : (1-quantile) * abs(target - prediction)
     # else : quantile * abs(target - prediction)
     # Then we take the mean of the weighted quantile loss for all the predictions
+    # See https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss
     logger.info("Computing the mean weighted quantile loss.")
-    weighted_quantile_loss = []
-    for q in [1, 5, 9]:
-        df_aggregate[f"quantile_loss_{q}"] = 0.0
-        df_aggregate.loc[
-            df_aggregate[f"quantile{q}"] > df_aggregate["target"], f"quantile_loss_{q}"
-        ] = (1 - (q / 10)) * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
-        df_aggregate.loc[
-            df_aggregate[f"quantile{q}"] <= df_aggregate["target"], f"quantile_loss_{q}"
-        ] = q / 10 * abs(df_aggregate[f"quantile{q}"] - df_aggregate["target"])
-        weighted_quantile_loss.append(
-            2
-            * df_aggregate[f"quantile_loss_{q}"].sum()
-            / abs(df_aggregate["target"]).sum()
-        )
-    mean_weighted_quantile_loss = sum(weighted_quantile_loss) / len(
-        weighted_quantile_loss
-    )
+    weighted_quantile_losses = []
+    weight = 2/np.abs(df_aggregate["target"]).sum()
+    for q in [0.1, 0.5, 0.9]:
+        ql = quantile_loss(q, df_aggregate[f"prediction_{q}"], df_aggregate["target"])
+        df_aggregate[f"quantile_loss_{q}"] = ql
+        weighted_quantile_losses.append(np.sum(ql) * weight)
+    mean_weighted_quantile_loss = np.mean(weighted_quantile_losses)
 
     report_dict = {
         "deepar_metrics": {

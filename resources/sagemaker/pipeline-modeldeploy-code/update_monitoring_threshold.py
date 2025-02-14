@@ -75,25 +75,23 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         weighted_quantile_loss_value = evaluation_output["deepar_metrics"][
             "weighted_quantile_loss"
         ]["value"]
-        # Add a margin to the score not to be too restrictive and round up to 4 decimals
+        # Get the SSM parameters
         model_validation_thresholds = get_ssm_parameters(
             "/rdi-mlops/sagemaker/model-build/validation-threshold"
         )
-        threshold_percentage_margin = float(model_validation_thresholds["threshold_percentage_margin"])
-        weighted_quantile_loss_value = round(
-            weighted_quantile_loss_value * (1 + threshold_percentage_margin), 4
-        )
-        # Read the SSM Parameters storing the model validation thresholds by the parameters path
-        
         weighted_quantile_loss_threshold = float(
             model_validation_thresholds["weighted_quantile_loss"]
         )
         # Update the threshold stored in the SSM Parameter Store if the threshold is lower
+        # We only update the threshold by the update_rate * (current_threshold - new model performance)
         if weighted_quantile_loss_value < weighted_quantile_loss_threshold:
+            update_rate = float(model_validation_thresholds["update_rate"])
+            threshold_update_step = abs(weighted_quantile_loss_value - weighted_quantile_loss_threshold) * update_rate
+            new_threshold = weighted_quantile_loss_value + threshold_update_step 
             ssm_client.put_parameter(
                 Name="/rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss",
                 Description="Model build pipeline parameter for validation-threshold/weighted_quantile_loss",
-                Value=f"{weighted_quantile_loss_value:.4f}",
+                Value=f"{new_threshold:.4f}",
                 Type="String",
                 Overwrite=True,
             )

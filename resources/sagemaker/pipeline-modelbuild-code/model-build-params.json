@@ -13,7 +13,7 @@
     },
     "validation-threshold": {
         "weighted_quantile_loss": 0.24,
-        "threshold_percentage_margin": 0.5,
-        "consecutive_accuracy_breach_to_alarm": 3
+        "update_rate": 0.5,
+        "consecutive_breach_to_alarm": 3
     }
 }

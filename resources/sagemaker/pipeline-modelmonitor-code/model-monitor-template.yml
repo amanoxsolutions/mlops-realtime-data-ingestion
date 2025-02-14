@@ -216,7 +216,7 @@ Parameters:
   ModelQualityWeightedQuantileLossThreshold:
     Type: String
     Description: Threshold for the mean quantile loss metric
-  ConsecutiveAccuracyBreachToAlarm:
+  ConsecutiveBreachToAlarm:
     Type: String
     Description: Number of consecutive metric breach in order to raise an alarm
 Conditions:
@@ -787,9 +787,9 @@ Resources:
       Statistic: Maximum
       Period: 3600
       EvaluationPeriods: 
-        Ref: ConsecutiveAccuracyBreachToAlarm
+        Ref: ConsecutiveBreachToAlarm
       DatapointsToAlarm:
-        Ref: ConsecutiveAccuracyBreachToAlarm
+        Ref: ConsecutiveBreachToAlarm
       Threshold:
         Ref: ModelQualityWeightedQuantileLossThreshold
       ComparisonOperator: GreaterThanOrEqualToThreshold
