@@ -68,7 +68,7 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
     try:
         # Read the Evaluation output from the SageMaker Model Building Pipeline
         # Of the last execution ID which is stored in S3
-        object_key = f"{model_pipeline_name}/{last_execution_id}/EvaluateModel/output/evaluation/evaluation.json"
+        object_key = f"{model_pipeline_name}/pipeline_executions/{last_execution_id}/model_evaluation/evaluation.json"
         response = s3_client.get_object(Bucket=bucket, Key=object_key)
         evaluation_output = json.loads(response["Body"].read())
         logger.info(f"Model evaluation output: {evaluation_output}")
@@ -109,6 +109,6 @@ if __name__ == "__main__":
     parser.add_argument("--sagemaker-project-name", type=str, required=True)
     args, _ = parser.parse_known_args()
 
-    model_pipeline_name = f"{args.sagemaker_project_name}-{args.sagemaker_project_id}"
+    model_pipeline_name = f"{args.sagemaker_project_name}-model-training"
     bucket = f"sagemaker-project-{args.sagemaker_project_id}"
     update_model_threshold(model_pipeline_name, bucket)
