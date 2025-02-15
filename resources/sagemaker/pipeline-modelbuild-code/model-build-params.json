@@ -6,12 +6,12 @@
         "num_validation_windows": 10
     },
     "training-hyperparameters": {
-        "epochs": 246,
+        "epochs": 253,
         "early_stopping_patience": 40,
-        "mini_batch_size": 86,
-        "learning_rate": 0.0002,
-        "dropout_rate": 0.09219668,
-        "embedding_dimension": 30,
+        "mini_batch_size": 114,
+        "learning_rate": 0.004968,
+        "dropout_rate": 0.10126986,
+        "embedding_dimension": 19,
         "likelihood": "student-T"
     },
     "validation-threshold": {
