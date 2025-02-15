@@ -80,12 +80,16 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         model_validation_thresholds = get_ssm_parameters(
             "/rdi-mlops/sagemaker/model-build/validation-threshold"
         )
+        current_model_mwql = float(ssm_client.get_parameter(
+            Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss"
+        )["Parameter"]["Value"])
         weighted_quantile_loss_threshold = float(
             model_validation_thresholds["weighted_quantile_loss"]
         )
-        # Update the threshold stored in the SSM Parameter Store if the threshold is lower
-        # We only update the threshold by the update_rate * (current_threshold - new model performance)
-        if weighted_quantile_loss_value < weighted_quantile_loss_threshold:
+        # We don't want to update the montioring threshold right after training the first model
+        # i.e. when current_model_wql is still = 1
+        # We update it if the model is better than the current one and there is actually a model deployed
+        if weighted_quantile_loss_value < current_model_mwql and current_model_mwql < 1.0:
             update_rate = float(model_validation_thresholds["update_rate"])
             threshold_update_step = abs(weighted_quantile_loss_value - weighted_quantile_loss_threshold) * update_rate
             new_threshold = weighted_quantile_loss_value + threshold_update_step 
@@ -98,6 +102,18 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
             )
             logger.info(
                 "Updated model validation threshold in SSM parameter /rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss to: {weighted_quantile_loss_value:.3f}"
+            )
+        # We update the current model accuarcy metric
+        if weighted_quantile_loss_value < current_model_mwql:
+            ssm_client.put_parameter(
+                Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss",
+                Description="Indicate whether the model has been trained once or not",
+                Value=str(weighted_quantile_loss_value),
+                Type="String",
+                Overwrite=True,
+            )
+            logger.info(
+                "Updated current model accuracy performance metric in SSM parameter /rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss to: {weighted_quantile_loss_value}"
             )
     except ClientError as e:
         logger.error(f"An error occurred: {e}")

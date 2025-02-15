@@ -271,13 +271,10 @@ def get_pipeline(
     model_training_hyperparameters = get_ssm_parameters(
         ssm_client, "/rdi-mlops/sagemaker/model-build/training-hyperparameters"
     )
-    # Read the SSM Parameters storing the model validation thresholds by the parameters path
-    model_validation_thresholds = get_ssm_parameters(
-        ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold"
-    )
-    weighted_quantile_loss_threshold = float(
-        model_validation_thresholds["weighted_quantile_loss"]
-    )
+    # Read the SSM Parameters storing thecurrent model accuracy
+    current_model_wql = float(ssm_client.get_parameter(
+        Name="/rdi-mlops/sagemaker/model-build/current-model-weighted-quantile-loss"
+    )["Parameter"]["Value"])
 
     #
     # Step 1: Data Preprocessing
@@ -673,7 +670,7 @@ def get_pipeline(
 
     # condition step for evaluating model quality and branching execution
     print(
-        f"model validation threshold used is : weighted_quantile_loss <= {weighted_quantile_loss_threshold}"
+        f"model validation threshold used is : weighted_quantile_loss <= {current_model_wql}"
     )
     cond_lte = ConditionLessThanOrEqualTo(
         left=JsonGet(
@@ -681,7 +678,7 @@ def get_pipeline(
             property_file=evaluation_report,
             json_path="deepar_metrics.weighted_quantile_loss.value",
         ),
-        right=weighted_quantile_loss_threshold,
+        right=current_model_wql,
     )
     step_cond = ConditionStep(
         name=CONDITON_STEP_NAME,

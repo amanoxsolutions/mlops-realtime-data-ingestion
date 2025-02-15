@@ -55,6 +55,23 @@ def main():
                     logger.info(
                         f"Parameter {parameter} already exists in AWS Systems Manager Parameter Store."
                     )
+        # Add an additional parameter to store the value of the monitoring metric of the model
+        # At the start when no model is trained the value of the  mean quatile loss is set to the max of 1
+        try:
+            ssm_client.put_parameter(
+                Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss",
+                Description="The mean weighted quantile loss of the current model.",
+                Value="1.0",
+                Type="String",
+                Overwrite=False,
+            )
+            logger.info(
+                "Stored initial value of current-model-mean-weighted-quantile-loss SSM Parameter."
+            )
+        except ssm_client.exceptions.ParameterAlreadyExists:
+            logger.info(
+                "Parameter fcurrent-model-mean-weighted-quantile-loss already exists in AWS Systems Manager Parameter Store."
+            )
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         raise e
