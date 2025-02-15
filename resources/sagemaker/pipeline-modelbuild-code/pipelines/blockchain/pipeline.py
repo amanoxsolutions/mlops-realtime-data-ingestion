@@ -273,7 +273,7 @@ def get_pipeline(
     )
     # Read the SSM Parameters storing thecurrent model accuracy
     current_model_wql = float(ssm_client.get_parameter(
-        Name="/rdi-mlops/sagemaker/model-build/current-model-weighted-quantile-loss"
+        Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss"
     )["Parameter"]["Value"])
 
     #
