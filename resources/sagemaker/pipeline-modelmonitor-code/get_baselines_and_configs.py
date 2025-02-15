@@ -148,8 +148,7 @@ def main():
         Name="/rdi-mlops/sagemaker/model-build/validation-threshold/consecutive_breach_to_alarm"
     )["Parameter"]["Value"]
     # Configure logging to output the line number and message
-    log_format = "%(levelname)s: [%(filename)s:%(lineno)s] %(message)s"
-    logging.basicConfig(format=log_format, level=args.log_level)
+    logging.basicConfig(encoding='utf-8', level=args.log_level)
 
     # get the name of the S3 bucket used to store the outputs of the Model Monitor's
     monitor_outputs_bucket = args.monitor_outputs_bucket

@@ -7,6 +7,7 @@ import json
 
 # create clients
 logger = logging.getLogger(__name__)
+logging.basicConfig(encoding='utf-8', level=logging.INFO)
 ssm_client = boto3.client("ssm")
 
 

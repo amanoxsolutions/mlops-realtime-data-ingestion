@@ -6,6 +6,7 @@ from botocore.exceptions import ClientError
 from typing import Dict
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(encoding='utf-8', level=logging.INFO)
 sm_client = boto3.client("sagemaker")
 s3_client = boto3.client("s3")
 ssm_client = boto3.client("ssm")
