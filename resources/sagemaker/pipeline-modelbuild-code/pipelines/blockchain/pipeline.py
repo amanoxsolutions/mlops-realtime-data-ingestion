@@ -28,7 +28,7 @@ from sagemaker.transformer import Transformer
 from sagemaker.model_metrics import MetricsSource, ModelMetrics
 from sagemaker.drift_check_baselines import DriftCheckBaselines
 from sagemaker.processing import ProcessingInput, ProcessingOutput, ScriptProcessor
-from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
+from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo, ConditionLessThan
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.functions import JsonGet
 from sagemaker.workflow.parameters import (
@@ -78,7 +78,8 @@ EVALUATION_JOB_NAME = "EvaluationJob"
 EVALUATION_REPORT_NAME = "EvaluationReport"
 EVALUATION_STEP_NAME = "EvaluateModel"
 REGISTER_MODEL_STEP_NAME = "RegisterModel"
-CONDITON_STEP_NAME = "CheckMQLCondition"
+CONDITON_STEP1_NAME = "CheckMwqlLessThanThresholdCondition"
+CONDITON_STEP2_NAME = "CheckMwqlLessThanExistingModelCondition"
 FAIL_STEP_NAME = "Fail"
 # Instances
 BASE_INSTANCE_TYPE = "ml.m5.large"
@@ -271,8 +272,15 @@ def get_pipeline(
     model_training_hyperparameters = get_ssm_parameters(
         ssm_client, "/rdi-mlops/sagemaker/model-build/training-hyperparameters"
     )
+    # Read the SSM Parameters storing the model validation thresholds by the parameters path
+    model_validation_thresholds = get_ssm_parameters(
+        ssm_client, "/rdi-mlops/sagemaker/model-build/validation-threshold"
+    )
+    weighted_quantile_loss_threshold = float(
+        model_validation_thresholds["weighted_quantile_loss"]
+    )
     # Read the SSM Parameters storing thecurrent model accuracy
-    current_model_wql = float(ssm_client.get_parameter(
+    current_model_mwql = float(ssm_client.get_parameter(
         Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss"
     )["Parameter"]["Value"])
 
@@ -668,24 +676,48 @@ def get_pipeline(
         step_args=register_step_args,
     )
 
-    # condition step for evaluating model quality and branching execution
+    # condition steps for evaluating model quality and branching execution
+    # A model must perform better than the current model but also the monitoring threshold
+    # During the first training current_model_mwql=1 since we haven't trained any model left
+    # But we should not accept the first model if it doesn't even match our monitoring threshold so we chack that first
+    # 2- the model must perform better than the existing model
     print(
-        f"model validation threshold used is : weighted_quantile_loss <= {current_model_wql}"
+        f"model validation threshold used is : weighted_quantile_loss <= {current_model_mwql}"
     )
-    cond_lte = ConditionLessThanOrEqualTo(
+    weighted_quantile_loss_threshold
+    cond_lte2 = ConditionLessThan(
         left=JsonGet(
             step_name=step_eval.name,
             property_file=evaluation_report,
             json_path="deepar_metrics.weighted_quantile_loss.value",
         ),
-        right=current_model_wql,
+        right=current_model_mwql,
     )
-    step_cond = ConditionStep(
-        name=CONDITON_STEP_NAME,
-        conditions=[cond_lte],
+    step_cond2 = ConditionStep(
+        name=CONDITON_STEP2_NAME,
+        conditions=[cond_lte2],
         if_steps=[step_register],
         else_steps=[],
     )
+    # 1- the model must perform better than the monitoring threshold
+    print(
+        f"model validation threshold used is : weighted_quantile_loss <= {weighted_quantile_loss_threshold}"
+    )
+    cond_lte1 = ConditionLessThanOrEqualTo(
+        left=JsonGet(
+            step_name=step_eval.name,
+            property_file=evaluation_report,
+            json_path="deepar_metrics.weighted_quantile_loss.value",
+        ),
+        right=weighted_quantile_loss_threshold,
+    )
+    step_cond1 = ConditionStep(
+        name=CONDITON_STEP1_NAME,
+        conditions=[cond_lte1],
+        if_steps=[step_cond2],
+        else_steps=[],
+    )
+
 
     # pipeline instance
     pipeline = Pipeline(
@@ -708,7 +740,7 @@ def get_pipeline(
             step_transform,
             step_eval,
             model_quality_check_step,
-            step_cond,
+            step_cond1,
         ],
         sagemaker_session=pipeline_session,
     )
