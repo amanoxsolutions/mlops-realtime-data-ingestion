@@ -14,7 +14,7 @@ from sagemaker.feature_store.feature_group import FeatureGroup
 import json
 import os
 import argparse
-from datetime import datetime, timezoner
+from datetime import datetime, timezone
 import uuid
 import boto3
 import logging
@@ -74,7 +74,6 @@ def predictions_with_id(
         },
         "eventVersion": "0",
     }
-# from datetime import timezone
 
 
 def write_output_data(path: str, record: OutputData, file_index: int) -> None:
