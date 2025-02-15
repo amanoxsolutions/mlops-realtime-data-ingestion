@@ -3,26 +3,26 @@ import sys
 
 subprocess.check_call([sys.executable, "-m", "pip", "install", "sagemaker>=2.197.0"])
 subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas>=2.1.3"])
-from utils import (  # noqa: E402
+from utils import (
     DeepARPredictor,
     DeepARData,
     get_session,
     write_dicts_to_file,
     get_ssm_parameters,
 )
-from sagemaker.feature_store.feature_group import FeatureGroup  # noqa: E402
-import json  # noqa: E402
-import os  # noqa: E402
-import argparse  # noqa: E402
-from datetime import datetime  # noqa: E402
-import uuid  # noqa: E402
-import boto3  # noqa: E402
-import logging  # noqa: E402
-import time  # noqa: E402
-from botocore.config import Config  # noqa: E402
-from sagemaker import Session  # noqa: E402
-import pandas as pd  # noqa: E402
-from typing import List, Dict, Any, TypeAlias  # noqa: E402
+from sagemaker.feature_store.feature_group import FeatureGroup
+import json
+import os
+import argparse
+from datetime import datetime, timezoner
+import uuid
+import boto3
+import logging
+import time
+from botocore.config import Config
+from sagemaker import Session
+import pandas as pd
+from typing import List, Dict, Any, TypeAlias
 
 # create clients
 AWS_REGION = os.environ["AWS_REGION"]
@@ -70,10 +70,11 @@ def predictions_with_id(
         "eventMetadata": {
             "eventId": str(uuid),
             "inferenceId": str(uuid),
-            "inferenceTime": str(datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")),
+            "inferenceTime": str(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")),
         },
         "eventVersion": "0",
     }
+# from datetime import timezone
 
 
 def write_output_data(path: str, record: OutputData, file_index: int) -> None:

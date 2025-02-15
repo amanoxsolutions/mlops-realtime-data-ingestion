@@ -21,7 +21,7 @@ import { join } from 'path';
 // This will be used to conditionally update the Flink application when the code changes.
 // from: https://stackoverflow.com/questions/68074935/hash-of-folders-in-nodejs
 export function computeDirectoryHash(paths: string[], inputHash?:Hash): string {
-  const hash = inputHash ? inputHash : createHash("sha1");
+  const hash = inputHash ? inputHash : createHash("sha384");
   for (const path of paths) {
     const statInfo = statSync(path);
     if (statInfo.isDirectory()) {
@@ -88,7 +88,8 @@ export class RDIFeatureStore extends Construct {
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,
-      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY
+      autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
+      enforceSSL: true,
     });
     // Deploy the Glue script to the code assets bucket
     const glueDeployment = new BucketDeployment(this, 'DeployGlueScript', {
@@ -118,6 +119,7 @@ export class RDIFeatureStore extends Construct {
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,
       autoDeleteObjects: this.removalPolicy === RemovalPolicy.DESTROY,
+      enforceSSL: true,
     });
 
     // Create an IAM Policy allowing access to the SageMaker Project S3 Bucket and attach it to the data access policy
@@ -145,7 +147,7 @@ export class RDIFeatureStore extends Construct {
       roleName: `${this.prefix}-sagemaker-feature-store-role`,
       assumedBy: new ServicePrincipal('sagemaker.amazonaws.com'),
       managedPolicies: [
-        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFullAccess')],
+        ManagedPolicy.fromAwsManagedPolicyName('AmazonSageMakerFeatureStoreAccess')],
     });
     fgRole.attachInlinePolicy(new Policy(this, 'FeatureStorePolicy', {
       policyName: `${this.prefix}-sagemaker-feature-store-s3-bucket-access`,

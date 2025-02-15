@@ -38,11 +38,11 @@ async function ingestData(throwError = false) {
     let latestblockResponse = await axios.get('https://blockchain.info/unconfirmed-transactions?format=json');
     const transactions = latestblockResponse.data;
     if (transactions) {
-      console.log(`Pulled ${transactions.txs.length} data points from the public API`);
+      console.log(`Pulled ${JSON.stringify(transactions.txs.length)} data points from the public API`);
       return transactions;
     }
   } catch (error) {
-    console.log(error);
+    console.log(JSON.stringify(error));
     if (throwError) {
       throw new Error('Failed to get data from the public API');
     }

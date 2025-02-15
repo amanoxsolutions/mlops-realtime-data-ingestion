@@ -50,6 +50,7 @@ Resources:
          - ModelPackageName: !Ref ModelPackageName
       ExecutionRoleArn: !Ref ModelExecutionRoleArn
 
+  # amazonq-ignore-next-line
   EndpointConfig:
     Type: AWS::SageMaker::EndpointConfig
     Properties:

@@ -50,6 +50,7 @@ export class DataIngestionPipelineStack extends Stack {
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: removalPolicy,
       autoDeleteObjects: removalPolicy === RemovalPolicy.DESTROY,
+      enforceSSL: true,
     });
 
     const pipeline = new CodePipeline(this, 'Pipeline', {

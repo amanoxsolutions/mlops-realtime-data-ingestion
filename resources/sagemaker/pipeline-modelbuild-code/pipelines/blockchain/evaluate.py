@@ -50,8 +50,8 @@ if __name__ == "__main__":
     # Load the Batch Transform JSON outputs from S3.
     # In our case there should be only one line to read
     logger.info("Loading the Batch Transform outputs.")
-    f = open(transform_outputs_file, "r")
-    transform_outputs = json.load(f)
+    with open(transform_outputs_file, "r") as f:
+        transform_outputs = json.load(f)
 
     # Create a dataframe with the target_col from the test targets and the quantiles from the Batch Transform outputs
     logger.info("Creating the final dataframe.")
