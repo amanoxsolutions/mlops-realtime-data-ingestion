@@ -9,7 +9,10 @@
         "epochs": 246,
         "early_stopping_patience": 40,
         "mini_batch_size": 86,
-        "learning_rate": 0.0002
+        "learning_rate": 0.0002,
+        "dropout_rate": 0.09219668,
+        "embedding_dimension": 30,
+        "likelihood": "student-T"
     },
     "validation-threshold": {
         "weighted_quantile_loss": 0.24,

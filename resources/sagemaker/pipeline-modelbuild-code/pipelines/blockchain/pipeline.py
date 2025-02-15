@@ -406,9 +406,11 @@ def get_pipeline(
         ],
         "mini_batch_size": model_training_hyperparameters["mini_batch_size"],
         "learning_rate": model_training_hyperparameters["learning_rate"],
+        "likelihood": model_training_hyperparameters["likelihood"],
+        "dropout_rate": model_training_hyperparameters["dropout_rate"],
+        "embedding_dimension": model_training_hyperparameters["embedding_dimension"],
         "context_length": model_target_parameters["prediction_length"],
         "prediction_length": model_target_parameters["prediction_length"],
-        "likelihood": "negative-binomial",
     }
     deepar_estimator.set_hyperparameters(**hyperparameters)
     preprocessing_step_args = deepar_estimator.fit(
