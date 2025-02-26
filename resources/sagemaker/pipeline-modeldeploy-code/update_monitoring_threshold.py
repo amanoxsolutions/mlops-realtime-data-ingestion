@@ -86,10 +86,9 @@ def update_model_threshold(model_pipeline_name: str, bucket: str) -> None:
         weighted_quantile_loss_threshold = float(
             model_validation_thresholds["weighted_quantile_loss"]
         )
-        # We don't want to update the montioring threshold right after training the first model
-        # i.e. when current_model_wql is still = 1
-        # We update it if the model is better than the current one and there is actually a model deployed
-        if weighted_quantile_loss_value < current_model_mwql and current_model_mwql < 1.0:
+        # We update it if the model monioting threshold according to the update rate if the model mean weighted quantile loss
+        # is lower than the existing threshold
+        if weighted_quantile_loss_value < weighted_quantile_loss_threshold:
             update_rate = float(model_validation_thresholds["update_rate"])
             threshold_update_step = abs(weighted_quantile_loss_value - weighted_quantile_loss_threshold) * update_rate
             new_threshold = weighted_quantile_loss_value + threshold_update_step 

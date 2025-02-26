@@ -1,5 +1,5 @@
 """Process the Batch Transform Outputs with the target data to have a single CSV file
-with the following format: target, quantile0.1, quantile0.5, quantile0.9"""
+with the following format: target, low_quantile, quantile0.5, up_quantile"""
 
 import subprocess
 import sys
@@ -37,9 +37,13 @@ if __name__ == "__main__":
     logger.info("Starting processing of Batch Transforms outputs.")
     parser = argparse.ArgumentParser()
     parser.add_argument("--target-col", type=str, required=True)
+    parser.add_argument("--low_quantile", type=float, required=True)
+    parser.add_argument("--up_quantile", type=float, required=True)
     args = parser.parse_args()
     # Set Data files variables
     target_col = args.target_col
+    low_quantile = args.low_quantile
+    up_quantile = args.up_quantile
     transform_outputs_file = f"{TRANSFORM_DATA_PATH}/test-inputs.json.out"
     test_targets_file = f"{TEST_DATA_PATH}/test-targets.csv"
 
@@ -59,33 +63,32 @@ if __name__ == "__main__":
         {
             "target": df_test_targets[target_col],
             "prediction_mean": transform_outputs["mean"],
-            "prediction_0.1": transform_outputs["quantiles"]["0.1"],
+            f"prediction_{low_quantile}": transform_outputs["quantiles"][str(low_quantile)],
             "prediction_0.5": transform_outputs["quantiles"]["0.5"],
-            "prediction_0.9": transform_outputs["quantiles"]["0.9"],
+            f"prediction_{up_quantile}": transform_outputs["quantiles"][str(up_quantile)],
         }
     )
 
     # Compute the RMSE for the mean
     logger.info("Computing the RMSE for the mean prediction.")
-    df_aggregate["error"] = df_aggregate["target"] - df_aggregate["prediction_mean"]
-    df_aggregate["error"] = df_aggregate["error"].pow(2)
-    rmse = df_aggregate["error"].mean() ** 0.5
+    targets = np.array(df_test_targets[target_col])
+    mean_predictions = np.array(transform_outputs["mean"])
+    square_errors=(mean_predictions-targets)**2
+    rmse = np.sqrt(square_errors.mean())
+    df_aggregate["square_errors"] = square_errors
     # Compute the mean weighted quantile loss for a specific quantile
-    # The weighted quantile loss is :
-    # 2 / sum(abs(target))
-    # Where Q(quantile) is
-    # if quantile value > prediction : (1-quantile) * abs(target - prediction)
-    # else : quantile * abs(target - prediction)
-    # Then we take the mean of the weighted quantile loss for all the predictions
-    # See https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss
+    # See https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html
+    # And https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss
     logger.info("Computing the mean weighted quantile loss.")
-    weighted_quantile_losses = []
-    weight = 2/np.abs(df_aggregate["target"]).sum()
-    for q in [0.1, 0.5, 0.9]:
-        ql = quantile_loss(q, df_aggregate[f"prediction_{q}"], df_aggregate["target"])
+    logger.info(f"Low quantile is {low_quantile}, up quantile is {up_quantile}")
+    weighted_quantile_losses = np.array([])
+    weight = 2/np.abs(targets).sum()
+    for q in [low_quantile, 0.5, up_quantile]:
+        quantile_predictions = np.array(transform_outputs["quantiles"][str(q)])
+        ql = quantile_loss(q, quantile_predictions, targets)
         df_aggregate[f"quantile_loss_{q}"] = ql
-        weighted_quantile_losses.append(np.sum(ql) * weight)
-    mean_weighted_quantile_loss = np.mean(weighted_quantile_losses)
+        weighted_quantile_losses = np.append(weighted_quantile_losses, ql.sum() * weight)
+    mean_weighted_quantile_loss = weighted_quantile_losses.mean()
 
     report_dict = {
         "deepar_metrics": {

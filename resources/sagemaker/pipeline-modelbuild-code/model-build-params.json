@@ -17,6 +17,7 @@
     "validation-threshold": {
         "weighted_quantile_loss": 0.24,
         "update_rate": 0.5,
-        "consecutive_breach_to_alarm": 3
+        "consecutive_breach_to_alarm": 3,
+        "confidence": 90
     }
 }

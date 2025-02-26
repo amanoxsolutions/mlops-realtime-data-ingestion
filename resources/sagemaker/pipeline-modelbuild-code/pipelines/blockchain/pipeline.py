@@ -279,6 +279,13 @@ def get_pipeline(
     weighted_quantile_loss_threshold = float(
         model_validation_thresholds["weighted_quantile_loss"]
     )
+    # Get the model confidence from the validation-threshold parameter and
+    # Make sure the confidence is above 50 and below 100 otherwise default to 90
+    confidence = float(model_validation_thresholds["confidence"])
+    if not 50 < confidence < 100:
+        confidence = 90.0
+    low_quantile = round(0.5 - confidence * 0.005, 3)
+    up_quantile = round(confidence * 0.005 + 0.5, 3)
     # Read the SSM Parameters storing thecurrent model accuracy
     current_model_mwql = float(ssm_client.get_parameter(
         Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss"
@@ -466,7 +473,7 @@ def get_pipeline(
     deepar_environment_param = {
         "num_samples": 100,
         "output_types": ["quantiles", "mean"],
-        "quantiles": ["0.1", "0.5", "0.9"],
+        "quantiles": [str(low_quantile), "0.5", str(up_quantile)],
     }
     transformer = Transformer(
         model_name=step_create_model.properties.ModelName,
@@ -517,7 +524,7 @@ def get_pipeline(
     #
     # Process the Batch Transform Outputs with the target data to have a single CSV file with the
     # following format:
-    # target, prediction_mean, prediction_0.1, prediction_0.5, prediction_0.9
+    # target, prediction_mean, low_quantile, quantile0.5, up_quantile
     evaluate_processor = ScriptProcessor(
         image_uri=processing_image_uri,
         command=["python3"],
@@ -555,7 +562,11 @@ def get_pipeline(
             )
         ],
         code=os.path.join(BASE_DIR, "evaluate.py"),
-        arguments=["--target-col", model_target_parameters["target_col"]],
+        arguments=[
+            "--target-col", model_target_parameters["target_col"],
+            "--low_quantile", str(low_quantile),
+            "--up_quantile", str(up_quantile),
+        ],
     )
 
     evaluation_report = PropertyFile(

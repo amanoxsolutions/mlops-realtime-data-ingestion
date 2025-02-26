@@ -94,6 +94,15 @@ if __name__ == "__main__":
     model_target_parameters = get_ssm_parameters(
         ssm_client, "/rdi-mlops/sagemaker/model-build/target"
     )
+    # Get the model confidence from the validation-threshold parameter and
+    # Make sure the confidence is either 60, 70, 80 or 90 otherwise default to 60
+    confidence = int(ssm_client.get_parameter(
+        Name="/rdi-mlops/sagemaker/model-build/validation-threshold/confidence"
+    )["Parameter"]["Value"])
+    if confidence not in [60, 70, 80, 90]:
+        confidence = 60
+    low_quantile = round(0.5 - confidence * 0.005, 2)
+    up_quantile = round(confidence * 0.005 + 0.5, 2)
 
     # Set some Buckets variables
     model_artifacts_bucket = f"{stack_parameters['project-prefix']}-sagemaker-experiment-{stack_parameters['bucket-suffix']}"
@@ -179,7 +188,7 @@ if __name__ == "__main__":
 
     # Convert the context data to time series
     ts = df_input_data[target_col]
-    df_predictions = predictor.predict(ts=ts, quantiles=[0.1, 0.5, 0.9])
+    df_predictions = predictor.predict(ts=ts, quantiles=[low_quantile, 0.5, up_quantile])
 
     # Set the predictions and ground-truth folders
     upload_time = datetime.utcnow()
