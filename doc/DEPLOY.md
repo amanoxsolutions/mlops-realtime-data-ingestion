@@ -9,14 +9,14 @@ The list below is for _Windows_ environment
 ## 1. Fork this Repository
 ## 2. Create an AWS Codestar Connection
 Please refer to the AWS document [Create a connection to GitHub](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-github.html)
-## 3. Prepare 3rd Party Git
-The SageMaker project template is going to create 3 Git repositories and it needs permissions for that. In this example we are using GitHub. If you are using another 3rd party git Provider, please search for the official documentation to perform the following steps:
-* Make sure that the GitHub App "AWS Connector for GitHub" is installed.
+## 3. Prepare 3rd Party Git Repositories
+The SageMaker project template is going to create 3 Git repositories and it needs permissions for that. In this example we are using GitHub. If you are using another 3rd party git provider, please search for the official documentation to perform similar configuration:
+* Make sure that the GitHub App "AWS Connector for GitHub" is installed in your GitHub account.
 * Depending on the repository access do the following tasks:
   * All repositories: No additional tasks to do - The SageMaker template will create the repos for you.
-  * Only selected repositories: Create three empty repos (Build, Deploy and Monitoring) without any branch and add them to the GitHub App as selected repos.
+  * Only selected repositories: Create three __empty__ repos (Build, Deploy and Monitoring) without any branch and add them to the GitHub App as selected repos.
 
-__Later on__, once you have enough data (see section 7.), you will need to replace the code in each of these repositories by the code provided in `\resources\sagemaker`.
+__Later on__, once you have enough data (see section 7.), you will need to replace the code in each of these repositories by the code provided in `\resources\sagemaker\pipeline-model*`.
 ## 4. Edit the Data Ingestion Configuration
 In the [`bin/data-ingestion.ts` file](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/bin/data-ingestion.ts#L35-L36) configure the
 * repository name
@@ -98,7 +98,7 @@ It will
 > aggregates the data per minute, it means that you need to ingest data for at least 5 hours before you can train
 > your first model. If you deploy the __Model Build__ pipeline before you have enough observations, the SageMaker
 > pipeline __TrainModel__ stage will fail with the following error: `ClientError: ClientError: Very low number of
-> time observations (found 50 observations in 1 time series). DeepAR requires at least 300 observations., exit code: 2`
+> time observations (found ** observations in 1 time series). DeepAR requires at least 300 observations., exit code: 2`
 
 You can check the amount of observations stored in SageMaker Feature Store using Athena.
 1. In the Athena console, select the `sagemaker_featurestore` database
@@ -121,16 +121,16 @@ the repositories do not match this project and must be replaced. Also, as mentio
 the first model to be trained. Finally, how could the __Model Deploy__ pipeline deploy a model and the __Model Monitor__
 pipeline deploy the resources to monitor a model, when none has been trained yet?
 
-The code for each pipeline is provided to you in the `\resources\sagemaker` folder. You will have to clone each of the
+The code for each pipeline is provided to you in the `\resources\sagemaker\pipeline-model*` folders. You will have to clone each of the
 3rd Party Git repositories, replace the entire content with the one provided for each pipeline and commit the project code
-for each repository.
+for each repository, starting with the model build code.
 
 On your machine or using the SageMaker Studio Domain Code Editor environment (you will have to configure your Git access):
 1. Clone the __3rd Party Git__ repositories created in step 3 for each of the __Model Build__, __Model Deploy__ and __Model Monitor__ pipelines
 2. For each cloned repository (build, deploy & monitor):
     1. In your IDE open the repository folder
     2. Delete the entire content of each repository
-    2. Copy the code from the `\resources\sagemaker` folder to the repository (pay attention to copy the right repository code)
+    2. Copy the code from the corresponding `\resources\sagemaker`\pipeline-model* folder to the repository (pay attention to copy the right repository code)
     3. Commit & push all the changes for each repository
 
 The __Model Build__ pipeline will start right away, provisioning and running the SageMaker pipeline to train a model.
