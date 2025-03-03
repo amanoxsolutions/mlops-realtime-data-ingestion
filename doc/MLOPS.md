@@ -3,24 +3,105 @@
 1. Build an [Amazon DeepAR forecasting model](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html)
 2. Deploy the trained model automatically if it passes accuracy threshold and is manually approved
 3. Monitor the model accuracy
-4. Automatically retrigger a model training based on the latest data if the deployed model’s metric fall below expected accuracy
+4. Automatically re-trigger a model training based on the latest data if the deployed model’s metric fall below expected accuracy
 ## The Model
-As the ingestion pipeline aggregates in near real time blockchain transaction metrics into Amazon SageMaker Feature Store, we chose to forecast the average transaction fee.
+### Amazon DeepAR Forecasting
+As the ingestion pipeline aggregates in near real time blockchain transaction metrics into Amazon SageMaker
+Feature Store, we chose to forecast the average transaction fee.
 
-In order to train a forecasting model, we decided to use [Amazon Forecasting Algorithm](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html). That algorithm is better suited for one-dimensional multi time series (e.g. energy consumption of multiple households). However, in our case we have a one-dimensional (average transaction fee) single time series (one stream of blockchain transactions). But as per AWS documentation, DeepAR can still be used for single time series, and based on the quick test we performed, it is the model that was performing the best.
+In order to train a forecasting model, we decided to use [Amazon Forecasting Algorithm](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html).
+That algorithm is better suited for one-dimensional multi time series (e.g. energy consumption of multiple households).
+However, in our case we have a one-dimensional (average transaction fee) single time series (one stream of blockchain
+transactions). But as per AWS documentation, DeepAR can still be used for single time series, and based on the quick
+test we performed, it is the model that was performing the best.
 
-But the main objective of this demo is – not – to train the most accurate model. We just need – a – model to test a fully automated MLOps lifecycle and using a prepackaged AWS model, greatly simplified our pipeline and demo development.
+But the main objective of this demo is – not – to train the most accurate model. We just need – a – model to test a
+fully automated MLOps lifecycle and using a prepackaged AWS model, greatly simplified our pipeline and demo development.
 
-The model is trained to forecast the next 5 average transaction fee. As we aggregate data per minute, it forecasts average transaction fee on the blockchain 5 minutes in the future.
+The model is trained to forecast the next 5 average transaction fee. As we aggregate data per minute,
+it forecasts average transaction fee on the blockchain 5 minutes in the future.
 
 To evaluate the accuracy of the model, this demo uses the mean quantile loss metric. See:
 * [Use the SageMaker AI DeepAR forecasting algorithm](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar.html)
 * [Weighted Quantile Loss](https://docs.aws.amazon.com/forecast/latest/dg/metrics.html#metrics-wQL)
 * [How to Evaluate Probabilistic Forecasts with Weighted Quantile Loss](https://website-nine-gules.vercel.app/blog/how-to-evaluate-probabilistic-forecasts-weighted-quantile-loss)
-## The Architecture
-Refer to [this documentation](./INGESTION.md) for the details about the near real time data ingestion pipeline architecture. This architecture abstracts the data ingestion pipeline to focus on the MLOps architecture to train and operate the model.
+### Model Parameters
+We do __not__ want want the parameters used for training and monitoring the model hardcoded in the code repositories or
+notebooks. We want these parameters to be decoupled from the pipeline and model code.
 
-The architecture is based on AWS provided SageMaker project for MLOps (provisioned through AWS Service Catalog) which we adapted to our project. The SageMaker project provides the following:
+Why?
+
+Because this way we can update how the model is trained and monitored without having to commit, merge code and run
+pipelines. Throughout the MLOps lifecycle, the MLOps pipeline can update those parameters (e.g. model validation
+threshold) which will automatically be used by the MLOps pipeline processes the next time they run.
+
+To achieve this, parameters describing the
+* model target
+* hyperparameters for model training,
+* parameters for model evaluation
+
+are stored in SSM parameters. The initial values are set and deployed - if they do not exist - through the "Model Build"
+pipeline and can then evolve independently. The initial parameters are set according to the values in the
+`\resources\sagemaker\pipeline-modelbuild-code\model-build-params.json` file:
+```
+{
+    "target": {
+        "target_col": "avg_fee_1min",
+        "prediction_length": 5,
+        "freq": "1min",
+        "num_validation_windows": 10
+    },
+    "training-hyperparameters": {
+        "epochs": 253,
+        "early_stopping_patience": 40,
+        "mini_batch_size": 114,
+        "learning_rate": 0.004968,
+        "dropout_rate": 0.10126986,
+        "embedding_dimension": 19,
+        "likelihood": "student-T"
+    },
+    "validation-threshold": {
+        "weighted_quantile_loss": 0.24,
+        "update_rate": 0.5,
+        "consecutive_breach_to_alarm": 3,
+        "confidence": 90
+    }
+}
+```
+
+The parameters in the `target` block refer to:
+* The value being predicted (the average transaction fee on the blockchain during the next minute).
+Other values could be one of the values aggregated by the Apache Flink job:
+  * `total_nb_trx_1min` the total number of transactions
+  * `total_fee_1min` the total amount of transaction fees
+* The forecasting period: 5 data points = 5 minutes
+* The frequency (used for the DeepAR algorithm data)
+* The number of validation windows used when training a model
+
+For explanation on the hyperparameters in the `training-hyperparameters` block, please refer to AWS documentation
+[DeepAR Hyperparameters](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html).
+A notebook is available in `\resources\sagemaker\model-hypertunning.ipynb` to train new hyperparameters.
+
+The parameters in the `validation-threshold` block refer to:
+* `weighted_quantile_loss` - the initial threshold at which a model is considered good enough to be deployed in production.
+In this demo, this value store in an SSM parameters will be lowered over time as (hopefully) better and better model are trained.
+* `update_rate` - the rate at which we update the `weighted_quantile_loss` validation threshold. In this demo we use
+a very simple approach `abs(new_model_weighted_quantile_loss_value - weighted_quantile_loss_threshold) * update_rate`. 
+With an `update_rate` of `0`, the validation threshold is never updated. With a value of `1`, the new model mean
+quantile loss value becomes the new threshold. By default, we take a middle ground where we reduce the evaluation
+threshold by half of the *accuracy* gained by the new model. We do this to avoid lowering the monitoring threshold
+too fast in case we were just lucky to train a model which performed well on test data.
+* `consecutive_breach_to_alarm` - refers to the number of times the validation threshold must be breached by the model
+before an alarmed is raised and a new model automatically retrained.
+* `confidence` percentage - refers to the quantiles used to compute the mean quantile loss metric. A `confidence` of 90%
+means using the 5th and 95th quantiles together with the median.
+Explanation of confidence interval can be found here: [Confidence Interval](https://www.geeksforgeeks.org/confidence-interval/)
+## The Architecture
+Refer to [this documentation](./INGESTION.md) for the details about the near real time data ingestion pipeline architecture.
+This architecture abstracts the data ingestion pipeline to focus on the MLOps architecture to train and operate the model.
+
+The architecture is based on AWS provided SageMaker project for MLOps (provisioned through AWS Service Catalog) which 
+we adapted to our project. The SageMaker project provides the following:
 1. An AWS CodeCommit repository and AWS CodePipeline pipeline for
    1.	model building
    2.	model deployment
@@ -29,25 +110,33 @@ The architecture is based on AWS provided SageMaker project for MLOps (provision
 
 ![Architecture](./images/mlops-overview.jpg)
 
-1. The "Model Build" repository and pipeline deploy a SageMaker pipeline to train the forecasting model. The build phase of that pipeline also creates SSM Parameters (if they do not exist) holding the parameters for the model training and to evaluate the model accuracy.
+1. The "Model Build" repository and pipeline deploy a SageMaker pipeline to train the forecasting model.
+The build phase of that pipeline also creates SSM Parameters (if they do not exist, see above) holding the parameters
+for the model training and to evaluate the model accuracy.
 2. The approval of a trained model automatically triggers the "Model Deploy" pipeline.
-3. The "Model Deploy" pipeline deploys in the staging environment (and later on in the production environment if approved) of the model behind an Amazon SageMaker API Endpoint.
-4. Once the endpoint is in service, this automatically triggers the deployment of the "Model Monitoring" pipeline to monitor the new model.
-5. On an hourly schedule, another SageMaker pipeline is triggered to compare the model forecast results with the latest datapoints.
-6. If the model forecasting accuracy falls under the acceptable threshold, the "Model Build" pipeline is automatically retriggered, to train a new model based on the latest data.
-
-The SSM Parameters with the initial values to train and monitor the models are define in the `model-build-params.json` file at the root of the "Model Build" repository. Those parameters can then be updated throught the MLOps lifecycle.
+3. The "Model Deploy" pipeline deploys in the staging environment (and later on in the production environment if
+approved) of the model behind an Amazon SageMaker API Endpoint.
+4. Once the endpoint is in service, this automatically triggers the deployment of the "Model Monitoring" pipeline
+to monitor the new model.
+5. On an hourly schedule, another SageMaker pipeline is triggered to compare the model forecast results with the
+latest datapoints.
+6. If the model forecasting accuracy falls under the acceptable threshold, the "Model Build" pipeline is automatically
+re-triggered, to train a new model based on the latest data.
 ## Building the Model With the SageMaker Pipeline
-The SageMaker pipeline is different from the CodePipeline type of pipelines used to deploy infrastructure and applications. It is a pipeline used to train a machine learning model.
+The SageMaker pipeline is different from the CodePipeline type of pipelines used to deploy infrastructure and
+applications. It is a pipeline used to train a machine learning model.
 
-The SageMaker project comes with a built-in SageMaker pipeline code which we had to refactor to match our use case. Our pipeline consists of the following steps:
-1. Read the data from SageMaker Feature store, extract the last 5 data point as a test dataset to evaluate the model and format the data for the DeepAR algorithm.
+The SageMaker project comes with a built-in SageMaker pipeline code which we had to refactor to match our use case.
+Our pipeline consists of the following steps:
+1. Read the data from SageMaker Feature store, extract the last 5 data point as a test dataset to evaluate the model
+and format the data for the DeepAR algorithm.
 2. Train the model.
 3. Create the trained model.
 4. Make a batch prediction of the next 5 data points based on training data.
 5. Evaluate the forecast accuracy by computing the model’s mean quantile loss between the forecast and test datapoints.
 6. Check the model accuracy compared to the threshold stored in the SSM parameter (deployed by the "Model Build" pipeline).
-7. Store in S3 the model's performance and generate a constraints.json file which will be used by the defaul SageMaker monitoring to evaluate the model.
+7. Store in S3 the model's performance and generate a constraints.json file which will be used by the default
+SageMaker monitoring to evaluate the model.
 8. Register the trained model if its accuracy passes the threshold.
 ## Deploying the Model
 Once the model is registered in SageMaker, it must be manually approved in order to be deployed in the staging environment first. The approval of the model will automatically trigger the "Model Deploy" pipeline. This pipeline performs 3 main actions.
@@ -129,7 +218,7 @@ The accuracy threshold is evolving as new models are being re-trained and deploy
 ## Triggering Automatic Model Retraining
 Once we have in CloudWatch, our custom metric and alarm configured, it is easy to trigger the "Model Build" pipeline to retrain a new model. We set a Lambda Function as the target of the alarm which is triggering the "Model Build" pipeline.
 
-With this approach, we are able to fully automate the model training, deployment, monitoring and retriggering of the whole cycle, hence achieving our objective of a fully automated MLOps pipeline.
+With this approach, we are able to fully automate the model training, deployment, monitoring and re-triggering of the whole cycle, hence achieving our objective of a fully automated MLOps pipeline.
 ## Challenges
 ### Using a SageMaker Project
 The use of the SageMaker Project provided through AWS Service Catalog, was of significant help to quickly build the overall framework for our fully automated MLOps pipeline. However, it comes with a constraint: the model build, deploy and monitor pipelines are fixed by that AWS Service Catalog product and might not exactly fit your need. In this demo for example, in order to set and update the model accuracy threshold stored in SSM parameters we used the CodeBuild phase of the different pipelines to update that threshold (Build phase of the "Model Deploy" pipeline) or read it to create the alarm metrics. This is not necessarily the best way and place to do that, but it is the best solution we found given that fixed framework.
