@@ -1,17 +1,5 @@
-"""Example workflow pipeline script for the blockchain forecasting pipeline.
-                                               . -ModelStep
-                                              .
-    Process-> DataQualityCheck/DataBiasCheck -> Train -> Evaluate -> Condition .
-                |                              .
-                |                                . -(stop)
-                |
-                 -> CreateModel
-                         |
-                         |
-                          -> BatchTransform -> ModelQualityCheck
-
-Implements a get_pipeline(**kwargs) method.
-Example of DeepAR pipeline: https://github.com/aws-samples/amazon-sagemaker-forecasting-air-pollution-with-deepar/blob/main/02_manual_ml_pipeline_creation_for_air_quality_forecasting.ipynb
+"""
+Refer to the project's repo main documentation: https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/doc/MLOPS.md#deploying-the-model
 """
 
 import os
@@ -697,7 +685,6 @@ def get_pipeline(
     print(
         f"model validation threshold used is : weighted_quantile_loss <= {current_model_mwql}"
     )
-    weighted_quantile_loss_threshold
     cond_lte2 = ConditionLessThan(
         left=JsonGet(
             step_name=step_eval.name,

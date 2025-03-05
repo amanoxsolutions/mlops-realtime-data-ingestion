@@ -86,11 +86,8 @@ The parameters in the `validation-threshold` block refer to:
 * `weighted_quantile_loss` - the initial threshold at which a model is considered good enough to be deployed in production.
 In this demo, this value store in an SSM parameters will be lowered over time as (hopefully) better and better model are trained.
 * `update_rate` - the rate at which we update the `weighted_quantile_loss` validation threshold. In this demo we use
-a very simple approach `abs(new_model_weighted_quantile_loss_value - weighted_quantile_loss_threshold) * update_rate`. 
-With an `update_rate` of `0`, the validation threshold is never updated. With a value of `1`, the new model mean
-quantile loss value becomes the new threshold. By default, we take a middle ground where we reduce the evaluation
-threshold by half of the *accuracy* gained by the new model. We do this to avoid lowering the monitoring threshold
-too fast in case we were just lucky to train a model which performed well on test data.
+a very simple approach `abs(new_model_weighted_quantile_loss_value - weighted_quantile_loss_threshold) * update_rate`.
+See the section below [How is the model accuracy threshold updated?](#how-is-the-model-accuracy-threshold-updated)
 * `consecutive_breach_to_alarm` - refers to the number of times the validation threshold must be breached by the model
 before an alarmed is raised and a new model automatically retrained.
 * `confidence` percentage - refers to the quantiles used to compute the mean quantile loss metric. A `confidence` of 90%
@@ -113,7 +110,7 @@ we adapted to our project. The SageMaker project provides the following:
 1. The "Model Build" repository and pipeline deploy a SageMaker pipeline to train the forecasting model.
 The build phase of that pipeline also creates SSM Parameters (if they do not exist, see above) holding the parameters
 for the model training and to evaluate the model accuracy.
-2. The approval of a trained model automatically triggers the "Model Deploy" pipeline.
+2. The manual approval of a trained model automatically triggers the "Model Deploy" pipeline.
 3. The "Model Deploy" pipeline deploys in the staging environment (and later on in the production environment if
 approved) of the model behind an Amazon SageMaker API Endpoint.
 4. Once the endpoint is in service, this automatically triggers the deployment of the "Model Monitoring" pipeline
@@ -124,7 +121,9 @@ latest datapoints.
 re-triggered, to train a new model based on the latest data.
 ## Building the Model With the SageMaker Pipeline
 The SageMaker pipeline is different from the CodePipeline type of pipelines used to deploy infrastructure and
-applications. It is a pipeline used to train a machine learning model.
+applications. It is a pipeline used to train the machine learning model.
+
+![Model Training Pipeline](./images/sagemaker-model-build-pipeline.jpg)
 
 The SageMaker project comes with a built-in SageMaker pipeline code which we had to refactor to match our use case.
 Our pipeline consists of the following steps:
@@ -138,40 +137,78 @@ and format the data for the DeepAR algorithm.
 7. Store in S3 the model's performance and generate a constraints.json file which will be used by the default
 SageMaker monitoring to evaluate the model.
 8. Register the trained model if its accuracy passes the threshold.
+
+For any pipeline execution, all the output files of the different jobs in the pipeline are stored in S3 in
+`sagemaker-project-<PROJECT ID>/mlops-*******-model-training/pipeline_executions/<SAGEMAKER PIPELINE EXECUTION ID>/`.
+Unfortunately there is no simple way to see the execution ID other than opening the pipeline execution inside
+the SageMaker Studio environment and checking the ID.
 ## Deploying the Model
-Once the model is registered in SageMaker, it must be manually approved in order to be deployed in the staging environment first. The approval of the model will automatically trigger the "Model Deploy" pipeline. This pipeline performs 3 main actions.
-1. As the model has been approved, we take this new model accuracy as the new model threshold (taking into account the update_rate parameter) – if it is better (lower is better for our metric) than the existing one – and update the SSM parameter. You might not want to do that for your use case, as you might have fixed business/legal metric that you must match. But for this demo we decided to update the model accuracy as new models are retrained, hopefully building an increasingly accurate models as time passes.
-2. A first AWS CodeDeploy stage deploys the new model behind an Amazon SageMaker endpoint which can then be used to predict 5 data points in the future.
-3. Once the model has been deployed behind the staging endpoint, the pipeline has a manual approval stage before deploying the new model in production. If approved, then a second AWS CodeDeploy stage deploys the new model behind a second Amazon SageMaker endpoint for production.
+Once the model is registered in SageMaker, it must be manually approved in order to be deployed in the staging
+environment first. The approval of the model will automatically trigger the "Model Deploy" pipeline.
+This pipeline performs 3 main actions.
+1. As the model has been approved, we take this new model accuracy as the new model threshold (taking into account the
+update_rate parameter, see the section below
+[How is the model accuracy threshold updated?](#how-is-the-model-accuracy-threshold-updated)) – if it is better (lower
+is better for our metric) than the existing one – and update the SSM parameter. You might not want to do that for
+your use case, as you might have fixed business/legal metric that you must match. But for this demo we decided to
+update the model accuracy as new models are retrained, hopefully building an increasingly accurate models as time passes.
+2. A first AWS CodeDeploy stage deploys the new model behind an Amazon SageMaker endpoint which can then be used to
+predict 5 data points in the future.
+3. Once the model has been deployed behind the staging endpoint, the pipeline has a manual approval stage before
+deploying the new model in production. If approved, then a second AWS CodeDeploy stage deploys the new model behind a
+second Amazon SageMaker endpoint for production.
 
-__How is the model accuracy threshold updated?__
+### How is the model accuracy threshold updated?
 
-Custom Metric:
+__Custom Metric:__
 
-For this demo we chose a simple approach: if the new model mean quantile loss is lower than the existing threshold, we add to the new model mean quantile loss, the difference between the existing threshold minus the new model mean quantile loss multiplied by the `update_rate` (set by the model build pipeline parameter file `model-build-params.json`):
+For this demo we chose a simple approach: if the new model mean quantile loss is lower than the existing threshold,
+we add to the new model mean quantile loss, the difference between the existing threshold minus the new model
+mean quantile loss multiplied by the `update_rate` (set by the model build pipeline parameter file `model-build-params.json`):
 
 `new_threshold = new_model_mean_quatile loss + (new_threshold - new_model_mean_quatile loss) * update_rate`
 
-We do this not to update the monitoring threshold too quickly, otherwise if we were lucky to train a model which performed very good on the validation data for that particular run, we might set the bar too high (set the mean quantile loss threshold too low in our case) and subsequent predictions will fail to pass the new threshold immediately after deployment.
+With an `update_rate` of `0`, the validation threshold is never updated. With a value of `1`, the new model mean
+quantile loss value becomes the new threshold. By default, we take a middle ground where we reduce the evaluation
+threshold by half of the *accuracy* gained by the new model.
 
-Built-in Model Monitoring:
+We do this not to update the monitoring threshold too quickly, otherwise if we were lucky to train a model which
+performed very good on the test data for that particular run, we might set the bar too high (set the mean
+quantile loss threshold too low in our case) and subsequent predictions will fail to pass the new threshold
+immediately after deployment.
 
-If the `register_new_baseline` parameter of the `QualityCheckStep` step of the SageMaker pipeline is set to True, SageMaker automatically takes the last model metric as the new baseline for monitoring and we can't influence like we do for the custom metric the rate at which we want to update the monitoring threshold.
+__Built-in Model Monitoring:__
+
+If the `register_new_baseline` parameter of the `QualityCheckStep` step of the
+[SageMaker pipeline](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/resources/sagemaker/pipeline-modelbuild-code/pipelines/blockchain/pipeline.py)
+is set to True using the
+[pipeline RegisterNewModelQualityBaseline parameter](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/resources/sagemaker/pipeline-modelbuild-code/pipelines/run_pipeline.py#L104),
+then SageMaker automatically takes the last model metric as the new baseline for monitoring and we can't influence like
+we do for the custom metric the rate at which we want to update the monitoring threshold.
 ## SageMaker Model Monitoring
-The SageMaker service includes a model monitoring functionality, which can only be run on a schedule. At high level it simply compares predicted values from the model endpoints to ground truth values, computes an accuracy metric and raises an alarm if the accuracy is below the threshold stored in the constraints.json file (created during the model training in our case).
-### How is the Monitoring Metric Computed?
+The SageMaker service includes a model monitoring functionality, which can only be run on a schedule. At high level it
+simply compares predicted values from the model endpoints to ground truth values, computes an accuracy metric and
+raises an alarm if the accuracy is below the threshold stored in a `constraints.json` file (created during the model
+training in our case - see below
+["How is the model accuracy threshold configured?"](#how-is-the-model-accuracy-threshold-configured)).
+### How is the Default Monitoring Metric Computed?
 As per AWS [documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor-model-quality.html):
-> Model quality monitoring jobs monitor the performance of a model by comparing the predictions that the model makes with the actual Ground Truth labels that the model attempts to predict.
-> To do this, model quality monitoring merges data that is captured from real-time or batch inference with actual labels that you store in an Amazon S3 Bucket, and then compares the predictions with the actual labels.
+> Model quality monitoring jobs monitor the performance of a model by comparing the predictions that the model makes
+> with the actual Ground Truth labels that the model attempts to predict. To do this, model quality monitoring merges
+> data that is captured from real-time or batch inference with actual labels that you store in an Amazon S3 Bucket,
+> and then compares the predictions with the actual labels.
 
-Querying the model's endpoint to preform predictions that will be compared with ground truth data is something that you must orchestrate. You must also ensure that the predictions and ground truth data are delivered in the Amazon S3 Bucket before the monitoring job runs.
+Querying the model's endpoint to preform predictions that will be compared with ground truth data is something that you
+must orchestrate. You must also ensure that the predictions and ground truth data are delivered in the Amazon S3 Bucket
+before the monitoring job runs.
 #### How is the model accuracy threshold configured?
-You can use a fixed accuracy threshold or update it as your pipeline retrains (hopefully) better model. This will depend on your business requirements.
-In this demo the model accuracy is updated each time we retrain of model if the new model performance is better than the previous one.
-When the SageMaker pipeline trains a new model, the `QualityCheckStep` step of the SageMaker pipeline stores in Amazon S3 the latest model baseline and the constraints to evaluate
-the model. The file containg the evaluation constraints can be found in the SageMaker Project S3 Bucket :
+You can use a fixed accuracy threshold or update it as your pipeline retrains (hopefully) better model. This will
+depend on your business requirements. In this demo the model accuracy is updated each time we retrain of model if the
+new model performance is better than the previous one. When the SageMaker pipeline trains a new model, the
+`QualityCheckStep` step of the SageMaker pipeline stores in Amazon S3 the latest model baseline and the constraints to
+evaluate the model. The file containing the evaluation constraints can be found in the SageMaker Project S3 Bucket:
 
-`sagemaker-project-<PROJECT ID>/mlops-*******-<PROJECT ID>/pipeline_executions/<SAGEMAKER PIPELINE EXECUTION ID>/model_quality_check/constraints.json`
+`sagemaker-project-<PROJECT ID>/mlops-*******-model-training/pipeline_executions/<SAGEMAKER PIPELINE EXECUTION ID>/model_quality_check/constraints.json`
 
 When the "Model Monitor" CodePipeline pipeline is executed, it goes and reads those constraints to deploy the model monitoring with the latest model accuracy threshold.
 #### How are model predictions collected?
