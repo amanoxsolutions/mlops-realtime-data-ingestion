@@ -8,7 +8,7 @@ import { SagemakerStack } from './sagemaker/sagemaker-stack';
 
 export interface RealtimeDataIngestionStageProps extends StageProps {
   readonly prefix: string;
-  readonly uniqueSuffix: string;
+  readonly resourceSuffix: string;
   readonly runtime: Runtime;
   readonly removalPolicy: RemovalPolicy;
   readonly repoNameBuild: string;
@@ -23,7 +23,7 @@ export class RealtimeDataIngestionStage extends Stage {
 
     const properties = {
       prefix: props.prefix,
-      s3Suffix: props.uniqueSuffix,
+      s3Suffix: props.resourceSuffix,
       runtime: props.runtime,
       removalPolicy: props.removalPolicy,
       repoNameBuild: props.repoNameBuild,

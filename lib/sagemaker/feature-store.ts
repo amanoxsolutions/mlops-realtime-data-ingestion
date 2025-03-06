@@ -114,7 +114,7 @@ export class RDIFeatureStore extends Construct {
     //
     // Create an S3 Bucket for the Offline Feature Store
     this.bucket = new Bucket(this, 'FeatureStoreBucket', {
-      bucketName: `${this.prefix}-sagemaker-feature-store-bucket-${props.s3Suffix}`,
+      bucketName: `${this.prefix}-sagemaker-feature-store-${props.s3Suffix}`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: this.removalPolicy,

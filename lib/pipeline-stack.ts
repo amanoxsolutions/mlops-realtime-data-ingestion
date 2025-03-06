@@ -28,11 +28,13 @@ export class DataIngestionPipelineStack extends Stack {
 
     const removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
 
-    // Create a unique suffix based on the AWS account number and the branchName
+    // Create a resource suffix based on the AWS account number and the
+    // hash of the current account number region and the repo branch name
     // to be used for resources this is used for S3 bucket bucket names for example
-    const uniqueSuffix = getShortHashFromString(`${this.account}-${props.shortBranchName}`, 8);
-    console.log('unique resource Suffix source string: 👉 ', `${this.account}-${props.shortBranchName}`);
-    console.log('unique resource Suffix hash: 👉 ', uniqueSuffix);
+    const hashSuffix = getShortHashFromString(`${this.account}-${this.region}-${props.shortBranchName}`, 8);
+    const resourceSuffix = this.account.substring(0, 6).concat(hashSuffix);
+    console.log('resource Suffix source string: 👉 ', `${this.account}-${props.shortBranchName}`);
+    console.log('resource Suffix hash: 👉 ', resourceSuffix);
 
     const runtime = props.runtime || Runtime.PYTHON_3_11;
 
@@ -45,7 +47,7 @@ export class DataIngestionPipelineStack extends Stack {
     // Create the code artifact S3 bucket in order to be able to set the object deletion and
     // removalPolicy
     const artifactBucket = new Bucket(this, 'ArtifactBucket', {
-      bucketName: `${props.prefix}-pipeline-artifacts-bucket-${uniqueSuffix}`,
+      bucketName: `${props.prefix}-pipeline-artifacts-${resourceSuffix}`,
       accessControl: BucketAccessControl.PRIVATE,
       encryption: BucketEncryption.S3_MANAGED,
       removalPolicy: removalPolicy,
@@ -78,7 +80,7 @@ export class DataIngestionPipelineStack extends Stack {
 
     pipeline.addStage(new RealtimeDataIngestionStage(this, `${props.prefix}-RealtimeDataIngestion`, {
       prefix: props.prefix,
-      uniqueSuffix: uniqueSuffix,
+      resourceSuffix: resourceSuffix,
       runtime: runtime,
       removalPolicy: removalPolicy,
       repoNameBuild: props.repoNameBuild,

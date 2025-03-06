@@ -42,7 +42,7 @@ export class RealtimeDataIngestionStack extends Stack {
     this.s3Versioning = props.s3Versioning || false;
     this.runtime = props.runtime;
     this.removalPolicy = props.removalPolicy || RemovalPolicy.DESTROY;
-    const dataBucketName = `${this.prefix}-input-bucket-${this.s3Suffix}`;
+    const dataBucketName = `${this.prefix}-input-${this.s3Suffix}`;
     const firehoseStreamName = `${this.prefix}-kf-stream`;
     const ingestionStreamName = `${this.prefix}-kd-ingestion-stream`;
 
