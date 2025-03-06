@@ -1,18 +1,8 @@
-# Model Monitor Template
+# Model Deploy Pipeline
 
 ## Overview
+Please refer to the [main documentation](https://github.com/amanoxsolutions/mlops-realtime-data-ingestion/blob/main/doc/MLOPS.md#sagemaker-model-monitoring).
 
-The Model Monitor template automates the model monitor setup.
-The template provides the following types of Amazon SageMaker Model Monitor:
-
-- [Monitor Data Quality](https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor-data-quality.html) -
-  Monitor drift in data quality.
-- [Monitor Model Quality](https://docs.aws.amazon.com/sagemaker/latest/dg/model-monitor-model-quality.html) -
-  Monitor drift in model quality metrics, such as accuracy.
-- [Monitor Bias Drift for Models in Production](https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-model-monitor-bias-drift.html) -
-  Monitor bias in model's predictions.
-- [Monitor Feature Attribution Drift for Models in Production](https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-model-monitor-feature-attribution-drift.html) -
-  Monitor drift in feature attribution.
 
 ## Triggering the Model Monitor's CodePipeline
 
@@ -26,7 +16,7 @@ codepipeline again, to ensure that the monitors use the latests changes, such as
 
 ## Enabling/Disabling Monitors
 
-By default, all four Amazon SageMaker Model Monitor types are enabled. However, you can
+By default, only the SageMaker Model Quality Monitor type is enabled. However, you can
 disable/enable one, or more, monitor's type by setting `"Enable<Monitor-Type>Monitor"` to `"no"`,
 in the [staging-monitoring-schedule-config.json](staging-monitoring-schedule-config.json)
 and [prod-monitoring-schedule-config.json](prod-monitoring-schedule-config.json) files.
@@ -104,14 +94,11 @@ The template uses baselines and configuration files created by the model buildin
 }
 ```
 
-## Sample Code Layout
-
-This AWS CodeCommit repository is created as part of creating a Project in SageMaker. The sample code is organized as follows:
+## Code Layout
+This repository was modified from an AWS Project in SageMaker. The sample code is organized as follows:
 
 ```
 .
-├── README.md
-├── __init__.py
 ├── buildspec.yml                           # used by the AWS CodeBuild project to
 |                                             execute get_baselines_and_configs.py
 ├── get_baselines_and_configs.py            # gets baselines/configs files and updates configs files
