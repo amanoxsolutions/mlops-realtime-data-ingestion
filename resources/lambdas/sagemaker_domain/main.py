@@ -209,9 +209,11 @@ def get_default_domain_settings(domain_execution_role_arn: str):
                 "DirectDeploySettings": {
                     "Status": "DISABLED"
                 },
-                "DataScienceAssistantSettings": {
-                    "Status": "DISABLED",
-                    "CrossRegionQServiceStatus": "DISABLED"
+                "KendraSettings": {
+                    "Status": "DISABLED"
+                },
+                "EmrServerlessSettings": {
+                    "Status": "DISABLED"
                 }
             },
             "StudioWebPortal": "ENABLED",
