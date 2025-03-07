@@ -294,10 +294,7 @@ export class RDISagemakerDomainCustomResource extends Construct {
       serviceToken: customResourceLambda.functionArn,
       properties: {
         DomainName: props.sagemakerStudioDomainName,
-        DefaultUserSettings: {
-          ExecutionRole: props.defaultUserSettingsExecutionRoleArn,
-          StudioWebPortal: 'ENABLED'
-        },
+        ExecutionRole: props.defaultUserSettingsExecutionRoleArn,
         VpcId: props.vpcId,
         SubnetIds: props.subnetIds,
         RemovalPolicy: this.removalPolicy,

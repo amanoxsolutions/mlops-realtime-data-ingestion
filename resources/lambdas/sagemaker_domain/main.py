@@ -20,12 +20,15 @@ def create(event, _):
     domain_properties = event.get("ResourceProperties")
     vpc_id = domain_properties["VpcId"]
     subnet_ids = domain_properties["SubnetIds"]
-    default_user_settings = domain_properties["DefaultUserSettings"]
+    domain_execution_role_arn = domain_properties["ExecutionRole"]
     domain_name = domain_properties["DomainName"]
+    default_setting = get_default_domain_settings(domain_execution_role_arn)
     response = sagemaker.create_domain(
         DomainName=domain_name,
         AuthMode="IAM",
-        DefaultUserSettings=default_user_settings,
+        DefaultSpaceSettings=default_setting["DefaultSpaceSettings"],
+        DefaultUserSettings=default_setting["DefaultUserSettings"],
+        AppNetworkAccessType="PublicInternetOnly",
         SubnetIds=subnet_ids,
         VpcId=vpc_id,
     )
@@ -47,7 +50,6 @@ def create(event, _):
     # To enable SageMaker projects in the domain we must associate the domain role
     # with the SageMaker Service Catalog portfolio. We also need to associate the domain user role for
     # users to be able to use SageMaker projects.
-    domain_execution_role_arn = default_user_settings["ExecutionRole"]
     response = catalog.associate_principal_with_portfolio(
         PortfolioId=portfolio_id,
         PrincipalARN=domain_execution_role_arn,
@@ -139,9 +141,12 @@ def delete(event, _):
 def update(event, _):
     domain_id = event.get("PhysicalResourceId")
     domain_properties = event.get("ResourceProperties")
-    default_user_settings = domain_properties["DefaultUserSettings"]
+    domain_execution_role_arn = domain_properties["ExecutionRole"]
+    default_setting = get_default_domain_settings(domain_execution_role_arn)
     response = sagemaker.update_domain(
-        DomainId=domain_id, DefaultUserSettings=default_user_settings
+        DomainId=domain_id, 
+        DefaultSpaceSettings=default_setting["DefaultSpaceSettings"],
+        DefaultUserSettings=default_setting["DefaultUserSettings"],
     )
     updated = False
     while not updated:
@@ -153,3 +158,92 @@ def update(event, _):
         time.sleep(5)
     portfolio_id = get_portfolio_id()
     helper.Data.update({"DomainId": domain_id, "PortfolioId": portfolio_id})
+
+
+def get_default_domain_settings(domain_execution_role_arn: str):
+    """This function returns the default space and user settings for the SageMaker domain.
+
+    Args:
+        domain_execution_role_arn: The ARN of the default execution role
+    Returns:
+        dict: The default space and user settings for the SageMaker domain
+    """
+    default_settings = {
+        "DefaultSpaceSettings": {
+            "ExecutionRole": domain_execution_role_arn,
+            "SpaceStorageSettings": {
+                "DefaultEbsStorageSettings": {
+                    "DefaultEbsVolumeSizeInGb": 5,
+                    "MaximumEbsVolumeSizeInGb": 100
+                }
+            },
+            "JupyterLabAppSettings": {
+                "AppLifecycleManagement": {
+                    "IdleSettings": {
+                        "LifecycleManagement": "ENABLED",
+                        "IdleTimeoutInMinutes": 120,
+                        "MinIdleTimeoutInMinutes": 60,
+                        "MaxIdleTimeoutInMinutes": 240
+                    }
+                }
+            }
+        },
+        "DefaultUserSettings": {
+            "ExecutionRole": domain_execution_role_arn,
+            "SharingSettings": {
+                "NotebookOutputOption": "Disabled",
+            },
+            "SpaceStorageSettings": {
+                "DefaultEbsStorageSettings": {
+                    "DefaultEbsVolumeSizeInGb": 5,
+                    "MaximumEbsVolumeSizeInGb": 100
+                }
+            },
+            "CanvasAppSettings": {
+                "TimeSeriesForecastingSettings": {
+                    "Status": "DISABLED"
+                },
+                "ModelRegisterSettings": {
+                    "Status": "DISABLED"
+                },
+                "DirectDeploySettings": {
+                    "Status": "DISABLED"
+                },
+                "DataScienceAssistantSettings": {
+                    "Status": "DISABLED",
+                    "CrossRegionQServiceStatus": "DISABLED"
+                }
+            },
+            "StudioWebPortal": "ENABLED",
+            "AutoMountHomeEFS": "Disabled",
+            "StudioWebPortalSettings": {
+                "HiddenAppTypes": [
+                    "JupyterServer",
+                    "RStudioServerPro",
+                    "Canvas"
+                ],
+                "HiddenMlTools": []
+            },
+            "JupyterLabAppSettings": {
+                "AppLifecycleManagement": {
+                    "IdleSettings": {
+                        "LifecycleManagement": "ENABLED",
+                        "IdleTimeoutInMinutes": 120,
+                        "MinIdleTimeoutInMinutes": 60,
+                        "MaxIdleTimeoutInMinutes": 240
+                    }
+                }
+            },
+            "CodeEditorAppSettings": {
+                "AppLifecycleManagement": {
+                    "IdleSettings": {
+                        "LifecycleManagement": "ENABLED",
+                        "IdleTimeoutInMinutes": 120,
+                        "MinIdleTimeoutInMinutes": 60,
+                        "MaxIdleTimeoutInMinutes": 240
+                    }
+                }
+            }
+        }
+    }
+    return default_settings
