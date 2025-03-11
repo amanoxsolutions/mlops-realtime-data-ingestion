@@ -274,7 +274,7 @@ def get_pipeline(
         confidence = 90.0
     low_quantile = round(0.5 - confidence * 0.005, 3)
     up_quantile = round(confidence * 0.005 + 0.5, 3)
-    # Read the SSM Parameters storing thecurrent model accuracy
+    # Read the SSM Parameters storing the current model accuracy
     current_model_mwql = float(ssm_client.get_parameter(
         Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss"
     )["Parameter"]["Value"])
@@ -679,9 +679,6 @@ def get_pipeline(
 
     # condition steps for evaluating model quality and branching execution
     # A model must perform better than the current model but also the monitoring threshold
-    # During the first training current_model_mwql=1 since we haven't trained any model left
-    # But we should not accept the first model if it doesn't even match our monitoring threshold so we chack that first
-    # 2- the model must perform better than the existing model
     print(
         f"model validation threshold used is : weighted_quantile_loss <= {current_model_mwql}"
     )
