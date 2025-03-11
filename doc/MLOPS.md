@@ -80,7 +80,7 @@ Other values could be one of the values aggregated by the Apache Flink job:
 
 For explanation on the hyperparameters in the `training-hyperparameters` block, please refer to AWS documentation
 [DeepAR Hyperparameters](https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html).
-A notebook is available in `\resources\sagemaker\model-hypertunning.ipynb` to train new hyperparameters.
+A notebook is available to train new hyperparameters in `\resources\sagemaker\notebooks\model-hypertunning.ipynb` (upload it together with the `utils.py` file in the the same folder to the SageMaker Studio code editor environment).
 
 The parameters in the `validation-threshold` block refer to:
 * `weighted_quantile_loss` - the initial threshold at which a model is considered good enough to be deployed in production.

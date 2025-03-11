@@ -49,7 +49,7 @@ available in that Feature Store
 
 Then to use the provided Jupyter Notebook to check the ingested data: 
 1. From the SageMaker Studio interface, create a code editor environment
-2. Once, created and launched, upload the `\resources\sagemaker\read_feature_store.ipynb` notebook
+2. Once, created and launched, upload the notebook files and `utils.py` file from the `\resources\sagemaker\notebooks` folder
 3. Run the notebook
 
 The notebook is pulling all the information from the SSM parameters. It should thus run and read the data from the
