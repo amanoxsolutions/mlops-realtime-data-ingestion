@@ -134,8 +134,9 @@ and format the data for the DeepAR algorithm.
 4. Make a batch prediction of the next 5 data points based on training data.
 5. Evaluate the forecast accuracy by computing the model’s mean quantile loss between the forecast and test datapoints.
 6. Check the model accuracy compared to the threshold stored in the SSM parameter (deployed by the "Model Build" pipeline).
-7. Store in S3 the model's performance and generate a constraints.json file which will be used by the default
-SageMaker monitoring to evaluate the model.
+7. Compute the model quality baseline (which will be store in S3 in a 
+`model_quality_check/constraints.json` file) which will be used by the default SageMaker monitoring
+to evaluate the model, against these constraints.
 8. Register the trained model if its accuracy passes the threshold.
 
 For any pipeline execution, all the output files of the different jobs in the pipeline are stored in S3 in
