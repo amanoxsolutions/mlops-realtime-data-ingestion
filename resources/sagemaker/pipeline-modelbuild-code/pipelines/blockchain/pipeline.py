@@ -61,13 +61,12 @@ CREATE_MODEL_STEP_NAME = "CreateModel"
 TRANSFORM_STEP_NAME = "Transform"
 TRANSFORM_JOB_NAME = "TransformOutputsProcessingJob"
 PROCESSING_TRANSFORM_STEP_NAME = "ProcessingTransformOutputs"
-MODEL_QUALITY_CHECK_STEP_NAME = "QualityCheck"
+MODEL_QUALITY_CHECK_STEP_NAME = "ComputeQualityCheckBaseline"
 EVALUATION_JOB_NAME = "EvaluationJob"
 EVALUATION_REPORT_NAME = "EvaluationReport"
 EVALUATION_STEP_NAME = "EvaluateModel"
 REGISTER_MODEL_STEP_NAME = "RegisterModel"
-CONDITON_STEP1_NAME = "CheckMwqlLessThanThresholdCondition"
-CONDITON_STEP2_NAME = "CheckMwqlLessThanExistingModelCondition"
+CONDITON_STEP_NAME = "CheckMwqlLessThanThresholdCondition"
 FAIL_STEP_NAME = "Fail"
 # Instances
 BASE_INSTANCE_TYPE = "ml.m5.large"
@@ -274,10 +273,6 @@ def get_pipeline(
         confidence = 90.0
     low_quantile = round(0.5 - confidence * 0.005, 3)
     up_quantile = round(confidence * 0.005 + 0.5, 3)
-    # Read the SSM Parameters storing the current model accuracy
-    current_model_mwql = float(ssm_client.get_parameter(
-        Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss"
-    )["Parameter"]["Value"])
 
     #
     # Step 1: Data Preprocessing
@@ -678,29 +673,11 @@ def get_pipeline(
     )
 
     # condition steps for evaluating model quality and branching execution
-    # A model must perform better than the current model but also the monitoring threshold
-    print(
-        f"model validation threshold used is : weighted_quantile_loss <= {current_model_mwql}"
-    )
-    cond_lte2 = ConditionLessThan(
-        left=JsonGet(
-            step_name=step_eval.name,
-            property_file=evaluation_report,
-            json_path="deepar_metrics.weighted_quantile_loss.value",
-        ),
-        right=current_model_mwql,
-    )
-    step_cond2 = ConditionStep(
-        name=CONDITON_STEP2_NAME,
-        conditions=[cond_lte2],
-        if_steps=[step_register],
-        else_steps=[],
-    )
-    # 1- the model must perform better than the monitoring threshold
+    # the model must perform better than the monitoring threshold
     print(
         f"model validation threshold used is : weighted_quantile_loss <= {weighted_quantile_loss_threshold}"
     )
-    cond_lte1 = ConditionLessThanOrEqualTo(
+    cond_lte = ConditionLessThanOrEqualTo(
         left=JsonGet(
             step_name=step_eval.name,
             property_file=evaluation_report,
@@ -708,10 +685,10 @@ def get_pipeline(
         ),
         right=weighted_quantile_loss_threshold,
     )
-    step_cond1 = ConditionStep(
-        name=CONDITON_STEP1_NAME,
-        conditions=[cond_lte1],
-        if_steps=[step_cond2],
+    step_cond = ConditionStep(
+        name=CONDITON_STEP_NAME,
+        conditions=[cond_lte],
+        if_steps=[model_quality_check_step, step_register],
         else_steps=[],
     )
 
@@ -736,8 +713,7 @@ def get_pipeline(
             step_create_model,
             step_transform,
             step_eval,
-            model_quality_check_step,
-            step_cond1,
+            step_cond,
         ],
         sagemaker_session=pipeline_session,
     )
