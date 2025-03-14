@@ -4,14 +4,13 @@ import boto3
 import botocore
 import pandas as pd
 import numpy as np
-from typing import List, TypedDict
+from typing import TypedDict
 from sagemaker.serializers import IdentitySerializer
-from typing import Dict
 
 
 class DeepARData(TypedDict):
     start: str
-    target: List[float]
+    target: list[float]
 
 
 class DeepARPredictor(sagemaker.predictor.Predictor):
@@ -149,14 +148,14 @@ def get_session(region, default_bucket):
     )
 
 
-def write_dicts_to_file(path: str, data: List[DeepARData]) -> None:
+def write_dicts_to_file(path: str, data: list[DeepARData]) -> None:
     with open(path, "wb") as fp:
         for d in data:
             fp.write(json.dumps(d).encode("utf-8"))
             fp.write("\n".encode("utf-8"))
 
 
-def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str, str]:
+def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> dict[str, str]:
     """Retrieves the SSM parameters from the specified path
 
     Args:
@@ -164,7 +163,7 @@ def get_ssm_parameters(ssm_client: botocore.client, param_path: str) -> Dict[str
         param_path (str): The path to the SSM parameters
 
     Returns:
-        Dict[str, str]: The SSM parameters
+        dict[str, str]: The SSM parameters
     """
     parameters = {}
     try:

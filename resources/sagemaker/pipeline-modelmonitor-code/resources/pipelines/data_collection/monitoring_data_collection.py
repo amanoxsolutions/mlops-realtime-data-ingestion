@@ -22,7 +22,7 @@ import time
 from botocore.config import Config
 from sagemaker import Session
 import pandas as pd
-from typing import List, Dict, Any, TypeAlias
+from typing import Any, TypeAlias
 
 # create clients
 AWS_REGION = os.environ["AWS_REGION"]
@@ -33,7 +33,7 @@ boto3_config = Config(
 ssm_client = boto3.client("ssm", config=boto3_config)
 s3_client = boto3.resource("s3", config=boto3_config)
 
-OutputData: TypeAlias = Dict[str, Any | "OutputData"]
+OutputData: TypeAlias = dict[str, Any | "OutputData"]
 
 
 def ground_truth_with_id(data: str, uuid: str) -> OutputData:
@@ -50,7 +50,7 @@ def ground_truth_with_id(data: str, uuid: str) -> OutputData:
 
 
 def predictions_with_id(
-    uuid: str, input_data: List[DeepARData], prediction: float
+    uuid: str, input_data: list[DeepARData], prediction: float
 ) -> OutputData:
     return {
         "captureData": {

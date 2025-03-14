@@ -16,7 +16,7 @@ import botocore
 from botocore.exceptions import ClientError
 import argparse
 import logging
-from typing import Callable, Any, Dict, List, Tuple
+from typing import Callable, Any
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def get_project_arn(sm_client: botocore.client, sagemaker_project_name: str) -> 
 
 def get_project_tags(
     sm_client: botocore.client, sagemaker_project_arn: str
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """
     Combines Resource's tags with Amazon SageMaker Studio project's custom tags
 
@@ -108,8 +108,8 @@ def get_project_tags(
 
 
 def combine_resource_tags(
-    new_tags: Dict[str, str], project_tags_list: List[Dict[str, str]]
-) -> Dict[str, str]:
+    new_tags: dict[str, str], project_tags_list: list[dict[str, str]]
+) -> dict[str, str]:
     """
     Combines Resource's tags with Amazon SageMaker Studio project's tags
 
@@ -137,7 +137,7 @@ def combine_resource_tags(
 @exception_handler
 def get_baselines_and_model_name(
     endpoint_name: str, sm_client: botocore.client
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Gets Baselines from Model Registry and Model Name from the deployed endpoint
 
@@ -180,7 +180,7 @@ def get_baselines_and_model_name(
 @exception_handler
 def get_json_file_from_s3(
     bucket_name: str, file_key: str, s3_client: botocore.client
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Gets JSON file's contents from S3 bucket
 
@@ -202,7 +202,7 @@ def get_json_file_from_s3(
 
 @exception_handler
 def upload_json_to_s3(
-    file_contents: Dict[str, Any],
+    file_contents: dict[str, Any],
     bucket_name: str,
     file_key: str,
     s3_client: botocore.client,
@@ -222,7 +222,7 @@ def upload_json_to_s3(
 
 
 @exception_handler
-def get_bucket_name_and_file_key(file_s3_uri: str) -> Tuple[str, str]:
+def get_bucket_name_and_file_key(file_s3_uri: str) -> tuple[str, str]:
     """
     Gets S3 bucket name and file key from S3 URI
 
@@ -230,7 +230,7 @@ def get_bucket_name_and_file_key(file_s3_uri: str) -> Tuple[str, str]:
         file_s3_uri (str): S3 file URI
 
     Returns:
-        Tuple[str, str]: (bucket_name, file_key)
+        tuple[str, str]: (bucket_name, file_key)
     """
     bucket_key_string = file_s3_uri.split("//")[1]
     return (bucket_key_string.split("/")[0], "/".join(bucket_key_string.split("/")[1:]))
@@ -238,18 +238,18 @@ def get_bucket_name_and_file_key(file_s3_uri: str) -> Tuple[str, str]:
 
 @exception_handler
 def process_bias_baselines(
-    bias_baselines: Dict[str, str], s3_client: botocore.client
-) -> Dict[str, str]:
+    bias_baselines: dict[str, str], s3_client: botocore.client
+) -> dict[str, str]:
     """
     Combines Model Bias PreTrainingConstraints/PostTrainingConstraints json files and uploads
     the combined json file to the same S3 bucket
 
     Args:
-        bias_baselines (Dict[str, str]): raw Model Bias baselines returned from Model Registry
+        bias_baselines (dict[str, str]): raw Model Bias baselines returned from Model Registry
         s3_client (Boto3 S3 client): Amazon S3 boto3 client
 
     Returns:
-        Dict[str, str]: processed Model Bias baselines
+        dict[str, str]: processed Model Bias baselines
     """
     # extract the bucket name and file key
     pre_s3_bucket_name, pre_training_s3_file_key = get_bucket_name_and_file_key(
@@ -283,21 +283,21 @@ def process_bias_baselines(
 
 @exception_handler
 def process_explainability_config_file(
-    explainability_baselines: Dict[str, str],
+    explainability_baselines: dict[str, str],
     model_name: str,
     s3_client: botocore.client,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Updates Model Explainability json ConfigFile with model name, and uploads
     it to the same S3 bucket
 
     Args:
-        explainability_baselines (Dict[str, str]): raw Model Explainability baselines returned from Model Registry
+        explainability_baselines (dict[str, str]): raw Model Explainability baselines returned from Model Registry
         model_name (str): Amazon SageMaker model name
         s3_client (Boto3 S3 client): Amazon S3 boto3 client
 
     Returns:
-        Dict[str, str]: processed Model Explainability baselines
+        dict[str, str]: processed Model Explainability baselines
     """
     # extract the bucket name and file key
     s3_bucket_name, config_s3_file_key = get_bucket_name_and_file_key(
@@ -329,16 +329,16 @@ def extend_config(
     args: argparse.Namespace,
     monitor_image_uri: str,
     clarify_image_uri: str,
-    baselines: Dict[str, Any],
+    baselines: dict[str, Any],
     monitor_outputs_bucket: str,
-    stage_config: Dict[str, Dict[str, str]],
+    stage_config: dict[str, dict[str, str]],
     sm_client: botocore.client,
     project_prefix: str,
     monitoring_pipelinde_definition_object: str,
     timestamp: str,
     weighted_quantile_loss_threshold: str,
     consecutive_breach_to_alarm: str = "1",
-) -> Dict[str, Dict[str, str]]:
+) -> dict[str, dict[str, str]]:
     """
     Extend the stage configuration of the Monitoring Schedule with additional parameters and tags based.
 
@@ -440,7 +440,7 @@ def extend_config(
 
 
 @exception_handler
-def read_config_from_json(file_name: str) -> Dict[str, Dict[str, str]]:
+def read_config_from_json(file_name: str) -> dict[str, dict[str, str]]:
     """
     Reads template parameters/tags from a JSON file
 
@@ -457,7 +457,7 @@ def read_config_from_json(file_name: str) -> Dict[str, Dict[str, str]]:
 
 @exception_handler
 def write_config_to_json(
-    file_name: str, export_config: Dict[str, Dict[str, str]]
+    file_name: str, export_config: dict[str, dict[str, str]]
 ) -> None:
     """
     Writes template parameters/tags to a JSON file
