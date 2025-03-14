@@ -68,11 +68,16 @@ def update_model_threshold(model_package_group_name: str, model_pipeline_name: s
         model_validation_thresholds = get_ssm_parameters(
             "/rdi-mlops/sagemaker/model-build/validation-threshold"
         )
+        current_model_mwql = float(ssm_client.get_parameter(
+            Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss"
+        )["Parameter"]["Value"])
         weighted_quantile_loss_threshold = float(
             model_validation_thresholds["weighted_quantile_loss"]
         )
-        # We update parameters if the new model mean quantile loss is better than the current monitoring threshold
-        if weighted_quantile_loss_value < weighted_quantile_loss_threshold:
+        # We update parameters if 
+        # the model's mean weighted quantile loss has changed
+        # and it is better than the current monitoring threshold
+        if not (current_model_mwql == weighted_quantile_loss_value) and weighted_quantile_loss_value < weighted_quantile_loss_threshold:
             update_rate = float(model_validation_thresholds["update_rate"])
             threshold_update_step = abs(weighted_quantile_loss_value - weighted_quantile_loss_threshold) * update_rate
             new_threshold = weighted_quantile_loss_value + threshold_update_step 
@@ -86,7 +91,7 @@ def update_model_threshold(model_package_group_name: str, model_pipeline_name: s
             logger.info(
                 "Updated model validation threshold in SSM parameter /rdi-mlops/sagemaker/model-build/validation-threshold/weighted_quantile_loss to: {weighted_quantile_loss_value:.3f}"
             )
-        # We update the current model accuarcy metric
+        # We update the current model accuracy metric
         ssm_client.put_parameter(
             Name="/rdi-mlops/sagemaker/model-build/current-model-mean-weighted-quantile-loss",
             Description="Indicate whether the model has been trained once or not",
